@@ -28,7 +28,6 @@ MESSAGE_IDS = {
     192: 17
 }
 
-
 # Mapping from internal message IDs to information used to decode the message
 DECODE_DATA = {
     1: {
