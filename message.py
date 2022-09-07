@@ -11,8 +11,9 @@ class MessageFormatException(Exception):
     A class to represent exceptions related to invalid message formats.
     """
 
-    def __init__(self, message):
+    def __init__(self, message: str, status: int = 0):
         self.message = message
+        self.status = status
 
 
 class Message:
@@ -29,7 +30,7 @@ class Message:
         """
         Overrides the string representation of the class.
         """
-        return f"[{self.timestamp}] {self.id} - {self.data}"
+        return f"[{self.timestamp.toString('yyyy-MM-ddTHH:mm:ss.zzzZ')}] {self.id} - {self.data}"
 
     def decode(self) -> List[Data]:
         """
