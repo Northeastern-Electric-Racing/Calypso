@@ -120,7 +120,7 @@ DECODE_DATA = {
         "decoder": decode21,
     },
     22: {
-        "description": "",
+        "description": "cell voltages",
         "decoder": decode22,
     }
 }
