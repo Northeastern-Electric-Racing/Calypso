@@ -83,7 +83,19 @@ class FormatData:
         return value / 10
 
     @staticmethod
+    def lowVoltage(value):
+        return value / 100
+
+    @staticmethod
     def torque(value):
+        return value / 10
+
+    @staticmethod
+    def highVoltage(value):
+        return value / 10
+
+    @staticmethod
+    def current(value):
         return value / 10
 
     @staticmethod
@@ -91,21 +103,21 @@ class FormatData:
         return value / 10
 
     @staticmethod
+    def angularVelocity(value):
+        return -value
+
+    @staticmethod
     def frequency(value):
         return value / 10
 
     @staticmethod
-    def angularVelocity(value):
-        return value
-
-    @staticmethod
-    def current(value):
-        return value / 10
-
-    @staticmethod
-    def high_voltage(value):
+    def power(value):
         return value / 10
 
     @staticmethod
     def timer(value):
         return value * 0.003
+
+    @staticmethod
+    def flux(value):
+        return value / 1000
