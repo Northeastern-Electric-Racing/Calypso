@@ -30,7 +30,13 @@ MESSAGE_IDS = {
     514: 19,
     768: 20,
     769: 21,
-    54: 22
+    7: 22,
+    193: 23,
+    6: 24,
+    194: 25,
+    1744: 26,
+    1745: 27,
+    175: 28
 }
 
 # Mapping from internal message IDs to information used to decode the message
@@ -122,6 +128,30 @@ DECODE_DATA = {
     22: {
         "description": "cell voltages",
         "decoder": decode22,
+    },
+    23: {
+        "description": "unknown",
+        "decoder": decode8,
+    },
+    24: {
+        "description": "unknown",
+        "decoder": decode8,
+    },
+    25: {
+        "description": "unknown",
+        "decoder": decode8,
+    },
+    26: {
+        "description": "unknown",
+        "decoder": decode8,
+    },
+    27: {
+        "description": "unknown",
+        "decoder": decode8,
+    },
+    28: {
+        "description": "unknown",
+        "decoder": decode8,
     }
 }
 
