@@ -130,28 +130,28 @@ DECODE_DATA = {
         "decoder": decode22,
     },
     23: {
-        "description": "unknown",
-        "decoder": decode8,
+        "description": "unknown 1",
+        "decoder": decodeMock,
     },
     24: {
-        "description": "unknown",
-        "decoder": decode8,
+        "description": "unknown 2",
+        "decoder": decodeMock,
     },
     25: {
-        "description": "unknown",
-        "decoder": decode8,
+        "description": "unknown 3",
+        "decoder": decodeMock,
     },
     26: {
-        "description": "unknown",
-        "decoder": decode8,
+        "description": "unknown 4",
+        "decoder": decodeMock,
     },
     27: {
-        "description": "unknown",
-        "decoder": decode8,
+        "description": "unknown 5",
+        "decoder": decodeMock,
     },
     28: {
-        "description": "unknown",
-        "decoder": decode8,
+        "description": "unknown 6",
+        "decoder": decodeMock,
     }
 }
 

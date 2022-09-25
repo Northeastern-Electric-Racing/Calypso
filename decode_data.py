@@ -10,6 +10,11 @@ from ner_processing.data import (
 )
 
 
+def decodeMock(data: List[int]) -> Dict[int, Any]:
+    return {
+        0: 0
+    }
+
 def decode1(data: List[int]) -> Dict[int, Any]:
     return {
         1: pd.bigEndian(data[0:2]),
