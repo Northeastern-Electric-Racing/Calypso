@@ -10,6 +10,11 @@ from ner_processing.data import (
 )
 
 
+def decodeMock(data: List[int]) -> Dict[int, Any]:
+    return {
+        0: 0
+    }
+
 def decode1(data: List[int]) -> Dict[int, Any]:
     return {
         1: pd.bigEndian(data[0:2]),
@@ -73,104 +78,156 @@ def decode7(data: List[int]) -> Dict[int, Any]:
         29: fd.torque(decoded_data[3])
     }
 
+# TODO: Fill this method out (complicated with bit shifts)
 def decode8(data: List[int]) -> Dict[int, Any]:
-    decoded_data = pd.defaultDecode(data)
     return {
-        30: fd.angle(decoded_data[0]),
-        31: fd.angularVelocity(decoded_data[1]),
-        32: fd.frequency(decoded_data[2]),
-        33: fd.angle(decoded_data[3])
+        30: 0,
+        31: 0,
+        32: 0,
+        33: 0,
+        34: 0,
+        35: 0
     }
 
 def decode9(data: List[int]) -> Dict[int, Any]:
-    decoded_data = pd.defaultDecode(data)
-    final_data = [fd.current(d) for d in decoded_data]
     return {
-        34: final_data[0],
-        35: final_data[1],
-        36: final_data[2],
-        37: final_data[3]
+        36: data[0],
+        37: data[1],
+        38: data[2],
+        39: data[3],
+        40: data[4],
+        41: data[5],
+        42: data[6],
+        43: data[7]
     }
 
 def decode10(data: List[int]) -> Dict[int, Any]:
     decoded_data = pd.defaultDecode(data)
-    final_data = [fd.high_voltage(d) for d in decoded_data]
     return {
-        38: final_data[0],
-        39: final_data[1],
-        40: final_data[2],
-        41: final_data[3]
+        44: fd.angle(decoded_data[0]),
+        45: fd.angularVelocity(decoded_data[1]),
+        46: fd.frequency(decoded_data[2]),
+        47: fd.angle(decoded_data[3])
     }
 
 def decode11(data: List[int]) -> Dict[int, Any]:
-    decoded_data = ["{:08b}".format(d) for d in data[3:]]
+    decoded_data = pd.defaultDecode(data)
+    final_data = [fd.current(d) for d in decoded_data]
     return {
-        42: pd.littleEndian(data[0:2]),
-        43: data[2],
-        44: decoded_data[0],
-        45: decoded_data[1][0],
-        46: decoded_data[1][5:],
-        47: decoded_data[2],
-        48: decoded_data[3][0],
-        49: decoded_data[3][7],
-        50: decoded_data[4][0],
-        51: decoded_data[4][1],
-        52: decoded_data[4][2]
+        48: final_data[0],
+        49: final_data[1],
+        50: final_data[2],
+        51: final_data[3]
     }
 
 def decode12(data: List[int]) -> Dict[int, Any]:
-    grouped_data = [pd.littleEndian(d) for d in pd.groupBytes(data)]
+    decoded_data = pd.defaultDecode(data)
+    final_data = [fd.highVoltage(d) for d in decoded_data]
     return {
-        53: grouped_data[0],
-        54: grouped_data[1],
-        55: grouped_data[2],
-        56: grouped_data[3]
+        52: final_data[0],
+        53: final_data[1],
+        54: final_data[2],
+        55: final_data[3]
     }
 
 def decode13(data: List[int]) -> Dict[int, Any]:
-    decoded_data = pd.defaultDecode(data[:4])
-    timer_data = pd.littleEndian(data[4:])
+    decoded_data = pd.defaultDecode(data)
     return {
-        57: fd.torque(decoded_data[0]),
-        58: fd.torque(decoded_data[1]),
-        59: fd.timer(timer_data)
+        56: fd.flux(decoded_data[0]),
+        57: fd.flux(decoded_data[1]),
+        58: fd.current(decoded_data[2]),
+        59: fd.current(decoded_data[3])
     }
 
 def decode14(data: List[int]) -> Dict[int, Any]:
+    decoded_data = pd.defaultDecode(data)
+    final_data = [fd.lowVoltage(d) for d in decoded_data]
     return {
-        60: pd.littleEndian(data[0:2]),
-        61: pd.littleEndian(data[2:4])
+        60: final_data[0],
+        61: final_data[1],
+        62: final_data[2],
+        63: final_data[3]
     }
 
 def decode15(data: List[int]) -> Dict[int, Any]:
-    decoded_data = pd.defaultDecode(data)
+    decoded_data = ["{:08b}".format(d) for d in data[3:]]
     return {
-        62: decoded_data[0],
-        63: decoded_data[1],
-        64: decoded_data[2]
+        64: pd.littleEndian(data[0:2]),
+        65: data[2],
+        66: decoded_data[0],
+        67: decoded_data[1][0],
+        68: decoded_data[1][5:],
+        69: decoded_data[2],
+        70: decoded_data[3][0],
+        71: decoded_data[3][7],
+        72: decoded_data[4][0],
+        73: decoded_data[4][1],
+        74: decoded_data[4][2]
     }
 
 def decode16(data: List[int]) -> Dict[int, Any]:
+    grouped_data = [pd.littleEndian(d) for d in pd.groupBytes(data)]
+    return {
+        75: grouped_data[0],
+        76: grouped_data[1],
+        77: grouped_data[2],
+        78: grouped_data[3]
+    }
+
+def decode17(data: List[int]) -> Dict[int, Any]:
+    decoded_data = pd.defaultDecode(data[:4])
+    timer_data = pd.littleEndian(data[4:])
+    return {
+        79: fd.torque(decoded_data[0]),
+        80: fd.torque(decoded_data[1]),
+        81: fd.timer(timer_data)
+    }
+
+def decode18(data: List[int]) -> Dict[int, Any]:
+    decoded_data = pd.defaultDecode(data)
+    return {
+        82: fd.torque(decoded_data[0]),
+        83: fd.angularVelocity(decoded_data[1]),
+        84: data[4],
+        85: data[5] & 1,
+        86: (data[5] >> 1) & 1,
+        87: (data[5] >> 2) & 1,
+        88: fd.torque(decoded_data[3])
+    }
+
+def decode19(data: List[int]) -> Dict[int, Any]:
+    return {
+        89: pd.littleEndian(data[0:2]),
+        90: pd.littleEndian(data[2:4])
+    }
+
+def decode20(data: List[int]) -> Dict[int, Any]:
+    decoded_data = pd.defaultDecode(data)
+    return {
+        91: decoded_data[0],
+        92: decoded_data[1],
+        93: decoded_data[2]
+    }
+
+def decode21(data: List[int]) -> Dict[int, Any]:
     temp = pd.littleEndian(data[0:2])
     humid = pd.littleEndian(data[2:4])
     tempF = -49 + (315 * temp / 65535.0)
     tempC = -45 + (175 * temp / 65535.0)
     relHumid = 100 * humid / 65535.0 
     return {
-        65: tempC,
-        66: tempF,
-        67: relHumid
+        94: tempC,
+        95: tempF,
+        96: relHumid
     }
 
-def decode17(data: List[int]) -> Dict[int, Any]:
-    decoded_data = pd.defaultDecode(data)
-
+def decode22(data: List[int]) -> Dict[int, Any]:
+    cell_id = data[0]
+    instant_voltage = pd.bigEndian(data[1:3])
+    internal_resistance = pd.bigEndian(data[3:5]) & 32767 # clear last bit
+    shunted = (data[3] >> 7) & 1 # get last bit
+    open_voltage = pd.bigEndian(data[5:7])
     return {
-        68: fd.torque(decoded_data[0]),
-        69: fd.angularVelocity(decoded_data[1]),
-        70: data[4],
-        71: data[5] & 1,
-        72: (data[5] >> 1) & 1,
-        73: (data[5] >> 2) & 1,
-        74: fd.torque(decoded_data[3])
+        97: f"{cell_id} {instant_voltage} {open_voltage} {internal_resistance} {shunted}"
     }
+
