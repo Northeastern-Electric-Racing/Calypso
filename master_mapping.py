@@ -157,6 +157,7 @@ DECODE_DATA = {
 
 # Mapping from data ids to their description (potentially add format information)
 DATA_IDS = {
+    0: "Mock Data",
     1: "Pack Inst Voltage",
     2: "Pack Current",
     3: "Pack Amphours",
