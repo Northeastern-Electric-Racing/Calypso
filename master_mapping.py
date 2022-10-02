@@ -36,7 +36,8 @@ MESSAGE_IDS = {
     194: 25,
     1744: 26,
     1745: 27,
-    175: 28
+    175: 28,
+    770: 29
 }
 
 # Mapping from internal message IDs to information used to decode the message
@@ -152,6 +153,10 @@ DECODE_DATA = {
     28: {
         "description": "unknown 6",
         "decoder": decodeMock,
+    },
+    29: {
+        "description": "GLV current",
+        "decoder": decode29,
     }
 }
 
@@ -254,6 +259,7 @@ DATA_IDS = {
     94: "TCU Temperature C",
     95: "TCU Temperature F",
     96: "Relative Humidity",
-    97: "Cell Voltage Info"
+    97: "Cell Voltage Info",
+    98: "GLV Current"
 }
 

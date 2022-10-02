@@ -231,3 +231,8 @@ def decode22(data: List[int]) -> Dict[int, Any]:
         97: f"{cell_id} {instant_voltage} {open_voltage} {internal_resistance} {shunted}"
     }
 
+def decode29(data: List[int]) -> Dict[int, Any]:
+    glv_current = pd.twosComp(pd.littleEndian(data), 32)
+    return {
+        98: glv_current / 1000000.0 # undo 10^6 scale factor from car
+    }
