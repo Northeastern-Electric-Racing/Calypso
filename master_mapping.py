@@ -37,7 +37,10 @@ MESSAGE_IDS = {
     1744: 26,
     1745: 27,
     175: 28,
-    770: 29
+    770: 29,
+    2015: 30,
+    2027: 31,
+    2019: 32
 }
 
 # Mapping from internal message IDs to information used to decode the message
@@ -157,7 +160,19 @@ DECODE_DATA = {
     29: {
         "description": "GLV current",
         "decoder": decode29,
-    }
+    },
+    30: {
+        "description": "unknown 2015",
+        "decoder": decodeMock,
+    },
+    31: {
+        "description": "unknown 2027",
+        "decoder": decodeMock,
+    },
+    32: {
+        "description": "unknown 2019",
+        "decoder": decodeMock,
+    },
 }
 
 # Mapping from data ids to their description (potentially add format information)
