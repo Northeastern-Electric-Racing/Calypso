@@ -40,7 +40,8 @@ MESSAGE_IDS = {
     770: 29,
     2015: 30,
     2027: 31,
-    2019: 32
+    2019: 32,
+    5: 33
 }
 
 # Mapping from internal message IDs to information used to decode the message
@@ -171,6 +172,10 @@ DECODE_DATA = {
     },
     32: {
         "description": "unknown 2019",
+        "decoder": decodeMock,
+    },
+    33: {
+        "description": "Is-Charging",
         "decoder": decodeMock,
     },
 }
