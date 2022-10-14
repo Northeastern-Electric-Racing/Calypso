@@ -43,30 +43,32 @@ if __name__ == "__main__":
     current_line = 0
     print(f"Processing a total of {line_count} lines")
 
-    processed_data: List[Data] = []
-    for fp in listdir(LOGS_DIRECTORY):
-        with open(LOGS_DIRECTORY + fp) as file:
-            line_num = 0
-            for line in file:
-                line_num += 1
-                current_line += 1
-                if current_line % 5000 == 0:
-                    print(f"Line {line_num}")
-                try:
-                    message: Message = processLine(line, FORMAT)
-                    processed_data.extend(message.decode())
-                except:
-                    print(f"Error with line {line_num} in file {file.name}")
-                    pass
-
     print(f"Writing to the CSV")
     header = ["time", "data_id", "description", "value"]
+
     with open(OUTPUT_PATH, "w", encoding="UTF8", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(header)
-        for data in processed_data:
-            str_time = data.timestamp.toString("yyyy-MM-ddTHH:mm:ss.zzzZ")
-            writer.writerow([str_time, data.id, DATA_IDS[data.id], data.value])
+
+        processed_data: List[Data] = []
+        for fp in listdir(LOGS_DIRECTORY):
+            with open(LOGS_DIRECTORY + fp) as file:
+                line_num = 0
+                for line in file:
+                    line_num += 1
+                    current_line += 1
+                    if current_line % 5000 == 0:
+                        print(f"Line {line_num}")
+                    try:
+                        message: Message = processLine(line, FORMAT)
+                        processed_data = message.decode()
+
+                        for data in processed_data:
+                            str_time = data.timestamp.toString("yyyy-MM-ddTHH:mm:ss.zzzZ")
+                            writer.writerow([str_time, data.id, DATA_IDS[data.id], data.value])
+                    except:
+                        print(f"Error with line {line_num} in file {file.name}")
+                        pass
 
 
 
