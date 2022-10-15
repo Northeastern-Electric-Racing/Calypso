@@ -41,7 +41,8 @@ MESSAGE_IDS = {
     2015: 30,
     2027: 31,
     2019: 32,
-    5: 33
+    5: 33,
+    771: 34
 }
 
 # Mapping from internal message IDs to information used to decode the message
@@ -178,6 +179,10 @@ DECODE_DATA = {
         "description": "Is-Charging",
         "decoder": decodeMock,
     },
+    34: {
+        "description": "strain gauge",
+        "decoder": decode34,
+    }
 }
 
 # Mapping from data ids to their description (potentially add format information)
@@ -280,6 +285,8 @@ DATA_IDS = {
     95: "TCU Temperature F",
     96: "Relative Humidity",
     97: "Cell Voltage Info",
-    98: "GLV Current"
+    98: "GLV Current",
+    99: "Strain Gauge Voltage 1",
+    100: "Strain Gauge Voltage 2"
 }
 
