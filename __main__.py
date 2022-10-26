@@ -3,13 +3,14 @@ from datetime import datetime
 
 from os import listdir, path
 import csv
+import sys
 from typing import List
 
 from ner_processing.master_mapping import DATA_IDS
 from ner_processing.thread import thread
 
-LOGS_DIRECTORY = "./logs/"
-OUTPUT_PATH = "./output.csv"
+DEFAULT_LOGS_DIRECTORY = "./logs/"
+DEFAULT_OUTPUT_PATH = "./output.csv"
 PROCESSORS = 8
 PROCESS_CHUNK_SIZE = 85000  # Processes data in chunks, specified by this variable
 
@@ -66,6 +67,9 @@ def find_time(start, finish):
 
 
 def process_lines(lines, writer):
+    """
+    Processes a chunk of lines and writes the results to the CSV.
+    """
     with multiprocessing.Pool(PROCESSORS) as p:
         out = p.map(thread, lines)
     lines.clear()
@@ -77,25 +81,49 @@ def process_lines(lines, writer):
 
 if __name__ == "__main__":
     """
-    Processes the log files in the log folder and puts them in the output.csv file
+    Processes the log files in the log folder and puts them in the output.csv file.
+    Command line args:
+        - arg 1 = output directory of the csv file
+            - Must be a directory name (C:\Users\user1\Documents)
+            - A file called 'output.csv' is created here
+        - args 2... = space separated list of file paths to process
+            - Each path must be a text file (C:\Users\user1\Documents\logs.txt)
+    Default file paths are all those in "./logs/"
+    Default output directory is the current location
     """
 
     start_time = datetime.now().strftime("%M:%S:%f").split(":")
-    line_count = getLineCount([LOGS_DIRECTORY + name for name in listdir(LOGS_DIRECTORY)])
+    output_path = ""
+    paths_to_process = []
+
+    # If manually specifying the paths
+    if len(sys.argv) > 1:
+        # Formats the input file path strings correctly
+        for i in range(1, len(sys.argv)):
+            sys.argv[i] = sys.argv[i].replace("\\","/") 
+        
+        output_path = sys.argv[1] + "/output.csv"
+        paths_to_process = sys.argv[2:]
+    else:
+        output_path = DEFAULT_OUTPUT_PATH
+        paths_to_process = [DEFAULT_LOGS_DIRECTORY + name for name in listdir(DEFAULT_LOGS_DIRECTORY)]
+
+    line_count = getLineCount(paths_to_process)
+    print(f"Processing a total of {line_count} lines")
+
     current_line = 0
     manager = multiprocessing.Manager()
     return_dict = manager.dict()
-    print(f"Processing a total of {line_count} lines")
 
     print(f"Writing to the CSV")
     header = ["time", "data_id", "description", "value"]
 
-    with open(OUTPUT_PATH, "w", encoding="UTF8", newline="") as f:
+    with open(output_path, "w", encoding="UTF8", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(header)
 
-        for fp in listdir(LOGS_DIRECTORY):
-            with open(LOGS_DIRECTORY + fp) as file:
+        for fp in paths_to_process:
+            with open(fp) as file:
                 line_num = 0
                 lines = []
                 for line in file:
@@ -107,19 +135,14 @@ if __name__ == "__main__":
                     lines.append(line)
                     try:
                         if line_num % PROCESS_CHUNK_SIZE == 0:
-                            """
-                            When stored data reaches specified amount, use threads to decode data faster
-                            """
+                            # When stored data reaches specified amount, use threads to decode data faster
                             process_lines(lines, writer)
-
                     except:
                         print(f"Error with line {line_num} in file {file.name}")
                         pass
 
                 if lines:
-                    """
-                    Handles leftover stored lines when the loop ends
-                    """
+                    # Handles leftover stored lines when the loop ends
                     process_lines(lines, writer)
 
     finish_time = datetime.now().strftime("%M:%S:%f").split(":")
