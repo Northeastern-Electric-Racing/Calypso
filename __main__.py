@@ -75,8 +75,8 @@ if __name__ == "__main__":
     manager = multiprocessing.Manager()
     return_dict = manager.dict()
     print(f"Processing a total of {line_count} lines")
-    processors = 4
-    process_chunk_size = 50000  # Processes data in chunks, specified by this variable
+    processors = 8
+    process_chunk_size = 85000  # Processes data in chunks, specified by this variable
 
     print(f"Writing to the CSV")
     header = ["time", "data_id", "description", "value"]
