@@ -6,11 +6,12 @@ import csv
 from typing import List
 
 from ner_processing.master_mapping import DATA_IDS
-from ner_processing.data import Data
 from ner_processing.thread import thread
 
 LOGS_DIRECTORY = "./logs/"
 OUTPUT_PATH = "./output.csv"
+PROCESSORS = 8
+PROCESS_CHUNK_SIZE = 85000  # Processes data in chunks, specified by this variable
 
 
 def getLineCount(filepaths: List[str]) -> int:
@@ -64,6 +65,16 @@ def find_time(start, finish):
         microseconds))
 
 
+def process_lines(lines, writer):
+    with multiprocessing.Pool(PROCESSORS) as p:
+        out = p.map(thread, lines)
+    lines.clear()
+    for data in out:
+        for sub_data in data:
+            str_time = sub_data.timestamp.toString("yyyy-MM-ddTHH:mm:ss.zzzZ")
+            writer.writerow([str_time, sub_data.id, DATA_IDS[sub_data.id], sub_data.value])
+
+
 if __name__ == "__main__":
     """
     Processes the log files in the log folder and puts them in the output.csv file
@@ -75,8 +86,6 @@ if __name__ == "__main__":
     manager = multiprocessing.Manager()
     return_dict = manager.dict()
     print(f"Processing a total of {line_count} lines")
-    processors = 8
-    process_chunk_size = 85000  # Processes data in chunks, specified by this variable
 
     print(f"Writing to the CSV")
     header = ["time", "data_id", "description", "value"]
@@ -97,18 +106,11 @@ if __name__ == "__main__":
 
                     lines.append(line)
                     try:
-                        if line_num % process_chunk_size == 0:
+                        if line_num % PROCESS_CHUNK_SIZE == 0:
                             """
                             When stored data reaches specified amount, use threads to decode data faster
                             """
-
-                            with multiprocessing.Pool(processors) as p:
-                                out = p.map(thread, lines)
-                                lines = []
-                            for data in out:
-                                for sub_data in data:
-                                    str_time = sub_data.timestamp.toString("yyyy-MM-ddTHH:mm:ss.zzzZ")
-                                    writer.writerow([str_time, sub_data.id, DATA_IDS[sub_data.id], sub_data.value])
+                            process_lines(lines, writer)
 
                     except:
                         print(f"Error with line {line_num} in file {file.name}")
@@ -118,12 +120,7 @@ if __name__ == "__main__":
                     """
                     Handles leftover stored lines when the loop ends
                     """
-                    with multiprocessing.Pool(processors) as p:
-                        out = p.map(thread, lines)
-                    for data in out:
-                        for sub_data in data:
-                            str_time = sub_data.timestamp.toString("yyyy-MM-ddTHH:mm:ss.zzzZ")
-                            writer.writerow([str_time, sub_data.id, DATA_IDS[sub_data.id], sub_data.value])
+                    process_lines(lines, writer)
 
     finish_time = datetime.now().strftime("%M:%S:%f").split(":")
     find_time(start_time, finish_time)
