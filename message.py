@@ -11,9 +11,8 @@ class MessageFormatException(Exception):
     A class to represent exceptions related to invalid message formats.
     """
 
-    def __init__(self, message: str, status: int = 0):
+    def __init__(self, message: str):
         self.message = message
-        self.status = status
 
 
 class Message:
