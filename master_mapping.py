@@ -287,6 +287,7 @@ DATA_IDS = {
     97: "Cell Voltage Info",
     98: "GLV Current",
     99: "Strain Gauge Voltage 1",
-    100: "Strain Gauge Voltage 2"
+    100: "Strain Gauge Voltage 2",
+    101: "Vehicle Speed (mph)"
 }
 

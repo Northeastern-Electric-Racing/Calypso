@@ -103,11 +103,14 @@ def decode9(data: List[int]) -> Dict[int, Any]:
 
 def decode10(data: List[int]) -> Dict[int, Any]:
     decoded_data = pd.defaultDecode(data)
+    motor_speed = fd.angularVelocity(decoded_data[1])
+    vehicle_speed = motor_speed * 0.013048225
     return {
         44: fd.angle(decoded_data[0]),
-        45: fd.angularVelocity(decoded_data[1]),
+        45: motor_speed,
         46: fd.frequency(decoded_data[2]),
-        47: fd.angle(decoded_data[3])
+        47: fd.angle(decoded_data[3]),
+        101: vehicle_speed
     }
 
 def decode11(data: List[int]) -> Dict[int, Any]:
