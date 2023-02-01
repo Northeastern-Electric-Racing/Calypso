@@ -154,27 +154,27 @@ DATA_IDS = {
     },
     1: {
         "name": "Pack Inst Voltage",
-        "units": "FIND",
+        "units": "V",
     },
     2: {
         "name": "Pack Current",
-        "units": "FIND",
+        "units": "A",
     },
     3: {
         "name": "Pack Amphours",
-        "units": "FIND",
+        "units": "Ah",
     },
     4: {
         "name": "Pack SOC",
-        "units": "FIND",
+        "units": "%",
     },
     5: {
         "name": "Pack Health",
-        "units": "FIND",
+        "units": "%",
     },
     6: {
-        "name": "Pack Current",
-        "units": "FIND",
+        "name": "Failsafe Statuses",
+        "units": "",
     },
     7: {
         "name": "DTC Status 1",
@@ -186,111 +186,111 @@ DATA_IDS = {
     },
     9: {
         "name": "Current Limits Status",
-        "units": "FIND",
+        "units": "",
     },
     10: {
         "name": "Average Temp",
-        "units": "FIND",
+        "units": "C",
     },
     11: {
         "name": "Internal Temp",
-        "units": "FIND",
+        "units": "C",
     },
     12: {
         "name": "MPE State",
-        "units": "FIND",
+        "units": "",
     },
     13: {
         "name": "High Cell Voltage",
-        "units": "FIND",
+        "units": "V",
     },
     14: {
         "name": "High Cell Voltage ID",
-        "units": "FIND",
+        "units": "",
     },
     15: {
         "name": "Low Cell Voltage",
-        "units": "FIND",
+        "units": "V",
     },
     16: {
         "name": "Low Cell Voltage ID",
-        "units": "FIND",
+        "units": "",
     },
     17: {
         "name": "Average Cell Voltage",
-        "units": "FIND",
+        "units": "V",
     },
     18: {
         "name": "Module A Temperature",
-        "units": "Degrees C",
+        "units": "C",
     },
     19: {
         "name": "Module B Temperature",
-        "units": "Degrees C",
+        "units": "C",
     },
     20: {
         "name": "Module C Temperature",
-        "units": "Degrees C",
+        "units": "C",
     },
     21: {
         "name": "Gate Driver Board Temperature",
-        "units": "Degrees C",
+        "units": "C",
     },
     22: {
         "name": "Control Board Temperature",
-        "units": "Degrees C",
+        "units": "C",
     },
     23: {
         "name": "RTD #1 Temperature",
-        "units": "Degrees C",
+        "units": "C",
     },
     24: {
         "name": "RTD #2 Temperature",
-        "units": "Degrees C",
+        "units": "C",
     },
     25: {
         "name": "RTD #3 Temperature",
-        "units": "Degrees C",
+        "units": "C",
     },
     26: {
         "name": "RTD #4 Temperature",
-        "units": "Degrees C",
+        "units": "C",
     },
     27: {
         "name": "RTD #5 Temperature",
-        "units": "Degrees C",
+        "units": "C",
     },
     28: {
         "name": "Motor Temperature",
-        "units": "Degrees C",
+        "units": "C",
     },
     29: {
         "name": "Torque Shudder",
-        "units": "Degrees C",
+        "units": "",
     },
     30: {
         "name": "Analog Input 1",
-        "units": "",
+        "units": "V",
     },
     31: {
         "name": "Analog Input 2",
-        "units": "",
+        "units": "V",
     },
     32: {
         "name": "Analog Input 3",
-        "units": "",
+        "units": "V",
     },
     33: {
         "name": "Analog Input 4",
-        "units": "",
+        "units": "V",
     },
     34: {
         "name": "Analog Input 5",
-        "units": "",
+        "units": "V",
     },
     35: {
         "name": "Analog Input 6",
-        "units": "",
+        "units": "V",
     },
     36: {
         "name": "Digital Input 1",
@@ -326,11 +326,11 @@ DATA_IDS = {
     },
     44: {
         "name": "Motor Angle (Electrical)",
-        "units": "degrees",
+        "units": "Deg",
     },
     45: {
         "name": "Motor Speed",
-        "units": "rpm",
+        "units": "RPM",
     },
     46: {
         "name": "Electrical Output Frequency",
@@ -338,71 +338,71 @@ DATA_IDS = {
     },
     47: {
         "name": "Delta Resolver Filtered",
-        "units": "degrees",
+        "units": "Deg",
     },
     48: {
         "name": "Phase A Current",
-        "units": "amps",
+        "units": "A",
     },
     49: {
         "name": "Phase B Current",
-        "units": "amps",
+        "units": "A",
     },
     50: {
         "name": "Phase C Current",
-        "units": "amps",
+        "units": "A",
     },
     51: {
         "name": "DC Bus Current",
-        "units": "amps",
+        "units": "A",
     },
     52: {
         "name": "DC Bus Voltage",
-        "units": "volts",
+        "units": "V",
     },
     53: {
         "name": "Output Voltage",
-        "units": "volts",
+        "units": "V",
     },
     54: {
         "name": "VAB_Vd Voltage",
-        "units": "volts",
+        "units": "V",
     },
     55: {
         "name": "VBC_Vq Voltage",
-        "units": "volts",
+        "units": "V",
     },
     56: {
         "name": "Flux Command",
-        "units": "Webers",
+        "units": "Wb",
     },
     57: {
         "name": "Flux Feedback",
-        "units": "Webers",
+        "units": "Wb",
     },
     58: {
         "name": "Id Feedback",
-        "units": "amps",
+        "units": "A",
     },
     59: {
         "name": "Iq Feedback",
-        "units": "amps",
+        "units": "A",
     },
     60: {
         "name": "1.5V Reference Voltage",
-        "units": "volts",
+        "units": "V",
     },
     61: {
         "name": "2.5V Reference Voltage",
-        "units": "volts",
+        "units": "V",
     },
     62: {
         "name": "5.0V Reference Voltage",
-        "units": "volts",
+        "units": "V",
     },
     63: {
         "name": "12V System Voltage",
-        "units": "volts",
+        "units": "V",
     },
     64: {
         "name": "VSM State",
@@ -474,7 +474,7 @@ DATA_IDS = {
     },
     81: {
         "name": "Power on Timer",
-        "units": "sec",
+        "units": "s",
     },
     82: {
         "name": "Torque Command",
@@ -482,7 +482,7 @@ DATA_IDS = {
     },
     83: {
         "name": "Speed Command",
-        "units": "rpm",
+        "units": "RPM",
     },
     84: {
         "name": "Direction Command",
@@ -506,35 +506,35 @@ DATA_IDS = {
     },
     89: {
         "name": "Pack DCL",
-        "units": "FIND",
+        "units": "A",
     },
     90: {
         "name": "Pack CCL",
-        "units": "FIND",
+        "units": "A",
     },
     91: {
         "name": "TCU X-Axis Acceleration",
-        "units": "FIND",
+        "units": "g",
     },
     92: {
         "name": "TCU Y-Axis Acceleration",
-        "units": "FIND",
+        "units": "g",
     },
     93: {
         "name": "TCU Z-Axis Acceleration",
-        "units": "FIND",
+        "units": "g",
     },
     94: {
         "name": "TCU Temperature C",
-        "units": "Degrees C",
+        "units": "C",
     },
     95: {
         "name": "TCU Temperature F",
-        "units": "Degrees F",
+        "units": "F",
     },
     96: {
         "name": "Relative Humidity",
-        "units": "FIND",
+        "units": "%",
     },
     97: {
         "name": "Cell Voltage Info",
@@ -542,19 +542,19 @@ DATA_IDS = {
     },
     98: {
         "name": "GLV Current",
-        "units": "FIND",
+        "units": "A",
     },
     99: {
         "name": "Strain Gauge Voltage 1",
-        "units": "FIND",
+        "units": "V",
     },
     100: {
         "name": "Strain Gauge Voltage 2",
-        "units": "FIND",
+        "units": "V",
     },
     101: {
         "name": "Vehicle Speed",
-        "units": "mph",
+        "units": "MPH",
     },
 }
 
