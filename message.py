@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 from PyQt6.QtCore import QDateTime
 
 from ner_processing.data import Data
-from ner_processing.master_mapping import DECODE_DATA, MESSAGE_IDS
+from ner_processing.master_mapping import MESSAGE_IDS
 
 
 class MessageFormatException(Exception):
@@ -43,7 +43,7 @@ class Message:
         Decodes the given message fields into their data points
         """
         try:
-            decoded_data: Dict[int, Any] = DECODE_DATA[MESSAGE_IDS[id]]["decoder"](data)
+            decoded_data: Dict[int, Any] = MESSAGE_IDS[id]["decoder"](data)
         except:
             raise MessageFormatException(f"Invalid data format for can id {id}")
         
