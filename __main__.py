@@ -76,8 +76,7 @@ def process_lines(lines, writer):
     for data in out:
         for sub_data in data:
             str_time = sub_data.timestamp.toString("yyyy-MM-ddTHH:mm:ss.zzzZ")
-            writer.writerow([str_time, sub_data.id, DATA_IDS[sub_data.id]["name"], sub_data.value,
-                             DATA_IDS[sub_data.id]["units"]])
+            writer.writerow([str_time, sub_data.id, DATA_IDS[sub_data.id]["name"], sub_data.value])
 
 
 if __name__ == "__main__":
@@ -117,7 +116,7 @@ if __name__ == "__main__":
     return_dict = manager.dict()
 
     print(f"Writing to the CSV")
-    header = ["time", "data_id", "description", "value", "units"]
+    header = ["time", "data_id", "description", "value"]
 
     with open(output_path, "w", encoding="UTF8", newline="") as f:
         writer = csv.writer(f)
