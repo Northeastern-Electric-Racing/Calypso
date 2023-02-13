@@ -143,7 +143,11 @@ MESSAGE_IDS = {
     771: {
         "description": "strain gauge",
         "decoder": decode34,
-    }
+    },
+    1024: {
+        "description": "wheel state",
+        "decoder": decode35,
+    },
 }
 
 # Mapping from data ids to their description (potentially add format information)
@@ -555,6 +559,18 @@ DATA_IDS = {
     101: {
         "name": "Vehicle Speed",
         "units": "MPH",
+    },
+    102: {
+        "name": "Wheel Knob 1",
+        "units": "",
+    },
+    103: {
+        "name": "Wheel Knob 2",
+        "units": "",
+    },
+    104: {
+        "name": "Wheel Buttons",
+        "units": "",
     },
 }
 
