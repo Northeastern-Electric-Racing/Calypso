@@ -247,3 +247,10 @@ def decode34(data: List[int]) -> Dict[int, Any]:
         99: voltage1 / 1000000.0, # undo 10^6 scale factor from car
         100: voltage2 / 1000000.0 
     }
+
+def decode35(data: List[int]) -> Dict[int, Any]:
+    return {
+        102: pd.bigEndian(data[0:2]),
+        103: pd.bigEndian(data[2:4]),
+        104: data[4]
+    }
