@@ -28,7 +28,7 @@ class Message:
         """
         Overrides the string representation of the class.
         """
-        return f"[{self.timestamp.toString('yyyy-MM-ddTHH:mm:ss.zzzZ')}] {self.id} - {self.data}"
+        return f"[{self.timestamp.strftime('%Y-%m-%dT%H:%M:%S.%fZ')}] {self.id} - {self.data}"
 
     def decode(self) -> List[Data]:
         """
