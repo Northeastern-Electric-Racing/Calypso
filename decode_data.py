@@ -4,9 +4,9 @@ This file specifies methods to decode messages into the many pieces of data they
 
 from typing import Any, Dict, List
 
-from ner_processing.data import (
-    ProcessData as pd, 
-    FormatData as fd, 
+from data import (
+    ProcessData as pd,
+    FormatData as fd,
 )
 
 

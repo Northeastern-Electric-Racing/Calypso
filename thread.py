@@ -1,5 +1,5 @@
-from ner_processing.decode_files import LogFormat, processLine
-from ner_processing.message import Message
+from decode_files import LogFormat, processLine
+from message import Message
 
 FORMAT = LogFormat.TEXTUAL1
 

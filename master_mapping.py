@@ -4,7 +4,7 @@ This file specifes the CAN and data ID mappings. IDS:
     - Data ID (id for individual data values contained in the messages)
 """
 
-from ner_processing.decode_data import *
+from decode_data import *
 
 # Mapping from external message ID to decoding information
 MESSAGE_IDS = {
