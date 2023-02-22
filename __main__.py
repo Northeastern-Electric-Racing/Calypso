@@ -6,8 +6,8 @@ import csv
 import sys
 from typing import List
 
-from ner_processing.master_mapping import DATA_IDS
-from ner_processing.thread import thread
+from master_mapping import DATA_IDS
+from thread import thread
 
 DEFAULT_LOGS_DIRECTORY = "./logs/"
 DEFAULT_OUTPUT_PATH = "./output.csv"
@@ -75,7 +75,7 @@ def process_lines(lines, writer):
     lines.clear()
     for data in out:
         for sub_data in data:
-            str_time = sub_data.timestamp.toString("yyyy-MM-ddTHH:mm:ss.zzzZ")
+            str_time = sub_data.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
             writer.writerow([str_time, sub_data.id, DATA_IDS[sub_data.id]["name"], sub_data.value])
 
 
@@ -84,14 +84,14 @@ if __name__ == "__main__":
     Processes the log files in the log folder and puts them in the output.csv file.
     Command line args:
         - arg 1 = output directory of the csv file
-            - Must be a directory name (C:\Users\user1\Documents)
+            - Must be a directory name
             - A file called 'output.csv' is created here
         - args 2... = space separated list of file paths to process
-            - Each path must be a text file (C:\Users\user1\Documents\logs.txt)
+            - Each path must be a text file
     Default file paths are all those in "./logs/"
     Default output directory is the current location
     """
-
+    
     start_time = datetime.now().strftime("%M:%S:%f").split(":")
     output_path = ""
     paths_to_process = []

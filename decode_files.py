@@ -4,9 +4,9 @@ a line in a log file.
 """
 
 from enum import Enum
-from PyQt6.QtCore import QDateTime
+from datetime import datetime
 
-from ner_processing.message import Message
+from message import Message
 
 
 class LogFormat(Enum):
@@ -35,7 +35,7 @@ def _processTextual1(line: str) -> Message:
     Example line format: 2021-01-01T00:00:00.003Z 514 8 [54,0,10,0,0,0,0,0]
     """
     fields = line.strip().split(" ")
-    timestamp = QDateTime.fromString(fields[0], "yyyy-MM-ddTHH:mm:ss.zzzZ")
+    timestamp = datetime.strptime(fields[0], "%Y-%m-%dT%H:%M:%S.%fZ")
     id = int(fields[1])
     length = int(fields[2])
     data = fields[3][1:-1].split(",") # remove commas and brackets at start and end
@@ -49,7 +49,7 @@ def _processTextual2(line: str) -> Message:
     Example line format: 1659901910.121 514 8 54 0 10 0 0 0 0 0
     """
     fields = line.strip().split(" ")
-    timestamp = QDateTime.fromMSecsSinceEpoch(int(float(fields[0])*1000))
+    timestamp = datetime.fromtimestamp(float(fields[0]))
     id = int(fields[1])
     length = int(fields[2])
     data = [int(x) for x in fields[3:3+length]]

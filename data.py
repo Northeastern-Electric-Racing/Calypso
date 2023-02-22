@@ -1,5 +1,5 @@
 from typing import List, Any
-from PyQt6.QtCore import QDateTime
+from datetime import datetime
 
 
 class Data:
@@ -7,7 +7,7 @@ class Data:
     Wrapper class for an individual piece of data.
     """
 
-    def __init__(self, timestamp: QDateTime, id: int, value: Any):
+    def __init__(self, timestamp: datetime, id: int, value: Any):
         self.timestamp = timestamp
         self.id = id
         self.value = value

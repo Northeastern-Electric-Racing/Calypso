@@ -1,9 +1,8 @@
 from typing import List, Dict, Any
+from datetime import datetime
 
-from PyQt6.QtCore import QDateTime
-
-from ner_processing.data import Data
-from ner_processing.master_mapping import MESSAGE_IDS
+from data import Data
+from master_mapping import MESSAGE_IDS
 
 
 class MessageFormatException(Exception):
@@ -20,7 +19,7 @@ class Message:
     Wrapper class for an individual message.
     """
 
-    def __init__(self, timestamp: QDateTime, id: int, data: List[int]):
+    def __init__(self, timestamp: datetime, id: int, data: List[int]):
         self.timestamp = timestamp
         self.id = id
         self.data = data
@@ -38,7 +37,7 @@ class Message:
         return self.decodeMessage(self.timestamp, self.id, self.data)
 
     @staticmethod
-    def decodeMessage(timestamp: QDateTime, id: int, data: List[int]) -> List[Data]:
+    def decodeMessage(timestamp: datetime, id: int, data: List[int]) -> List[Data]:
         """
         Decodes the given message fields into their data points
         """
