@@ -26,10 +26,10 @@ def decode1(data: List[int]) -> Dict[int, Any]:
 
 def decode2(data: List[int]) -> Dict[int, Any]:
     return {
-        6: "{:08b}".format(data[0]),
-        7: "{:08b}".format(data[1]),
-        8: "{:016b}".format(pd.bigEndian(data[2:4])),
-        9: "{:016b}".format(pd.bigEndian(data[4:6])),
+        6: data[0],
+        7: data[1],
+        8: pd.bigEndian(data[2:4]),
+        9: pd.bigEndian(data[4:6]),
         10: pd.twosComp(data[6], 8),
         11: pd.twosComp(data[7], 8)
     }
@@ -153,19 +153,18 @@ def decode14(data: List[int]) -> Dict[int, Any]:
     }
 
 def decode15(data: List[int]) -> Dict[int, Any]:
-    decoded_data = ["{:08b}".format(d) for d in data[3:]]
     return {
         64: pd.littleEndian(data[0:2]),
         65: data[2],
-        66: decoded_data[0],
-        67: decoded_data[1][0],
-        68: decoded_data[1][5:],
-        69: decoded_data[2],
-        70: decoded_data[3][0],
-        71: decoded_data[3][7],
-        72: decoded_data[4][0],
-        73: decoded_data[4][1],
-        74: decoded_data[4][2]
+        66: data[3],
+        67: data[4] & 1,
+        68: (data[4] >> 5) & 7,
+        69: data[5] & 1,
+        70: data[6] & 1,
+        71: (data[6] >> 7) & 1,
+        72: data[7] & 1,
+        73: (data[7] >> 1) & 1,
+        74: (data[7] >> 2) & 1
     }
 
 def decode16(data: List[int]) -> Dict[int, Any]:
