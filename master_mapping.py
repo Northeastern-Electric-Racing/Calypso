@@ -148,6 +148,11 @@ MESSAGE_IDS = {
         "description": "wheel state",
         "decoder": decode35,
     },
+    48879: {
+        "description": "MPU Motor States",
+        "decoder": decodeMotorStates,
+    }
+
 }
 
 # Mapping from data ids to their description (potentially add format information)
@@ -572,5 +577,8 @@ DATA_IDS = {
         "name": "Wheel Buttons",
         "units": "",
     },
+    105: {
+        "name": "MPU Mode State",
+        "units": ""
+    }
 }
-
