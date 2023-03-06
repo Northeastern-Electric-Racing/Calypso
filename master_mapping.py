@@ -138,7 +138,7 @@ MESSAGE_IDS = {
     },
     5: {
         "description": "Is-Charging",
-        "decoder": decodeMock,
+        "decoder": decodeIsCharging,
     },
     771: {
         "description": "strain gauge",
@@ -579,6 +579,10 @@ DATA_IDS = {
     },
     105: {
         "name": "MPU Mode State",
+        "units": ""
+    },
+    106: {
+        "name": "Is Charging",
         "units": ""
     }
 }

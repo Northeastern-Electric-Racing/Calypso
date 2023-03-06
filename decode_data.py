@@ -256,5 +256,10 @@ def decode35(data: List[int]) -> Dict[int, Any]:
 
 def decodeMotorStates(data: List[int]) -> Dict[int, Any]:
     return {
-        105: pd.bigEndian(data[0:8])
+        105: pd.bigEndian(data[0])
+    }
+
+def decodeIsCharging(data: List[int]) -> Dict[int, Any]:
+    return {
+        106: data[0]
     }
