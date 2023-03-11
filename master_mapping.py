@@ -151,8 +151,11 @@ MESSAGE_IDS = {
     48879: {
         "description": "MPU Motor States",
         "decoder": decodeMotorStates,
+    },
+    10: {
+        "description": "Charging-State",
+        "decoder": decodeChargingState,
     }
-
 }
 
 # Mapping from data ids to their description (potentially add format information)
@@ -583,6 +586,10 @@ DATA_IDS = {
     },
     106: {
         "name": "Is Charging",
+        "units": ""
+    },
+    107: {
+        "name": "Charging State",
         "units": ""
     }
 }
