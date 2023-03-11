@@ -263,3 +263,8 @@ def decodeIsCharging(data: List[int]) -> Dict[int, Any]:
     return {
         106: data[0]
     }
+
+def decodeChargingState(data: List[int]) -> Dict[int, Any]:
+    return {
+        107: data[0]
+    }
