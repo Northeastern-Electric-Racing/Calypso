@@ -149,8 +149,8 @@ MESSAGE_IDS = {
         "decoder": decode35,
     },
     48879: {
-        "description": "MPU Motor States",
-        "decoder": decodeMotorStates,
+        "description": "MPU States",
+        "decoder": decodeMPUStates,
     },
     10: {
         "description": "Charging-State",
@@ -593,3 +593,4 @@ DATA_IDS = {
         "units": ""
     }
 }
+

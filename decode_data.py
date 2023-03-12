@@ -254,7 +254,7 @@ def decode35(data: List[int]) -> Dict[int, Any]:
         104: data[4]
     }
 
-def decodeMotorStates(data: List[int]) -> Dict[int, Any]:
+def decodeMPUStates(data: List[int]) -> Dict[int, Any]:
     return {
         105: pd.bigEndian(data[0])
     }
