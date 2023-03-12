@@ -10,11 +10,11 @@ from decode_data import *
 MESSAGE_IDS = {
     1: {
         "description": "accumulator status",
-        "decoder": decode1
+        "decoder": decodeAccumulatorStatus
     },
     2: {
         "description": "BMS status",
-        "decoder": decode2
+        "decoder": decodeBMSStatus
     },
     3: {
         "description": "shutdown control",
@@ -585,12 +585,7 @@ DATA_IDS = {
         "units": ""
     },
     106: {
-        "name": "Is Charging",
-        "units": ""
-    },
-    107: {
-        "name": "Charging State",
+        "name": "BMS State",
         "units": ""
     }
 }
-
