@@ -15,7 +15,7 @@ def decodeMock(data: List[int]) -> Dict[int, Any]:
         0: 0
     }
 
-def decode1(data: List[int]) -> Dict[int, Any]:
+def decodeAccumulatorStatus(data: List[int]) -> Dict[int, Any]:
     return {
         1: pd.bigEndian(data[0:2]),
         2: pd.twosComp(pd.bigEndian(data[2:4])),
@@ -24,12 +24,10 @@ def decode1(data: List[int]) -> Dict[int, Any]:
         5: data[7]
     }
 
-def decode2(data: List[int]) -> Dict[int, Any]:
+def decodeBMSStatus(data: List[int]) -> Dict[int, Any]:
     return {
-        6: data[0],
-        7: data[1],
-        8: pd.bigEndian(data[2:4]),
-        9: pd.bigEndian(data[4:6]),
+        106: data[0],
+        107: pd.bigEndian(data[1:5]),
         10: pd.twosComp(data[6], 8),
         11: pd.twosComp(data[7], 8)
     }
