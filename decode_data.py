@@ -27,7 +27,7 @@ def decodeAccumulatorStatus(data: List[int]) -> Dict[int, Any]:
 def decodeBMSStatus(data: List[int]) -> Dict[int, Any]:
     return {
         106: data[0],
-        107: pd.bigEndian(data[1:5]),
+        107: pd.littleEndian(data[1:5]),
         10: pd.twosComp(data[5], 8),
         11: pd.twosComp(data[6], 8)
     }
