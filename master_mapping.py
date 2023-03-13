@@ -136,10 +136,6 @@ MESSAGE_IDS = {
         "description": "unknown 2019",
         "decoder": decodeMock,
     },
-    5: {
-        "description": "Is-Charging",
-        "decoder": decodeIsCharging,
-    },
     771: {
         "description": "strain gauge",
         "decoder": decode34,
@@ -150,11 +146,7 @@ MESSAGE_IDS = {
     },
     48879: {
         "description": "MPU States",
-        "decoder": decodeMPUStates,
-    },
-    10: {
-        "description": "Charging-State",
-        "decoder": decodeChargingState,
+        "decoder": decodeMPUDashboardInfo,
     }
 }
 
