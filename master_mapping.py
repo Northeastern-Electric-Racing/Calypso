@@ -579,5 +579,9 @@ DATA_IDS = {
     106: {
         "name": "BMS State",
         "units": ""
+    },
+    107: {
+        "name": "BMS Faults",
+        "units": ""
     }
 }
