@@ -28,8 +28,8 @@ def decodeBMSStatus(data: List[int]) -> Dict[int, Any]:
     return {
         106: data[0],
         107: pd.bigEndian(data[1:5]),
-        10: pd.twosComp(data[6], 8),
-        11: pd.twosComp(data[7], 8)
+        10: pd.twosComp(data[5], 8),
+        11: pd.twosComp(data[6], 8)
     }
 
 def decode3(data: List[int]) -> Dict[int, Any]:
@@ -252,17 +252,7 @@ def decode35(data: List[int]) -> Dict[int, Any]:
         104: data[4]
     }
 
-def decodeMPUStates(data: List[int]) -> Dict[int, Any]:
+def decodeMPUDashboardInfo(data: List[int]) -> Dict[int, Any]:
     return {
         105: pd.bigEndian(data[0])
-    }
-
-def decodeIsCharging(data: List[int]) -> Dict[int, Any]:
-    return {
-        106: data[0]
-    }
-
-def decodeChargingState(data: List[int]) -> Dict[int, Any]:
-    return {
-        107: data[0]
     }
