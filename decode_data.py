@@ -254,5 +254,5 @@ def decode35(data: List[int]) -> Dict[int, Any]:
 
 def decodeMPUDashboardInfo(data: List[int]) -> Dict[int, Any]:
     return {
-        105: pd.bigEndian(data[0])
+        105: data[0]
     }
