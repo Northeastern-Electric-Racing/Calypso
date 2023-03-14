@@ -144,7 +144,7 @@ MESSAGE_IDS = {
         "description": "wheel state",
         "decoder": decode35,
     },
-    48879: {
+    10: {
         "description": "MPU States",
         "decoder": decodeMPUDashboardInfo,
     }
