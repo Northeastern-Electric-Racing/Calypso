@@ -11,8 +11,9 @@ from message import Message
 
 class LogFormat(Enum):
     TEXTUAL1 = 1
-    TEXTUAL2 = 2
-    BINARY = 3
+    TEXTUAL1_LEGACY = 2
+    TEXTUAL2 = 3
+    BINARY = 4
 
 
 def processLine(line: str, format: LogFormat) -> Message:
@@ -21,6 +22,8 @@ def processLine(line: str, format: LogFormat) -> Message:
     """
     if format == LogFormat.TEXTUAL1:
         return _processTextual1(line)
+    if format == LogFormat.TEXTUAL1_LEGACY:
+        return _processTextual1Legacy(line)
     elif format == LogFormat.TEXTUAL2:
         return _processTextual2(line)
     elif format == LogFormat.BINARY:
@@ -30,6 +33,20 @@ def processLine(line: str, format: LogFormat) -> Message:
 
 
 def _processTextual1(line: str) -> Message:
+    """
+    Processes a line of data in the format "Timestamp id length [data1,data2,...]"
+    Example line format: 1679511802367 514 8 [54,0,10,0,0,0,0,0]
+    """
+    fields = line.strip().split(" ")
+    timestamp = datetime.fromtimestamp(float(fields[0]) / 1000)
+    id = int(fields[1])
+    length = int(fields[2])
+    data = fields[3][1:-1].split(",") # remove commas and brackets at start and end
+    int_data = [int(x) for x in data]
+    return Message(timestamp, id, int_data)
+
+
+def _processTextual1Legacy(line: str) -> Message:
     """
     Processes a line of data in the format "Timestamp id length [data1,data2,...]"
     Example line format: 2021-01-01T00:00:00.003Z 514 8 [54,0,10,0,0,0,0,0]

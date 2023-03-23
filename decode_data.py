@@ -256,3 +256,22 @@ def decodeMPUDashboardInfo(data: List[int]) -> Dict[int, Any]:
     return {
         105: data[0]
     }
+
+
+def decodeGPS1(data: List[int]) -> Dict[int, Any]:
+    return {
+        108: pd.twosComp(pd.littleEndian(data[0:4]), 32) / 10000000, # Longitude in degrees * 1e-7 (Get rid of multiplier)
+        109: pd.twosComp(pd.littleEndian(data[4:8]), 32) / 10000000 # Latitude in degrees * 1e-7 (Get rid of multiplier)
+    }
+
+def decodeGPS2(data: List[int]) -> Dict[int, Any]:
+    return {
+        110: pd.twosComp(pd.littleEndian(data[0:4]), 32),
+        111: pd.twosComp(pd.littleEndian(data[4:8]), 32) / 1000 # Altitude in mm (transform to m)
+    }
+
+def decodeGPS3(data: List[int]) -> Dict[int, Any]:
+    return {
+        112: pd.twosComp(pd.littleEndian(data[0:4]), 32) / 1000, # Ground speed in mm/sec (transform to m/s)
+        113: pd.twosComp(pd.littleEndian(data[4:8]), 32) / 100000 # Heading in degrees * 1e-5 (Get rid of multiplier)
+    }
