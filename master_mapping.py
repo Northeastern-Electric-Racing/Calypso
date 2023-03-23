@@ -147,6 +147,18 @@ MESSAGE_IDS = {
     10: {
         "description": "MPU States",
         "decoder": decodeMPUDashboardInfo,
+    },
+    772: {
+        "description": "GPS Data 1",
+        "decoder": decodeGPS1,
+    },
+    773: {
+        "description": "GPS Data 2",
+        "decoder": decodeGPS2,
+    },
+    774: {
+        "description": "GPS Data 3",
+        "decoder": decodeGPS3,
     }
 }
 
@@ -583,5 +595,29 @@ DATA_IDS = {
     107: {
         "name": "BMS Faults",
         "units": ""
-    }
+    },
+    108: {
+        "name": "Latitude",
+        "units": "Deg"
+    },
+    109: {
+        "name": "Longitude",
+        "units": "Deg"
+    },
+    110: {
+        "name": "GPS Fix Status",
+        "units": ""
+    },
+    111: {
+        "name": "Altitude",
+        "units": "M"
+    },
+    112: {
+        "name": "Ground Speed",
+        "units": "M/S"
+    },
+    113: {
+        "name": "Heading Direction",
+        "units": "Deg"
+    },
 }
