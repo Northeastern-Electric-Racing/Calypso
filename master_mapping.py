@@ -159,6 +159,10 @@ MESSAGE_IDS = {
     774: {
         "description": "GPS Data 3",
         "decoder": decodeGPS3,
+    },
+    8: {
+        "description": "Cell Temperatures",
+        "decoder": decodeCellTemps,
     }
 }
 
@@ -620,4 +624,24 @@ DATA_IDS = {
         "name": "Heading Direction",
         "units": "Deg"
     },
+    114: {
+        "name": "High Cell Temp",
+        "units": "C"
+    },
+    115: {
+        "name": "High Cell Temp ID",
+        "units": "BIN"
+    },
+    116: {
+        "name": "Low Cell Temp",
+        "units": "C"
+    },
+    117: {
+        "name": "Low Cell Temp ID",
+        "units": "BIN"
+    },
+    118: {
+        "name": "Average Cell Temp",
+        "units": "C"
+    }
 }

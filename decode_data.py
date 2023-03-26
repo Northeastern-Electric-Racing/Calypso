@@ -275,3 +275,12 @@ def decodeGPS3(data: List[int]) -> Dict[int, Any]:
         112: pd.twosComp(pd.littleEndian(data[0:4]), 32) / 1000, # Ground speed in mm/sec (transform to m/s)
         113: pd.twosComp(pd.littleEndian(data[4:8]), 32) / 100000 # Heading in degrees * 1e-5 (Get rid of multiplier)
     }
+
+def decodeCellTemps(data: List[int]) -> Dict[int, Any]:
+    return {
+        114: pd.bigEndian(data[0:2]),
+        115: data[2],
+        116: pd.bigEndian(data[3:5]),
+        117: data[5],
+        118: pd.bigEndian(data[6:8]),
+    }
