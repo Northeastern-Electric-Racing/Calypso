@@ -282,7 +282,7 @@ DATA_IDS = {
     },
     29: {
         "name": "Torque Shudder",
-        "units": "",
+        "units": "N-m",
     },
     30: {
         "name": "Analog Input 1",
@@ -434,51 +434,51 @@ DATA_IDS = {
     },
     67: {
         "name": "Inverter Run Mode",
-        "units": "",
+        "units": "BIN",
     },
     68: {
         "name": "Inverter Active Discharge State",
-        "units": "",
+        "units": "BIN",
     },
     69: {
         "name": "Inverter Command Mode",
-        "units": "",
+        "units": "BIN",
     },
     70: {
         "name": "Inverter Enable State",
-        "units": "",
+        "units": "BIN",
     },
     71: {
         "name": "Inverter Enable Lockout",
-        "units": "",
+        "units": "BIN",
     },
     72: { 
         "name": "Direction Command", 
-        "units": "" 
+        "units": "BIN"
     },
     73: {
         "name": "BMS Active",
-        "units": "",
+        "units": "BIN",
     },
     74: {
         "name": "BMS Limiting Torque",
-        "units": "",
+        "units": "BIN",
     },
     75: {
         "name": "POST Fault Lo",
-        "units": "",
+        "units": "BIN",
     },
     76: {
         "name": "POST Fault Hi",
-        "units": "",
+        "units": "BIN",
     },
     77: {
         "name": "Run Fault Lo",
-        "units": "",
+        "units": "BIN",
     },
     78: {
         "name": "Run Fault Hi",
-        "units": "",
+        "units": "BIN",
     },
     79: {
         "name": "Commanded Torque",
@@ -502,19 +502,19 @@ DATA_IDS = {
     },
     84: {
         "name": "Direction Command",
-        "units": "",
+        "units": "BIN",
     },
     85: {
         "name": "Inverter Enable",
-        "units": "",
+        "units": "BIN",
     },
     86: {
         "name": "Inverter Discharge",
-        "units": "",
+        "units": "BIN",
     },
     87: {
         "name": "Speed Mode Enable",
-        "units": "",
+        "units": "BIN",
     },
     88: {
         "name": "Commanded Torque Limit",
