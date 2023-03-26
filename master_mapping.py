@@ -610,11 +610,11 @@ DATA_IDS = {
     },
     111: {
         "name": "Altitude",
-        "units": "M"
+        "units": "m"
     },
     112: {
         "name": "Ground Speed",
-        "units": "M/S"
+        "units": "m/s"
     },
     113: {
         "name": "Heading Direction",
