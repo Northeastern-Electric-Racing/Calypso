@@ -38,10 +38,10 @@ def decode3(data: List[int]) -> Dict[int, Any]:
     }
 
 def decodeCellVoltages(data: List[int]) -> Dict[int, Any]:
-    high_cell_volt_chip_number = bin(data[2])[2:4]
-    high_cell_volt_cell_number = bin(data[2])[4:8]
-    low_cell_volt_chip_number = bin(data[5])[2:4]
-    low_cell_volt_cell_number = bin(data[5])[4:8]
+    high_cell_volt_chip_number = (data[2] >> 0) & 15
+    high_cell_volt_cell_number = (data[2] >> 4) & 15
+    low_cell_volt_chip_number = (data[5] >> 0) & 15
+    low_cell_volt_cell_number = (data[5] >> 4) & 15
     return {
         13: pd.bigEndian(data[0:2]),
         121: high_cell_volt_chip_number,
@@ -283,10 +283,10 @@ def decodeGPS3(data: List[int]) -> Dict[int, Any]:
     }
 
 def decodeCellTemps(data: List[int]) -> Dict[int, Any]:
-    high_cell_temp_chip_number = bin(data[2])[2:4]
-    high_cell_temp_cell_number = bin(data[2])[4:8]
-    low_cell_temp_chip_number = bin(data[5])[2:4]
-    low_cell_temp_cell_number = bin(data[5])[4:8]
+    high_cell_temp_chip_number = (data[2] >> 0) & 15
+    high_cell_temp_cell_number = (data[2] >> 4) & 15
+    low_cell_temp_chip_number = (data[5] >> 0) & 15
+    low_cell_temp_cell_number = (data[5] >> 4) & 15
 
     return {
         114: pd.bigEndian(data[0:2]),
