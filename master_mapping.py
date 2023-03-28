@@ -630,7 +630,7 @@ DATA_IDS = {
     },
     115: {
         "name": "High Cell Temp ID",
-        "units": "BIN"
+        "units": ""
     },
     116: {
         "name": "Low Cell Temp",
@@ -638,7 +638,7 @@ DATA_IDS = {
     },
     117: {
         "name": "Low Cell Temp ID",
-        "units": "BIN"
+        "units": ""
     },
     118: {
         "name": "Average Cell Temp",
