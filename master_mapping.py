@@ -22,7 +22,7 @@ MESSAGE_IDS = {
     },
     4: {
         "description": "cell data",
-        "decoder": decode4
+        "decoder": decodeCellVoltages
     },
     160: {
         "description": "temperatures (igbt modules, gate driver board)",
@@ -159,6 +159,10 @@ MESSAGE_IDS = {
     774: {
         "description": "GPS Data 3",
         "decoder": decodeGPS3,
+    },
+    8: {
+        "description": "Cell Temperatures",
+        "decoder": decodeCellTemps,
     }
 }
 
@@ -620,4 +624,48 @@ DATA_IDS = {
         "name": "Heading Direction",
         "units": "Deg"
     },
+    114: {
+        "name": "High Cell Temp",
+        "units": "C"
+    },
+    115: {
+        "name": "High Cell Temp Chip Number",
+        "units": ""
+    },
+    116: {
+        "name": "High Cell Temp Cell Number",
+        "units": ""
+    }, 
+    117: {
+        "name": "Low Cell Temp",
+        "units": "C"
+    },
+    118: {
+        "name": "Low Cell Temp Chip Number",
+        "units": ""
+    },
+    119: {
+        "name": "Low Cell Temp Cell Number",
+        "units": ""
+    },
+    120: {
+        "name": "Average Cell Temp",
+        "units": "C"
+    },
+    121: {
+        "name": "High Cell Voltage Chip Number",
+        "units": ""
+    },
+    122: {
+        "name": "High Cell Voltage Cell Number",
+        "units": ""
+    },
+    123: {
+        "name": "Low Cell Voltage Chip Number",
+        "units": ""
+    },
+    124: {
+        "name": "Low Cell Voltage Cell Number",
+        "units": ""
+    }
 }
