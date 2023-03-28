@@ -629,11 +629,11 @@ DATA_IDS = {
         "units": "C"
     },
     115: {
-        "name": "High Cell Temp Chip",
+        "name": "High Cell Temp Chip Number",
         "units": ""
     },
     116: {
-        "name": "Low Cell Temp Id",
+        "name": "Low Cell Temp Cell Number",
         "units": ""
     }, 
     117: {
@@ -641,11 +641,11 @@ DATA_IDS = {
         "units": "C"
     },
     118: {
-        "name": "Low Cell Temp Chip",
+        "name": "Low Cell Temp Chip Number",
         "units": ""
     },
     119: {
-        "name": "High Cell Temp Id",
+        "name": "High Cell Temp Cell Number",
         "units": ""
     },
     120: {
