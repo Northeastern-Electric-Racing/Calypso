@@ -190,15 +190,15 @@ DATA_IDS = {
     },
     6: {
         "name": "Failsafe Statuses",
-        "units": "",
+        "units": "HEX",
     },
     7: {
         "name": "DTC Status 1",
-        "units": "",
+        "units": "HEX",
     },
     8: {
         "name": "DTC Status 2",
-        "units": "",
+        "units": "HEX",
     },
     9: {
         "name": "Current Limits Status",
@@ -214,7 +214,7 @@ DATA_IDS = {
     },
     12: {
         "name": "MPE State",
-        "units": "",
+        "units": "BIN",
     },
     13: {
         "name": "High Cell Voltage",
@@ -282,7 +282,7 @@ DATA_IDS = {
     },
     29: {
         "name": "Torque Shudder",
-        "units": "",
+        "units": "N-m",
     },
     30: {
         "name": "Analog Input 1",
@@ -310,35 +310,35 @@ DATA_IDS = {
     },
     36: {
         "name": "Digital Input 1",
-        "units": "",
+        "units": "BIN",
     },
     37: {
         "name": "Digital Input 2",
-        "units": "",
+        "units": "BIN",
     },
     38: {
         "name": "Digital Input 3",
-        "units": "",
+        "units": "BIN",
     },
     39: {
         "name": "Digital Input 4",
-        "units": "",
+        "units": "BIN",
     },
     40: {
         "name": "Digital Input 5",
-        "units": "",
+        "units": "BIN",
     },
     41: {
         "name": "Digital Input 6",
-        "units": "",
+        "units": "BIN",
     },
     42: {
         "name": "Digital Input 7",
-        "units": "",
+        "units": "BIN",
     },
     43: {
         "name": "Digital Input 8",
-        "units": "",
+        "units": "BIN",
     },
     44: {
         "name": "Motor Angle (Electrical)",
@@ -430,55 +430,55 @@ DATA_IDS = {
     },
     66: {
         "name": "Relay State",
-        "units": "",
+        "units": "BIN",
     },
     67: {
         "name": "Inverter Run Mode",
-        "units": "",
+        "units": "BIN",
     },
     68: {
         "name": "Inverter Active Discharge State",
-        "units": "",
+        "units": "BIN",
     },
     69: {
         "name": "Inverter Command Mode",
-        "units": "",
+        "units": "BIN",
     },
     70: {
         "name": "Inverter Enable State",
-        "units": "",
+        "units": "BIN",
     },
     71: {
         "name": "Inverter Enable Lockout",
-        "units": "",
+        "units": "BIN",
     },
     72: { 
         "name": "Direction Command", 
-        "units": "" 
+        "units": "BIN"
     },
     73: {
         "name": "BMS Active",
-        "units": "",
+        "units": "BIN",
     },
     74: {
         "name": "BMS Limiting Torque",
-        "units": "",
+        "units": "BIN",
     },
     75: {
         "name": "POST Fault Lo",
-        "units": "",
+        "units": "BIN",
     },
     76: {
         "name": "POST Fault Hi",
-        "units": "",
+        "units": "BIN",
     },
     77: {
         "name": "Run Fault Lo",
-        "units": "",
+        "units": "BIN",
     },
     78: {
         "name": "Run Fault Hi",
-        "units": "",
+        "units": "BIN",
     },
     79: {
         "name": "Commanded Torque",
@@ -502,19 +502,19 @@ DATA_IDS = {
     },
     84: {
         "name": "Direction Command",
-        "units": "",
+        "units": "BIN",
     },
     85: {
         "name": "Inverter Enable",
-        "units": "",
+        "units": "BIN",
     },
     86: {
         "name": "Inverter Discharge",
-        "units": "",
+        "units": "BIN",
     },
     87: {
         "name": "Speed Mode Enable",
-        "units": "",
+        "units": "BIN",
     },
     88: {
         "name": "Commanded Torque Limit",
@@ -582,7 +582,7 @@ DATA_IDS = {
     },
     104: {
         "name": "Wheel Buttons",
-        "units": "",
+        "units": "BIN",
     },
     105: {
         "name": "MPU Mode State",
@@ -594,7 +594,7 @@ DATA_IDS = {
     },
     107: {
         "name": "BMS Faults",
-        "units": ""
+        "units": "HEX"
     },
     108: {
         "name": "Latitude",
@@ -610,11 +610,11 @@ DATA_IDS = {
     },
     111: {
         "name": "Altitude",
-        "units": "M"
+        "units": "m"
     },
     112: {
         "name": "Ground Speed",
-        "units": "M/S"
+        "units": "m/s"
     },
     113: {
         "name": "Heading Direction",
