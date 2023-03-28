@@ -633,7 +633,7 @@ DATA_IDS = {
         "units": ""
     },
     116: {
-        "name": "Low Cell Temp Cell Number",
+        "name": "High Cell Temp Cell Number",
         "units": ""
     }, 
     117: {
@@ -645,7 +645,7 @@ DATA_IDS = {
         "units": ""
     },
     119: {
-        "name": "High Cell Temp Cell Number",
+        "name": "Low Cell Temp Cell Number",
         "units": ""
     },
     120: {
