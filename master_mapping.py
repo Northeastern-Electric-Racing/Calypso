@@ -22,7 +22,7 @@ MESSAGE_IDS = {
     },
     4: {
         "description": "cell data",
-        "decoder": decode4
+        "decoder": decodeCellVoltages
     },
     160: {
         "description": "temperatures (igbt modules, gate driver board)",
