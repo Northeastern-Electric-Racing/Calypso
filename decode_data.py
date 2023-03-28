@@ -37,12 +37,18 @@ def decode3(data: List[int]) -> Dict[int, Any]:
         12: data[0]
     }
 
-def decode4(data: List[int]) -> Dict[int, Any]:
+def decodeCellVoltages(data: List[int]) -> Dict[int, Any]:
+    high_cell_volt_chip_number = bin(data[2])[2:4]
+    high_cell_volt_cell_number = bin(data[2])[4:8]
+    low_cell_volt_chip_number = bin(data[5])[2:4]
+    low_cell_volt_cell_number = bin(data[5])[4:8]
     return {
         13: pd.bigEndian(data[0:2]),
-        14: data[2],
+        121: high_cell_volt_chip_number,
+        122: high_cell_volt_cell_number,
         15: pd.bigEndian(data[3:5]),
-        16: data[5],
+        123: low_cell_volt_chip_number,
+        124: low_cell_volt_cell_number,
         17: pd.bigEndian(data[6:8])
     }
 
@@ -277,10 +283,17 @@ def decodeGPS3(data: List[int]) -> Dict[int, Any]:
     }
 
 def decodeCellTemps(data: List[int]) -> Dict[int, Any]:
+    high_cell_temp_chip_number = bin(data[2])[2:4]
+    high_cell_temp_cell_number = bin(data[2])[4:8]
+    low_cell_temp_chip_number = bin(data[5])[2:4]
+    low_cell_temp_cell_number = bin(data[5])[4:8]
+
     return {
         114: pd.bigEndian(data[0:2]),
-        115: data[2],
-        116: pd.bigEndian(data[3:5]),
-        117: data[5],
-        118: pd.bigEndian(data[6:8]),
+        115: high_cell_temp_chip_number,
+        116: high_cell_temp_cell_number,
+        117: pd.bigEndian(data[3:5]),
+        118: low_cell_temp_chip_number,
+        119: low_cell_temp_cell_number,
+        120: pd.bigEndian(data[6:8]),
     }

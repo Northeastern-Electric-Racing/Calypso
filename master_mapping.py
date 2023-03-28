@@ -629,19 +629,43 @@ DATA_IDS = {
         "units": "C"
     },
     115: {
-        "name": "High Cell Temp ID",
+        "name": "High Cell Temp Chip",
         "units": ""
     },
     116: {
+        "name": "Low Cell Temp Id",
+        "units": ""
+    }, 
+    117: {
         "name": "Low Cell Temp",
         "units": "C"
     },
-    117: {
-        "name": "Low Cell Temp ID",
+    118: {
+        "name": "Low Cell Temp Chip",
         "units": ""
     },
-    118: {
+    119: {
+        "name": "High Cell Temp Id",
+        "units": ""
+    },
+    120: {
         "name": "Average Cell Temp",
         "units": "C"
+    },
+    121: {
+        "name": "High Cell Voltage Chip Number",
+        "units": ""
+    },
+    122: {
+        "name": "High Cell Voltage Cell Number",
+        "units": ""
+    },
+    123: {
+        "name": "Low Cell Voltage Chip Number",
+        "units": ""
+    },
+    124: {
+        "name": "Low Cell Voltage Cell Number",
+        "units": ""
     }
 }
