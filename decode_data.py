@@ -3,7 +3,7 @@ This file specifies methods to decode messages into the many pieces of data they
 """
 
 from typing import Any, Dict, List
-
+import numpy as np
 from data import (
     ProcessData as pd,
     FormatData as fd,
@@ -209,10 +209,13 @@ def decode19(data: List[int]) -> Dict[int, Any]:
 
 def decode20(data: List[int]) -> Dict[int, Any]:
     decoded_data = pd.defaultDecode(data)
+    matrixData = np.mat(decoded_data[0:3])
+    transformMatrix = np.mat([[np.cos(np.deg2rad(70)), np.sin(np.deg2rad(70)), 0], [-np.sin(np.deg2rad(70)), np.cos(np.deg2rad(70)), 0], [0, 0, 1]])
+    transformedData = matrixData * transformMatrix
     return {
-        91: decoded_data[0],
-        92: decoded_data[1],
-        93: decoded_data[2]
+        91: transformedData[0],
+        92: transformedData[1],
+        93: transformedData[2]
     }
 
 def decode21(data: List[int]) -> Dict[int, Any]:
