@@ -300,8 +300,8 @@ def decodeCellTemps(data: List[int]) -> Dict[int, Any]:
 
 def decodeSegmentTemps(data: List[int]) -> Dict[int, Any]:
     return {
-        125: data[0],
-        126: data[1],
-        127: data[2],
-        128: data[3],
+        125: pd.twosComp(data[0], 8),
+        126: pd.twosComp(data[1], 8),
+        127: pd.twosComp(data[2], 8),
+        128: pd.twosComp(data[3], 8),
     }
