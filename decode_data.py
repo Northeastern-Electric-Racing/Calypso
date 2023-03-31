@@ -210,7 +210,7 @@ def decode19(data: List[int]) -> Dict[int, Any]:
 def decode20(data: List[int]) -> Dict[int, Any]:
     decoded_data = pd.defaultDecode(data)
     matrixData = np.mat(decoded_data[0:3])
-    transformMatrix = np.mat([[np.cos(np.deg2rad(70)), np.sin(np.deg2rad(70)), 0], [-np.sin(np.deg2rad(70)), np.cos(np.deg2rad(70)), 0], [0, 0, 1]])
+    transformMatrix = np.mat([[1, 0, 0], [0, np.cos(np.deg2rad(20)), np.sin(np.deg2rad(20))], [0, -np.sin(np.deg2rad(20)), np.cos(np.deg2rad(20))]])
     transformedData = transformMatrix * matrixData
     return {
         91: transformedData[0],
