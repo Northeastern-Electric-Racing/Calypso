@@ -305,3 +305,8 @@ def decodeSegmentTemps(data: List[int]) -> Dict[int, Any]:
         127: pd.twosComp(data[2], 8),
         128: pd.twosComp(data[3], 8),
     }
+
+def decodeLoggingStatus(data: List[int]) -> Dict[int, Any]:
+    return {
+        129: data[0]
+    }

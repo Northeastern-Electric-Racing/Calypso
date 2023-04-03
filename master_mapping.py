@@ -167,6 +167,10 @@ MESSAGE_IDS = {
     9: {
         "description": "Segment Temperatures",
         "decoder": decodeSegmentTemps,
+    },
+    775: {
+        "description": "Logging Status",
+        "decoder": decodeLoggingStatus,
     }
 }
 
@@ -687,5 +691,9 @@ DATA_IDS = {
     128: {
         "name": "Segment 4 Average Temperature",
         "units": "C"
-    }
+    },
+    129: {
+        "name": "Logging Status",
+        "units": ""
+    },
 }
