@@ -297,3 +297,8 @@ def decodeCellTemps(data: List[int]) -> Dict[int, Any]:
         119: low_cell_temp_cell_number,
         120: pd.bigEndian(data[6:8]),
     }
+
+def decodeLoggingStatus(data: List[int]) -> Dict[int, Any]:
+    return {
+        129: data[0]
+    }

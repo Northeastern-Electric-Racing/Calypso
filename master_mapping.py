@@ -163,6 +163,10 @@ MESSAGE_IDS = {
     8: {
         "description": "Cell Temperatures",
         "decoder": decodeCellTemps,
+    },
+    775: {
+        "description": "Logging Status",
+        "decoder": decodeLoggingStatus,
     }
 }
 
@@ -667,5 +671,9 @@ DATA_IDS = {
     124: {
         "name": "Low Cell Voltage Cell Number",
         "units": ""
-    }
+    },
+    129: {
+        "name": "Logging Status",
+        "units": ""
+    },
 }
