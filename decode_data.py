@@ -298,6 +298,14 @@ def decodeCellTemps(data: List[int]) -> Dict[int, Any]:
         120: pd.bigEndian(data[6:8]),
     }
 
+def decodeSegmentTemps(data: List[int]) -> Dict[int, Any]:
+    return {
+        125: pd.twosComp(data[0], 8),
+        126: pd.twosComp(data[1], 8),
+        127: pd.twosComp(data[2], 8),
+        128: pd.twosComp(data[3], 8),
+    }
+
 def decodeLoggingStatus(data: List[int]) -> Dict[int, Any]:
     return {
         129: data[0]

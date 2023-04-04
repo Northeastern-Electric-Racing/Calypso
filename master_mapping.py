@@ -164,6 +164,10 @@ MESSAGE_IDS = {
         "description": "Cell Temperatures",
         "decoder": decodeCellTemps,
     },
+    9: {
+        "description": "Segment Temperatures",
+        "decoder": decodeSegmentTemps,
+    },
     775: {
         "description": "Logging Status",
         "decoder": decodeLoggingStatus,
@@ -671,6 +675,22 @@ DATA_IDS = {
     124: {
         "name": "Low Cell Voltage Cell Number",
         "units": ""
+    },
+    125: {
+        "name": "Segment 1 Average Temperature",
+        "units": "C"
+    },
+    126: {
+        "name": "Segment 2 Average Temperature",
+        "units": "C"
+    },
+    127: {
+        "name": "Segment 3 Average Temperature",
+        "units": "C"
+    },
+    128: {
+        "name": "Segment 4 Average Temperature",
+        "units": "C"
     },
     129: {
         "name": "Logging Status",
