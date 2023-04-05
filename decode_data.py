@@ -293,13 +293,13 @@ def decodeCellTemps(data: List[int]) -> Dict[int, Any]:
     low_cell_temp_cell_number = (data[5] >> 4) & 15
 
     return {
-        114: pd.twosComp(pd.littleEndian(data[0:2])),
+        114: pd.twosComp(pd.littleEndian(data[0:2], 16)),
         115: high_cell_temp_chip_number,
         116: high_cell_temp_cell_number,
-        117: pd.twosComp(pd.littleEndian(data[3:5])),
+        117: pd.twosComp(pd.littleEndian(data[3:5], 16)),
         118: low_cell_temp_chip_number,
         119: low_cell_temp_cell_number,
-        120: pd.twosComp(pd.littleEndian(data[6:8])),
+        120: pd.twosComp(pd.littleEndian(data[6:8], 16)),
     }
 
 def decodeSegmentTemps(data: List[int]) -> Dict[int, Any]:
