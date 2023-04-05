@@ -287,7 +287,8 @@ def decodeGPS3(data: List[int]) -> Dict[int, Any]:
     }
 
 def decodeCellTemps(data: List[int]) -> Dict[int, Any]:
-    decoded_data = pd.defaultDecode(data)
+    parsed_vals = [pd.littleEndian(val) for val in data]
+    decoded_data = [pd.twosComp(val) for val in parsed_vals]
     high_cell_temp_chip_number = (decoded_data[2] >> 0) & 15
     high_cell_temp_cell_number = (decoded_data[2] >> 4) & 15
     low_cell_temp_chip_number = (decoded_data[5] >> 0) & 15
