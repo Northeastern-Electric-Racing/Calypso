@@ -214,9 +214,9 @@ def decode20(data: List[int]) -> Dict[int, Any]:
     transformMatrix = np.mat([[1, 0, 0], [0, np.cos(np.deg2rad(70)), np.sin(np.deg2rad(70))], [0, -np.sin(np.deg2rad(70)), np.cos(np.deg2rad(70))]])
     transformedData = transformMatrix * matrixData
     return {
-        91: transformedData[0][0],
-        92: transformedData[1][0],
-        93: transformedData[2][0]
+        91: transformedData[0][0][0],
+        92: transformedData[1][0][0],
+        93: transformedData[2][0][0]
     }
 
 def decode21(data: List[int]) -> Dict[int, Any]:
