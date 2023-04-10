@@ -207,16 +207,17 @@ def decode19(data: List[int]) -> Dict[int, Any]:
         90: pd.littleEndian(data[2:4])
     }
 
-def decode20(data: List[int]) -> Dict[int, Any]:
+def decodeAcceleromterData(data: List[int]) -> Dict[int, Any]:
+    # The accelerometer is mounted at a 70 degree angle to the horizontal, we need to rotate the data to account for this
     decoded_data = pd.defaultDecode(data)
     converted_data = [val*0.0029 for val in decoded_data]
     matrixData = np.matrix.transpose(np.mat(converted_data[0:3]))
     transformMatrix = np.mat([[1, 0, 0], [0, np.cos(np.deg2rad(70)), np.sin(np.deg2rad(70))], [0, -np.sin(np.deg2rad(70)), np.cos(np.deg2rad(70))]])
     transformedData = transformMatrix * matrixData
     return {
-        91: transformedData[0][0][0],
-        92: transformedData[1][0][0],
-        93: transformedData[2][0][0]
+        91: float(transformedData[0][0]),
+        92: float(transformedData[1][0]),
+        93: float(transformedData[2][0])
     }
 
 def decode21(data: List[int]) -> Dict[int, Any]:

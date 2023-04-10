@@ -86,7 +86,7 @@ MESSAGE_IDS = {
     },
     768: {
         "description": "nerduino accelerometer",
-        "decoder": decode20,
+        "decoder": decodeAcceleromterData,
     },
     769: {
         "description": "nerduino humidity",
