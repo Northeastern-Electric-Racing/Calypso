@@ -18,7 +18,7 @@ def decodeMock(data: List[int]) -> Dict[int, Any]:
 def decodeAccumulatorStatus(data: List[int]) -> Dict[int, Any]:
     return {
         1: pd.bigEndian(data[0:2]),
-        2: pd.twosComp(pd.bigEndian(data[2:4])) / 10,
+        2: -pd.twosComp(pd.bigEndian(data[2:4])) / 10,
         3: pd.bigEndian(data[4:6]),
         4: data[6],
         5: data[7]
