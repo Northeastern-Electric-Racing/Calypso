@@ -265,7 +265,11 @@ def decode35(data: List[int]) -> Dict[int, Any]:
 
 def decodeMPUDashboardInfo(data: List[int]) -> Dict[int, Any]:
     return {
-        105: data[0]
+        105: data[0],
+        130: data[1],
+        131: data[2],
+        132: data[3],
+        133: data[4],
     }
 
 

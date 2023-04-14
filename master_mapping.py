@@ -696,4 +696,20 @@ DATA_IDS = {
         "name": "Logging Status",
         "units": ""
     },
+    130: {
+        "name": "Accumulator Fan Percentage",
+        "units": "%"
+    },
+    131: {
+        "name": "Motor Fan Percentage",
+        "units": "%"
+    },
+    132: {
+        "name": "Torque Limit Percentage",
+        "units": "%"
+    },
+    133: {
+        "name": "Regen Strength Value",
+        "units": ""
+    }
 }
