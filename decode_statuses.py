@@ -6,16 +6,16 @@ from data import Data
 # Mapping from data IDs to the status bits they encode
 # Each data ID contains a dict with keys that are bit names and values that are the indexes
 STATUS_MAP = {
-    6: { # Failsafe Statuses
-    },
-    7: { # DTC Status 1
-    },
-    8: { # DTC Status 2
-    },
-    9: { # Current Limits Status
-    },
-    12: { # MPE State
-    },
+    # 6: { # Failsafe Statuses
+    # },
+    # 7: { # DTC Status 1
+    # },
+    # 8: { # DTC Status 2
+    # },
+    # 9: { # Current Limits Status
+    # },
+    # 12: { # MPE State
+    # },
     64: { # VSM State
         "VSM Start State": 0,
         "Pre-charge Init State": 1,
@@ -136,33 +136,53 @@ STATUS_MAP = {
     87: { # Speed Mode Enable
         "Speed Mode Enable": 0
     },
-    97: { # Cell Voltage Info
-    }
+    # 97: { # Cell Voltage Info
+    # }
+    107: { # BMS Faults
+        "Cells Not Balancing": 0,
+        "Cell Voltage Too High": 1,
+        "Cell Voltage Too Low": 2,
+        "Pack Too High": 3,
+        "Open Wiring Fault": 4,
+        "Internal Software Fault": 5,
+        "Internal Thermal Fault": 6,
+        "Internal Cell Comm Fault": 7,
+        "Current Sensor Fault": 8,
+        "Charge Reading Mismatch": 9,
+        "Low Cell Voltage": 10,
+        "Weak Pack Fault": 11,
+        "External Can Fault": 12,
+        "Discharge Limit Enforcement Fault": 13,
+        "Charger Safety Relay": 14,
+        "Battery Can Fault": 15,
+        "Charger Can Fault": 16,
+        "Charge Limit Enforcement Fault": 17
+    },
 }
 
 
-def getStatus(data: Data, name: str) -> Any:
+def getStatus(data_id: int, data_value: Any, name: str) -> int:
     """
-    Gets the specified status of the given data piece.
+    Gets the specified status of the given data piece. Returns a bit value.
     """
-    if data.id not in STATUS_MAP:
+    if data_id not in STATUS_MAP:
         raise KeyError("Data ID has no associated status mapping")
-    bitmap = STATUS_MAP[data.id]
+    bitmap = STATUS_MAP[data_id]
 
     if name not in bitmap:
         raise KeyError("Status name could not be found in the given data point")
     index = bitmap[name]
 
-    return (data.value >> index) & 1
+    return (data_value >> index) & 1
 
 
-def getStatuses(data: Data) -> Any:
+def getStatuses(data_id: int, data_value: Any) -> Any:
     """
     Gets all the statuses for the given data piece.
     """
-    if data.id not in STATUS_MAP:
+    if data_id not in STATUS_MAP:
         raise KeyError("Data ID has no associated status mapping")
-    bitmap = STATUS_MAP[data.id]
+    bitmap = STATUS_MAP[data_id]
 
     # Convert each dict value to the bit value at the index
-    return {name:(data.value >> index) & 1 for (name, index) in bitmap.items()}
+    return {name:(data_value >> index) & 1 for (name, index) in bitmap.items()}
