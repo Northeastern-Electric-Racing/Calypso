@@ -3,7 +3,7 @@ This file specifies methods to decode messages into the many pieces of data they
 """
 
 from typing import Any, Dict, List
-
+import numpy as np
 from data import (
     ProcessData as pd,
     FormatData as fd,
@@ -207,12 +207,17 @@ def decode19(data: List[int]) -> Dict[int, Any]:
         90: pd.littleEndian(data[2:4])
     }
 
-def decode20(data: List[int]) -> Dict[int, Any]:
+def decodeAcceleromterData(data: List[int]) -> Dict[int, Any]:
+    # The accelerometer is mounted at a 70 degree angle to the horizontal, we need to rotate the data to account for this
     decoded_data = pd.defaultDecode(data)
+    converted_data = [val*0.0029 for val in decoded_data]
+    matrixData = np.matrix.transpose(np.mat(converted_data[0:3]))
+    transformMatrix = np.mat([[1, 0, 0], [0, np.cos(np.deg2rad(70)), np.sin(np.deg2rad(70))], [0, -np.sin(np.deg2rad(70)), np.cos(np.deg2rad(70))]])
+    transformedData = transformMatrix * matrixData
     return {
-        91: decoded_data[0],
-        92: decoded_data[1],
-        93: decoded_data[2]
+        91: float(transformedData[0][0]),
+        92: float(transformedData[1][0]),
+        93: float(transformedData[2][0])
     }
 
 def decode21(data: List[int]) -> Dict[int, Any]:
@@ -260,7 +265,11 @@ def decode35(data: List[int]) -> Dict[int, Any]:
 
 def decodeMPUDashboardInfo(data: List[int]) -> Dict[int, Any]:
     return {
-        105: data[0]
+        105: data[0],
+        130: data[1],
+        131: data[2],
+        132: data[3],
+        133: data[4],
     }
 
 
@@ -289,13 +298,13 @@ def decodeCellTemps(data: List[int]) -> Dict[int, Any]:
     low_cell_temp_cell_number = (data[5] >> 4) & 15
 
     return {
-        114: pd.bigEndian(data[0:2]),
+        114: pd.twosComp(pd.littleEndian(data[0:2], 16)),
         115: high_cell_temp_chip_number,
         116: high_cell_temp_cell_number,
-        117: pd.bigEndian(data[3:5]),
+        117: pd.twosComp(pd.littleEndian(data[3:5], 16)),
         118: low_cell_temp_chip_number,
         119: low_cell_temp_cell_number,
-        120: pd.bigEndian(data[6:8]),
+        120: pd.twosComp(pd.littleEndian(data[6:8], 16)),
     }
 
 def decodeSegmentTemps(data: List[int]) -> Dict[int, Any]:
