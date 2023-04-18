@@ -171,6 +171,10 @@ MESSAGE_IDS = {
     775: {
         "description": "Logging Status",
         "decoder": decodeLoggingStatus,
+    },
+    177: {
+        "description": "unknown 177",
+        "decoder": decodeMock
     }
 }
 
