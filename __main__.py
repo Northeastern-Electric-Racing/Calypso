@@ -40,7 +40,6 @@ def getLineCount(filepaths: List[str]) -> int:
                     return int(total_size / (tested_size / tested_lines))
     return int(total_size / (tested_size / tested_lines))
 
-
 def find_time(start, finish):
     """
     Prints the difference between the two times provided

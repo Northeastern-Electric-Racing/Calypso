@@ -75,5 +75,3 @@ def _processTextual2(line: str) -> Message:
 
 def _processBinary(line: str) -> Message:
     raise RuntimeError("Binary files not currently supported.")
-
-
