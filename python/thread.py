@@ -1,5 +1,5 @@
-from decode_files import LogFormat, processLine
-from message import Message
+from python.decode_files import LogFormat, processLine
+from python.message import Message
 
 FORMAT = LogFormat.TEXTUAL1
 

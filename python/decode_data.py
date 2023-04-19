@@ -4,7 +4,7 @@ This file specifies methods to decode messages into the many pieces of data they
 
 from typing import Any, Dict, List
 
-from data import (
+from python.data import (
     ProcessData as pd,
     FormatData as fd,
 )

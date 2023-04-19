@@ -4,3 +4,7 @@ __pycache__/
 logs/
 .idea/
 output.csv
+
+# Added by cargo
+
+/target

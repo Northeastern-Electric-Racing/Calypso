@@ -6,7 +6,7 @@ a line in a log file.
 from enum import Enum
 from datetime import datetime
 
-from message import Message
+from python.message import Message
 
 
 class LogFormat(Enum):

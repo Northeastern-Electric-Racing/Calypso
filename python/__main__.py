@@ -6,8 +6,8 @@ import csv
 import sys
 from typing import List
 
-from master_mapping import DATA_IDS
-from thread import thread
+from python.master_mapping import DATA_IDS
+from python.thread import thread
 
 DEFAULT_LOGS_DIRECTORY = "./logs/"
 DEFAULT_OUTPUT_PATH = "./output.csv"
