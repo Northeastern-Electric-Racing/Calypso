@@ -175,6 +175,14 @@ MESSAGE_IDS = {
     177: {
         "description": "unknown 177",
         "decoder": decodeMock
+    },
+    1025: {
+        "description": "LV Battery 1",
+        "decoder": decodeLVBattery1,
+    },
+    1026: {
+        "description": "LV Battery 2",
+        "decoder": decodeLVBattery2,
     }
 }
 
@@ -715,5 +723,41 @@ DATA_IDS = {
     133: {
         "name": "Regen Strength Value",
         "units": ""
+    },
+    134: {
+        "name": "Charger State",
+        "units": ""
+    },
+    135: {
+        "name": "Measurement System Valid",
+        "units": ""
+    },
+    136: {
+        "name": "System Status",
+        "units": ""
+    },
+    137: {
+        "name": "Charge Status",
+        "units": ""
+    },
+    138: {
+        "name": "ibat",
+        "units": "A"
+    },
+    139: {
+        "name": "vbat",
+        "units": "V"
+    },
+    140: {
+        "name": "vin",
+        "units": "V"
+    },
+    141: {
+        "name": "vsys",
+        "units": "V"
+    },
+    142: {
+        "name": "iin",
+        "units": "A"
     }
 }

@@ -319,3 +319,20 @@ def decodeLoggingStatus(data: List[int]) -> Dict[int, Any]:
     return {
         129: data[0]
     }
+
+def decodeLVBattery1(data: List[int]) -> Dict[int, Any]:
+    return {
+        134: pd.littleEndian(data[0:2], 16),
+        135: data[2],
+        136: pd.littleEndian(data[3:5], 16),
+        137: data[5],
+        138: pd.twosComp(pd.littleEndian(data[6:8], 16))
+    }
+
+def decodeLVBattery2(data: List[int]) -> Dict[int, Any]:
+    return {
+        139: pd.twosComp(pd.littleEndian(data[0:2], 16)),
+        140: pd.twosComp(pd.littleEndian(data[2:4], 16)),
+        141: pd.twosComp(pd.littleEndian(data[4:6], 16)),
+        142: pd.twosComp(pd.littleEndian(data[6:8], 16))
+    }
