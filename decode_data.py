@@ -298,13 +298,13 @@ def decodeCellTemps(data: List[int]) -> Dict[int, Any]:
     low_cell_temp_cell_number = (data[5] >> 4) & 15
 
     return {
-        114: pd.twosComp(pd.littleEndian(data[0:2], 16)),
+        114: pd.twosComp(pd.littleEndian(data[0:2]), 16),
         115: high_cell_temp_chip_number,
         116: high_cell_temp_cell_number,
-        117: pd.twosComp(pd.littleEndian(data[3:5], 16)),
+        117: pd.twosComp(pd.littleEndian(data[3:5]), 16),
         118: low_cell_temp_chip_number,
         119: low_cell_temp_cell_number,
-        120: pd.twosComp(pd.littleEndian(data[6:8], 16)),
+        120: pd.twosComp(pd.littleEndian(data[6:8]), 16),
     }
 
 def decodeSegmentTemps(data: List[int]) -> Dict[int, Any]:
@@ -322,17 +322,17 @@ def decodeLoggingStatus(data: List[int]) -> Dict[int, Any]:
 
 def decodeLVBattery1(data: List[int]) -> Dict[int, Any]:
     return {
-        134: pd.littleEndian(data[0:2], 16),
+        134: pd.littleEndian(data[0:2]),
         135: data[2],
-        136: pd.littleEndian(data[3:5], 16),
+        136: pd.littleEndian(data[3:5]),
         137: data[5],
-        138: pd.twosComp(pd.littleEndian(data[6:8], 16))
+        138: pd.twosComp(pd.littleEndian(data[6:8]), 16)
     }
 
 def decodeLVBattery2(data: List[int]) -> Dict[int, Any]:
     return {
-        139: pd.twosComp(pd.littleEndian(data[0:2], 16)),
-        140: pd.twosComp(pd.littleEndian(data[2:4], 16)),
-        141: pd.twosComp(pd.littleEndian(data[4:6], 16)),
-        142: pd.twosComp(pd.littleEndian(data[6:8], 16))
+        139: pd.twosComp(pd.littleEndian(data[0:2]), 16),
+        140: pd.twosComp(pd.littleEndian(data[2:4]), 16),
+        141: pd.twosComp(pd.littleEndian(data[4:6]), 16),
+        142: pd.twosComp(pd.littleEndian(data[6:8]), 16)
     }
