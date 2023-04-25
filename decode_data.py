@@ -38,10 +38,10 @@ def decode3(data: List[int]) -> Dict[int, Any]:
     }
 
 def decodeCellVoltages(data: List[int]) -> Dict[int, Any]:
-    high_cell_volt_chip_number = (data[2] >> 0) & 15
-    high_cell_volt_cell_number = data[2] #(data[2] >> 4) & 15
-    low_cell_volt_chip_number = (data[5] >> 0) & 15
-    low_cell_volt_cell_number = data[5] #(data[5] >> 4) & 15
+    high_cell_volt_chip_number = (data[2] >> 4) & 15
+    high_cell_volt_cell_number = (data[2] >> 0) & 15
+    low_cell_volt_chip_number = (data[5] >> 4)
+    low_cell_volt_cell_number = (data[5] >> 0)
     return {
         13: pd.bigEndian(data[0:2]),
         121: high_cell_volt_chip_number,
