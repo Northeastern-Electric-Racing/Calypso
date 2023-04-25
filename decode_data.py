@@ -292,10 +292,10 @@ def decodeGPS3(data: List[int]) -> Dict[int, Any]:
     }
 
 def decodeCellTemps(data: List[int]) -> Dict[int, Any]:
-    high_cell_temp_chip_number = (data[2] >> 0) & 15
-    high_cell_temp_cell_number = (data[2] >> 4) & 15
-    low_cell_temp_chip_number = (data[5] >> 0) & 15
-    low_cell_temp_cell_number = (data[5] >> 4) & 15
+    high_cell_temp_chip_number = (data[2] >> 4) & 15
+    high_cell_temp_cell_number = (data[2] >> 0) & 15
+    low_cell_temp_chip_number = (data[5] >> 4) & 15
+    low_cell_temp_cell_number = (data[5] >> 0) & 15
 
     return {
         114: pd.twosComp(pd.littleEndian(data[0:2]), 16),
