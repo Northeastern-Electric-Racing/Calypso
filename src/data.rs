@@ -1,7 +1,6 @@
 use chrono::prelude::*;
 use std::fmt;
 
-#[derive(Debug)]
 pub struct Data {
     // Wrapper class for an individual piece of data.
     timestamp: DateTime<Utc>,
