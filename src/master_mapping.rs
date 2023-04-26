@@ -1,15 +1,15 @@
 use std::collections::HashMap;
-
 use super::decode_data::*;
 
-#[derive(Debug)]
-struct MessageInfo {
-    description: &'static str,
-    decoder: &'static fn(data: &[u8]) -> HashMap<i32, f32>
+
+#[derive(Clone)]
+pub struct MessageInfo {
+    pub description: &'static str,
+    pub decoder: fn(data: &[u8]) -> HashMap<u8, f32>
 }
 
 // Mapping from external message ID to decoding information
-pub const MESSAGE_IDS: HashMap<u8, MessageInfo> = [
+pub const MESSAGE_IDS: HashMap<u32, MessageInfo> = [
     (
         1,
         MessageInfo {
@@ -160,8 +160,8 @@ pub const MESSAGE_IDS: HashMap<u8, MessageInfo> = [
    (
       7,
       MessageInfo {
-        description: "Ce;; Voltages",
-        decoder: decode22,
+        description: "Cell Voltages",
+        decoder: decode_mock,
       },
    ),
    (
@@ -296,9 +296,9 @@ pub const MESSAGE_IDS: HashMap<u8, MessageInfo> = [
          decoder: decode_logging_status
       },
    )
-];
+].iter().collect();
 
-#[derive(Debug)]
+#[derive(Clone)]
 struct DataInfo {
     name: &'static str,
     units: &'static str,
@@ -1236,5 +1236,5 @@ pub const DATA_IDS: HashMap<u32, DataInfo> = [
                   units: "",
                },
          )
-];
+].iter().cloned().collect();
 
