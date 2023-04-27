@@ -17,12 +17,20 @@ fn main() {
     let (tx, rx) = channel();
     println!("uhhh");
     //open can socket channel at name can0
-    let can_socket = CANSocket::open("can0").unwrap();
-    //open("can0").unwrap();
-    print!("penis");
+    const CAN_CHANNEL: &str = "can0";
+    let socket = CANSocket::open(&CAN_CHANNEL);
+    println!("CUCK");
+    let socket = match socket {
+        Ok(socket) => socket,
+        Err(err) => {
+            println!("Failed to open CAN socket: {}", err);
+            return;
+        }
+    };
+    println!("penis");
     thread::spawn(move || {
         loop {
-            let msg = can_socket.read_frame().unwrap();
+            let msg = socket.read_frame().unwrap();
             let date: DateTime<Utc> = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
             let data = msg.data();
             let message = message::Message::new(&date, &msg.id(), &data);
