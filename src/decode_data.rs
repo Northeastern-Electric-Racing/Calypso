@@ -243,18 +243,18 @@ pub fn decode19(data: &[u8]) -> HashMap<u8, f32> {
 }
 
 pub fn decode_accelerometer_data(data: &[u8]) -> HashMap<u8, f32> {
-    let decoded_data = pd::default_decode(&data);
-    let converted_data = decoded_data
-        .iter()
-        .map(|val| *val as f32 * 0.0029)
-        .collect::<Vec<f32>>();
-    let mut matrix_data = vec![0.0; 3];
-    transpose::transpose(&converted_data[0..3], &mut matrix_data, 3, 1);
-    let transform_matrix = vec![
-        1.0, 0.0, 0.0,
-        0.0, f32::cos(f32::to_radians(70.0)), f32::sin(f32::to_radians(70.0)),
-        0.0, -f32::sin(f32::to_radians(70.0)), f32::cos(f32::to_radians(70.0))
-    ];
+    // let decoded_data = pd::default_decode(&data);
+    // let converted_data = decoded_data
+    //     .iter()
+    //     .map(|val| *val as f32 * 0.0029)
+    //     .collect::<Vec<f32>>();
+    // let mut matrix_data = vec![0.0; 3];
+    // transpose::transpose(&converted_data[0..3], &mut matrix_data, 3, 1);
+    // let transform_matrix = vec![
+    //     1.0, 0.0, 0.0,
+    //     0.0, f32::cos(f32::to_radians(70.0)), f32::sin(f32::to_radians(70.0)),
+    //     0.0, -f32::sin(f32::to_radians(70.0)), f32::cos(f32::to_radians(70.0))
+    // ];
     //TODO: matrix multiplication
     // let transformed_data = 
     // matrixmultiply::sgemm(3, 3, 0, alpha, a, rsa, csa, b, rsb, csb, beta, c, rsc, csc)transform_matrix * matrix_data;
