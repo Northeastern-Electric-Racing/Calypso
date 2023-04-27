@@ -30,9 +30,10 @@ impl<'a> Message<'a> {
         data: &[u8],
     ) -> Vec<Data> {
         let decoder = get_message_info(id).decoder;
+        println!("ATTEMPTING TO CUCK");
         let mut decoded_data: Vec<Data> = Vec::new();
-
         let result = decoder(data);
+        println!("CUCKED SUCCESSFUL");
         for (data_id, value) in result {
             decoded_data.push(Data::new(*timestamp, data_id, value));
         }
