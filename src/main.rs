@@ -15,8 +15,9 @@ mod message;
 fn main() {
     let mut stream = UnixStream::connect("/tmp/ipc.sock").unwrap();
     let (tx, rx) = channel();
+    println!("uhhh");
     let can_socket: CANSocket = CANSocket::open("can0").unwrap();
-
+    print!("penis");
     thread::spawn(move || {
         loop {
             let msg = can_socket.read_frame().unwrap();
