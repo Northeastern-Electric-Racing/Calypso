@@ -16,7 +16,9 @@ fn main() {
     let mut stream = UnixStream::connect("/tmp/ipc.sock").unwrap();
     let (tx, rx) = channel();
     println!("uhhh");
-    let can_socket: CANSocket = CANSocket::open("can0").unwrap();
+    //open can socket channel at name can0
+    let can_socket = CANSocket::open("can0").unwrap();
+    //open("can0").unwrap();
     print!("penis");
     thread::spawn(move || {
         loop {
