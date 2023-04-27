@@ -57,6 +57,7 @@ impl ProcessData {
         for (i, byte) in data_bytes.iter().enumerate() {
             println!("BYTE: {}", byte);
             result |= byte << (bits * i);
+            println!("RESULT: {}", result)
         }
         result
     }
