@@ -39,25 +39,21 @@ impl ProcessData {
             .collect()
     }
 
-    pub fn twos_comp(val: u8, bits: usize) -> u8 {
+    pub fn twos_comp(val: u32, bits: usize) -> i32 {
         // Computes the twos complement of the given value.
         if (val & (1 << (bits - 1))) != 0 {
-            val - (1 << bits)
+            (val - (1 << bits)) as i32
         } else {
-            val
+            val as i32
         }
     }
 
-    pub fn little_endian(data_bytes: &[u8], bits: usize) -> u8 {
+    pub fn little_endian(data_bytes: &[u8], bits: usize) -> u32 {
         // Transforms the given data bytes into a value in little endian.
         // Little Endian byte order stores low order bytes first.
-
         let mut result = 0;
-        println!("DATA BYTES: {:?}", data_bytes);
         for (i, byte) in data_bytes.iter().enumerate() {
-            println!("BYTE: {}", byte);
-            result |= byte << (bits * i);
-            println!("RESULT: {}", result)
+            result += (*byte as u32) << (i * bits);
         }
         result
     }
@@ -73,17 +69,17 @@ impl ProcessData {
         result
     }
 
-    pub fn default_decode(byte_vals: &[u8]) -> Vec<u8> {
+    pub fn default_decode(byte_vals: &[u8]) -> Vec<i32> {
         // Default decode structure seen by a majority of the messages.
 
         let grouped_vals = ProcessData::group_bytes(byte_vals, 2);
         println!("CUCKED GROUP BYTES");
-        let parsed_vals: Vec<u8> = grouped_vals
+        let parsed_vals: Vec<u32> = grouped_vals
             .iter()
             .map(|val| ProcessData::little_endian(val, 8))
             .collect();
         println!("CUCKED LITTLE ENDIAN");
-        let decoded_vals: Vec<u8> = parsed_vals
+        let decoded_vals: Vec<i32> = parsed_vals
             .iter()
             .map(|val| ProcessData::twos_comp(*val, 16))
             .collect();
@@ -97,47 +93,47 @@ pub struct FormatData {
 }
 
 impl FormatData {
-    pub fn temperature(value: u8) -> f32 {
+    pub fn temperature(value: i32) -> f32 {
         value as f32 / 10.0
     }
 
-    pub fn low_voltage(value: u8) -> f32 {
+    pub fn low_voltage(value: i32) -> f32 {
         value as f32 / 100.0
     }
 
-    pub fn torque(value: u8) -> f32 {
+    pub fn torque(value: i32) -> f32 {
         value as f32 / 10.0
     }
 
-    pub fn high_voltage(value: u8) -> f32 {
+    pub fn high_voltage(value: i32) -> f32 {
         value as f32 / 10.0
     }
 
-    pub fn current(value: u8) -> f32 {
+    pub fn current(value: i32) -> f32 {
         value as f32 / 10.0
     }
 
-    pub fn angle(value: u8) -> f32 {
+    pub fn angle(value: i32) -> f32 {
         value as f32 / 10.0
     }
 
-    pub fn angular_velocity(value: u8) -> i8 {
+    pub fn angular_velocity(value: i32) -> i8 {
         -(value as i8)
     }
 
-    pub fn frequency(value: u8) -> f32 {
+    pub fn frequency(value: i32) -> f32 {
         value as f32 / 10.0
     }
 
-    pub fn power(value: u8) -> f32 {
+    pub fn power(value: i32) -> f32 {
         value as f32 / 10.0
     }
 
-    pub fn timer(value: u8) -> f32 {
+    pub fn timer(value: i32) -> f32 {
         value as f32 * 0.003
     }
 
-    pub fn flux(value: u8) -> f32 {
+    pub fn flux(value: i32) -> f32 {
         value as f32 / 1000.0
     }
 }

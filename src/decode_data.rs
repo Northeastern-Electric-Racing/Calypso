@@ -16,7 +16,7 @@ pub fn decode_accumulator_status(data: &[u8]) -> HashMap<u8, f32> {
     result.insert(1, pd::big_endian(&data[0..2], 8) as f32);
     result.insert(
         2,
-        pd::twos_comp(pd::big_endian(&data[2..4], 8), 16) as f32 / 10.0,
+        pd::twos_comp(pd::big_endian(&data[2..4], 8) as u32, 16) as f32 / 10.0,
     );
     result.insert(3, pd::big_endian(&data[4..6], 8) as f32);
     result.insert(4, data[6] as f32);
@@ -28,8 +28,8 @@ pub fn decode_bms_status(data: &[u8]) -> HashMap<u8, f32> {
     let mut result = HashMap::new();
     result.insert(106, data[0] as f32);
     result.insert(107, pd::little_endian(&data[1..5], 8) as f32);
-    result.insert(10, pd::twos_comp(data[5] as u8, 8) as f32);
-    result.insert(11, pd::twos_comp(data[6] as u8, 8) as f32);
+    result.insert(10, pd::twos_comp(data[5] as u32, 8) as f32);
+    result.insert(11, pd::twos_comp(data[6] as u32, 8) as f32);
     result
 }
 
@@ -211,7 +211,7 @@ pub fn decode16(data: &[u8]) -> HashMap<u8, f32> {
 
 pub fn decode17(data: &[u8]) -> HashMap<u8, f32> {
     let decoded_data = pd::default_decode(&data[0..4]);
-    let timer_data = pd::little_endian(&data[4..], 8);
+    let timer_data = pd::little_endian(&data[4..], 8) as i32;
     let mut result = HashMap::new();
     result.insert(79, fd::torque(decoded_data[0]));
     result.insert(80, fd::torque(decoded_data[1]));
@@ -385,10 +385,10 @@ pub fn decode_cell_temps(data: &[u8]) -> HashMap<u8, f32> {
 
 pub fn decode_segment_temps(data: &[u8]) -> HashMap<u8, f32> {
     let mut result = HashMap::new();
-    result.insert(125, pd::twos_comp(data[0], 8) as f32);
-    result.insert(126, pd::twos_comp(data[1], 8) as f32);
-    result.insert(127, pd::twos_comp(data[2], 8) as f32);
-    result.insert(128, pd::twos_comp(data[3], 8) as f32);
+    result.insert(125, pd::twos_comp(data[0] as u32, 8) as f32);
+    result.insert(126, pd::twos_comp(data[1] as u32, 8) as f32);
+    result.insert(127, pd::twos_comp(data[2] as u32, 8) as f32);
+    result.insert(128, pd::twos_comp(data[3] as u32, 8) as f32);
 
     result
 }
