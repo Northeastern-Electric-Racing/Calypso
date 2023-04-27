@@ -54,7 +54,7 @@ impl ProcessData {
 
         let mut result = 0;
         for (i, byte) in data_bytes.iter().enumerate() {
-            print!("BYTE: {}", byte);
+            println!("BYTE: {}", byte);
             result |= byte << (bits * i);
         }
         result
