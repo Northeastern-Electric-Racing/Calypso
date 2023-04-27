@@ -3,7 +3,7 @@ use std::fmt;
 
 pub struct Data {
     // Wrapper class for an individual piece of data.
-    timestamp: DateTime<Utc>,
+    pub(crate) timestamp: DateTime<Utc>,
     id: u8,
     value: f32,
 }

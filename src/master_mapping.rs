@@ -17,7 +17,7 @@ impl MessageInfo {
 }
 
 // Mapping from external message ID to decoding information
-pub fn get_message_info(id: u32) -> MessageInfo {
+pub fn get_message_info(id: &u32) -> MessageInfo {
     match id {
         1 => return MessageInfo::new("accumulator status".to_string(), decode_accumulator_status),
         2 => return MessageInfo::new("BMS status".to_string(), decode_bms_status),
@@ -70,11 +70,12 @@ pub fn get_message_info(id: u32) -> MessageInfo {
         8 => return MessageInfo::new("Cell Temperatures".to_string(), decode_cell_temps),
         9 => return MessageInfo::new("Segment Temperatures".to_string(), decode_segment_temps),
         775 => return MessageInfo::new("Logging Status".to_string(), decode_logging_status),
+        _ => return MessageInfo::new("Unknown".to_string(), decode_mock),
     }
 }
 
 #[derive(Clone)]
-struct DataInfo {
+pub struct DataInfo {
     name: String,
     units: String,
 }
@@ -225,5 +226,6 @@ pub fn get_data_info(id: u8) -> DataInfo {
         131 => return DataInfo::new("Motor Fan Percentage".to_string(), "%".to_string()),
         132 => return DataInfo::new("Torque Limit Percentage".to_string(), "%".to_string()),
         133 => return DataInfo::new("Regen Strength value".to_string(), "".to_string()),
+        _ => return DataInfo::new("".to_string(), "".to_string())
     }
 }
