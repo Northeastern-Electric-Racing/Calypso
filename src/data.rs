@@ -58,13 +58,13 @@ impl ProcessData {
         result
     }
 
-    pub fn big_endian(data_bytes: &[u8], bits: usize) -> u8 {
+    pub fn big_endian(data_bytes: &[u8], bits: usize) -> u32 {
         // Transforms the given data bytes into a value in big endian.
         // Big Endian byte order stores low order bytes last.
 
         let mut result = 0;
         for (i, byte) in data_bytes.iter().enumerate() {
-            result |= byte << (bits * (data_bytes.len() - i - 1));
+            result += (*byte as u32) << (bits * (data_bytes.len() - i - 1));
         }
         result
     }
