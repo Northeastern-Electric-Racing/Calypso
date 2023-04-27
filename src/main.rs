@@ -30,13 +30,17 @@ fn main() {
     println!("penis");
     thread::spawn(move || {
         loop {
+            println!("CUCKLORD");
             let msg = socket.read_frame().unwrap();
             let date: DateTime<Utc> = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
             let data = msg.data();
             let message = message::Message::new(&date, &msg.id(), &data);
+            println!("CREATED MESSAGE");
             let decoded_data = message.decode();
+            println!("CUCKY MAGOO");
             for data in decoded_data {
                 tx.send(format!("Data is {}", data));
+                println!("HOLY FUCK SOMETHING WORKED");
             }
         }
     });
