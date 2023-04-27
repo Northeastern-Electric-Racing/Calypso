@@ -54,6 +54,7 @@ impl ProcessData {
 
         let mut result = 0;
         for (i, byte) in data_bytes.iter().enumerate() {
+            print!("BYTE: {}", byte);
             result |= byte << (bits * i);
         }
         result
@@ -74,14 +75,17 @@ impl ProcessData {
         // Default decode structure seen by a majority of the messages.
 
         let grouped_vals = ProcessData::group_bytes(byte_vals, 2);
+        println!("CUCKED GROUP BYTES");
         let parsed_vals: Vec<u8> = grouped_vals
             .iter()
             .map(|val| ProcessData::little_endian(val, 8))
             .collect();
+        println!("CUCKED LITTLE ENDIAN");
         let decoded_vals: Vec<u8> = parsed_vals
             .iter()
             .map(|val| ProcessData::twos_comp(*val, 16))
             .collect();
+        println!("CUCKED TWOS COMP");
         decoded_vals
     }
 }
