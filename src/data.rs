@@ -54,7 +54,7 @@ impl ProcessData {
         let mut result = 0;
         for (i, byte) in data_bytes.iter().enumerate() {
             println!("Little End Byte: {}", byte);
-            result += (*byte as u32) << (i * bits);
+            result |= *byte << (bits * i);
             println!("Little End Result: {}", result)
         }
         result
@@ -66,8 +66,7 @@ impl ProcessData {
         let mut result = 0;
         for (i, byte) in bytes.iter().enumerate() {
             println!("Big End Byte: {}", byte);
-            let shift_amount = (3 - i) * bits;
-            result += (*byte as u32) << shift_amount;
+            result |= *byte << (bits * (bytes.len() - i - 1));
             println!("Big End Result: {}", result);
         }
         result
