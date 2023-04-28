@@ -53,7 +53,7 @@ impl ProcessData {
         // Little Endian byte order stores low order bytes first.
         let mut result = 0;
         for (i, byte) in data_bytes.iter().enumerate() {
-            result += (*byte as u32) << (i * bits);
+            result |= (*byte as u32) << (i * bits);
         }
         result
     }
@@ -64,7 +64,7 @@ impl ProcessData {
         let mut result = 0;
         for (i, byte) in bytes.iter().enumerate() {
             let shift_amount = (3 - i) * bits;
-            result += (*byte as u32) << shift_amount;
+            result |= (*byte as u32) << shift_amount;
         }
         result
     }
