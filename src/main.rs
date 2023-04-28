@@ -5,6 +5,7 @@ use chrono::Utc;
 use socketcan::*;
 use std::io::Write;
 use std::os::unix::net::UnixStream;
+use std::process::Command;
 use std::sync::mpsc::channel;
 use std::thread;
 mod data;
@@ -13,6 +14,34 @@ mod master_mapping;
 mod message;
 
 fn main() {
+    let mut down_command = Command::new("ifconfig")
+        .arg("can0")
+        .arg("down")
+        .spawn()
+        .expect("down command did not work");
+    down_command
+        .wait()
+        .expect("Fail while waiting for down command");
+    let mut bit_rate_commmand = Command::new("ip")
+        .arg("link")
+        .arg("set")
+        .arg("can0")
+        .arg("type")
+        .arg("can")
+        .arg("bitrate")
+        .arg("1000000")
+        .spawn()
+        .expect("bit rate command did not work");
+    bit_rate_commmand
+        .wait()
+        .expect("Fail while waiting for bit rate");
+    let mut up_command = Command::new("ifconfig")
+        .arg("can0")
+        .arg("up")
+        .spawn()
+        .expect("up command did nto work");
+    up_command.wait().expect("Fail while waiting for up command");
+
     let mut stream = UnixStream::connect("/tmp/ipc.sock").unwrap();
     let (tx, rx) = channel();
     println!("uhhh");
@@ -28,20 +57,18 @@ fn main() {
         }
     };
     println!("penis");
-    thread::spawn(move || {
-        loop {
-            println!("CUCKLORD");
-            let msg = socket.read_frame().unwrap();
-            let date: DateTime<Utc> = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
-            let data = msg.data();
-            let message = message::Message::new(&date, &msg.id(), &data);
-            println!("CREATED MESSAGE");
-            let decoded_data = message.decode();
-            println!("CUCKY MAGOO");
-            for data in decoded_data {
-                tx.send(format!("{},{}", data.id, data.value));
-                println!("HOLY FUCK SOMETHING WORKED");
-            }
+    thread::spawn(move || loop {
+        println!("CUCKLORD");
+        let msg = socket.read_frame().unwrap();
+        let date: DateTime<Utc> = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
+        let data = msg.data();
+        let message = message::Message::new(&date, &msg.id(), &data);
+        println!("CREATED MESSAGE");
+        let decoded_data = message.decode();
+        println!("CUCKY MAGOO");
+        for data in decoded_data {
+            tx.send(format!("{},{}", data.id, data.value));
+            println!("HOLY FUCK SOMETHING WORKED");
         }
     });
     loop {
@@ -49,5 +76,4 @@ fn main() {
             .try_recv()
             .map(|reply| stream.write_all(reply.as_bytes()));
     }
-
 }
