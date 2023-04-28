@@ -53,7 +53,9 @@ impl ProcessData {
         // Little Endian byte order stores low order bytes first.
         let mut result = 0;
         for (i, byte) in data_bytes.iter().enumerate() {
+            println!("{}", byte);
             result += (*byte as u32) << (i * bits);
+            println!("{}", result)
         }
         result
     }
