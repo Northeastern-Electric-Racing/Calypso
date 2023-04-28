@@ -39,7 +39,7 @@ fn main() {
             let decoded_data = message.decode();
             println!("CUCKY MAGOO");
             for data in decoded_data {
-                tx.send(format!("Data is {}", data));
+                tx.send(format!("{},{}", data.id, data.value));
                 println!("HOLY FUCK SOMETHING WORKED");
             }
         }

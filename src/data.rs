@@ -4,8 +4,8 @@ use std::fmt;
 pub struct Data {
     // Wrapper class for an individual piece of data.
     pub(crate) timestamp: DateTime<Utc>,
-    id: u8,
-    value: f32,
+    pub id: u8,
+    pub value: f32,
 }
 
 impl fmt::Display for Data {
