@@ -51,10 +51,10 @@ impl ProcessData {
     pub fn little_endian(data_bytes: &[u8], bits: usize) -> u32 {
         // Transforms the given data bytes into a value in little endian.
         // Little Endian byte order stores low order bytes first.
-        let mut result = 0;
+        let mut result: u32 = 0;
         for (i, byte) in data_bytes.iter().enumerate() {
             println!("Little End Byte: {}", byte);
-            result |= *byte << (bits * i);
+            result |= (*byte as u32) << (bits * i);
             println!("Little End Result: {}", result)
         }
         result
@@ -63,10 +63,10 @@ impl ProcessData {
     pub fn big_endian(bytes: &[u8], bits: usize) -> u32 {
         // Transforms the given data bytes into a value in big endian.
         // Big Endian byte order stores low order bytes last.
-        let mut result = 0;
+        let mut result: u32 = 0;
         for (i, byte) in bytes.iter().enumerate() {
             println!("Big End Byte: {}", byte);
-            result |= *byte << (bits * (bytes.len() - i - 1));
+            result |= (*byte as u32) << (bits * (bytes.len() - i - 1));
             println!("Big End Result: {}", result);
         }
         result
