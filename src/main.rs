@@ -3,6 +3,7 @@ use chrono::DateTime;
 use chrono::TimeZone;
 use chrono::Utc;
 use socketcan::*;
+use core::num::flt2dec::decode;
 use std::io::Write;
 use std::os::unix::net::UnixStream;
 use std::process::Command;
@@ -71,9 +72,9 @@ fn main() {
         println!("CREATED MESSAGE");
         let decoded_data = message.decode();
         println!("CUCKY MAGOO");
-        for data in decoded_data {
-            tx.send(format!("{},{}", data.id.to_string(), data.value.to_string())).unwrap();
-            println!("SENDING: {},{}", data.id, data.value);
+        for (i, data) in decoded_data.iter().enumerate() {
+            tx.send(format!("index:{},{}", data.id.to_string(), data.value.to_string())).unwrap();
+            println!("SENDING: index:{},{}", data.id, data.value);
         }
     });
     loop {

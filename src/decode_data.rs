@@ -221,15 +221,12 @@ pub fn decode17(data: &[u8]) -> HashMap<u8, f32> {
 
 pub fn decode18(data: &[u8]) -> HashMap<u8, f32> {
     let decoded_data = pd::default_decode(&data);
-    println!("CUCK 1{:?}", decoded_data);
     let mut result = HashMap::new();
     result.insert(82, fd::torque(decoded_data[0]));
     result.insert(83, fd::angular_velocity(decoded_data[1]) as f32);
     result.insert(84, data[4] as f32);
     result.insert(85, (data[5] & 1) as f32);
-    println!("CUCK 2 {:?}", data[5]);
     result.insert(86, ((data[5] >> 1) & 1) as f32);
-    println!("CUCK 3 {:?}", data[5]);
     result.insert(87, ((data[5] >> 2) & 1) as f32);
     result.insert(88, fd::torque(decoded_data[3]));
     result
