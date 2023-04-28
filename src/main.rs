@@ -65,7 +65,6 @@ fn main() {
     thread::spawn(move || loop {
         println!("CUCKLORD");
         let msg = socket.read_frame().unwrap();
-        println!("HOLY CUCK");
         let date: DateTime<Utc> = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
         let data = msg.data();
         let message = message::Message::new(&date, &msg.id(), &data);
@@ -74,7 +73,7 @@ fn main() {
         println!("CUCKY MAGOO");
         for data in decoded_data {
             tx.send(format!("{},{}", data.id, data.value));
-            println!("HOLY FUCK SOMETHING WORKED");
+            println!("SENDING: {},{}", data.id, data.value);
         }
     });
     loop {
