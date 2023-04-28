@@ -14,7 +14,8 @@ mod master_mapping;
 mod message;
 
 fn main() {
-    let mut down_command = Command::new("ifconfig")
+    let mut down_command = Command::new("sudo")
+        .arg("ifconfig")
         .arg("can0")
         .arg("down")
         .spawn()
@@ -22,7 +23,8 @@ fn main() {
     down_command
         .wait()
         .expect("Fail while waiting for down command");
-    let mut bit_rate_commmand = Command::new("ip")
+    let mut bit_rate_commmand = Command::new("sudo")
+        .arg("ip")
         .arg("link")
         .arg("set")
         .arg("can0")
@@ -35,12 +37,15 @@ fn main() {
     bit_rate_commmand
         .wait()
         .expect("Fail while waiting for bit rate");
-    let mut up_command = Command::new("ifconfig")
+    let mut up_command = Command::new("sudo")
+        .arg("ifconfig")
         .arg("can0")
         .arg("up")
         .spawn()
         .expect("up command did nto work");
-    up_command.wait().expect("Fail while waiting for up command");
+    up_command
+        .wait()
+        .expect("Fail while waiting for up command");
 
     let mut stream = UnixStream::connect("/tmp/ipc.sock").unwrap();
     let (tx, rx) = channel();
