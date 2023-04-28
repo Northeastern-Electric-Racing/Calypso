@@ -226,6 +226,6 @@ pub fn get_data_info(id: u8) -> DataInfo {
         131 => return DataInfo::new("Motor Fan Percentage".to_string(), "%".to_string()),
         132 => return DataInfo::new("Torque Limit Percentage".to_string(), "%".to_string()),
         133 => return DataInfo::new("Regen Strength value".to_string(), "".to_string()),
-        _ => return DataInfo::new("".to_string(), "".to_string())
+        _ => return DataInfo::new("".to_string(), "".to_string()),
     }
 }
