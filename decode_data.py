@@ -331,8 +331,8 @@ def decodeLVBattery1(data: List[int]) -> Dict[int, Any]:
 
 def decodeLVBattery2(data: List[int]) -> Dict[int, Any]:
     return {
-        139: pd.twosComp(pd.littleEndian(data[0:2]), 16),
-        140: pd.twosComp(pd.littleEndian(data[2:4]), 16),
-        141: pd.twosComp(pd.littleEndian(data[4:6]), 16),
-        142: pd.twosComp(pd.littleEndian(data[6:8]), 16)
+        139: pd.twosComp(pd.littleEndian(data[0:2]), 16) * (192.264 / 1000000) * 4,
+        140: pd.twosComp(pd.littleEndian(data[2:4]), 16) * (1.648 / 1000),
+        141: pd.twosComp(pd.littleEndian(data[4:6]), 16) * (1.648 / 1000),
+        142: pd.twosComp(pd.littleEndian(data[6:8]), 16) * (1.46487 / 1000000) / (0.5 / 1000)
     }
