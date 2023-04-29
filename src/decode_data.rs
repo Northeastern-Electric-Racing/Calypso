@@ -331,6 +331,7 @@ pub fn decode_mpu_dashboard_info(data: &[u8]) -> HashMap<u8, f32> {
     result.insert(131, data[2] as f32);
     result.insert(132, data[3] as f32);
     result.insert(133, data[4] as f32);
+    result.insert(144, data[5] as f32);
     result
 }
 
