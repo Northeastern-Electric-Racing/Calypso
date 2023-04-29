@@ -237,6 +237,7 @@ pub fn get_data_info(id: u8) -> DataInfo {
         140 => return DataInfo::new("vin".to_string(), "V".to_string()),
         141 => return DataInfo::new("vsys".to_string(), "V".to_string()),
         142 => return DataInfo::new("iin".to_string(), "A".to_string()),
+        143 => return DataInfo::new("Cell Burning Status".to_string(), "".to_string()),
         _ => return DataInfo::new("".to_string(), "".to_string()),
     }
 }

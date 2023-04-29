@@ -30,6 +30,7 @@ pub fn decode_bms_status(data: &[u8]) -> HashMap<u8, f32> {
     result.insert(107, pd::little_endian(&data[1..5], 8) as f32);
     result.insert(10, pd::twos_comp(data[5] as u32, 8) as f32);
     result.insert(11, pd::twos_comp(data[6] as u32, 8) as f32);
+    result.insert(143, data[7] as f32);
     result
 }
 
