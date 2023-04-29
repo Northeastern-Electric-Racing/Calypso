@@ -3,7 +3,6 @@ use chrono::DateTime;
 use chrono::TimeZone;
 use chrono::Utc;
 use socketcan::*;
-use core::num::flt2dec::decode;
 use std::io::Write;
 use std::os::unix::net::UnixStream;
 use std::process::Command;
