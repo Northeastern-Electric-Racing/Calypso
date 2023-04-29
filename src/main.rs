@@ -49,11 +49,9 @@ fn main() {
 
     let mut stream = UnixStream::connect("/tmp/ipc.sock").unwrap();
     let (tx, rx) = channel();
-    println!("uhhh");
     //open can socket channel at name can0
     const CAN_CHANNEL: &str = "can0";
     let socket = CANSocket::open(&CAN_CHANNEL);
-    println!("CUCK");
     let socket = match socket {
         Ok(socket) => socket,
         Err(err) => {
@@ -63,17 +61,14 @@ fn main() {
     };
     println!("penis");
     thread::spawn(move || loop {
-        println!("CUCKLORD");
         let msg = socket.read_frame().unwrap();
         let date: DateTime<Utc> = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
         let data = msg.data();
         let message = message::Message::new(&date, &msg.id(), &data);
-        println!("CREATED MESSAGE");
         let decoded_data = message.decode();
-        println!("CUCKY MAGOO");
         for (_i, data) in decoded_data.iter().enumerate() {
             tx.send(format!("index:{},{}}}", data.id.to_string(), data.value.to_string())).unwrap();
-            println!("SENDING: index:{},{}", data.id, data.value);
+            println!("SENDING: index:{},{}}}", data.id, data.value);
         }
     });
     loop {

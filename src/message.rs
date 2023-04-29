@@ -33,7 +33,6 @@ impl<'a> Message<'a> {
         println!("ATTEMPTING TO CUCK: {}", id);
         let mut decoded_data: Vec<Data> = Vec::new();
         let result = decoder(data);
-        println!("CUCKED DECODE");
         for (data_id, value) in result {
             decoded_data.push(Data::new(*timestamp, data_id, value));
         }

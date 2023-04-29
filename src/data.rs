@@ -53,9 +53,9 @@ impl ProcessData {
         // Little Endian byte order stores low order bytes first.
         let mut result: u32 = 0;
         for (i, byte) in data_bytes.iter().enumerate() {
-            println!("Little End Byte: {}", byte);
+            // println!("Little End Byte: {}", byte);
             result |= (*byte as u32) << (bits * i);
-            println!("Little End Result: {}", result)
+            // println!("Little End Result: {}", result)
         }
         result
     }
@@ -65,9 +65,9 @@ impl ProcessData {
         // Big Endian byte order stores low order bytes last.
         let mut result: u32 = 0;
         for (i, byte) in bytes.iter().enumerate() {
-            println!("Big End Byte: {}", byte);
+            // println!("Big End Byte: {}", byte);
             result |= (*byte as u32) << (bits * (bytes.len() - i - 1));
-            println!("Big End Result: {}", result);
+            // println!("Big End Result: {}", result);
         }
         result
     }
