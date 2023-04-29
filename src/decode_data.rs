@@ -396,3 +396,22 @@ pub fn decode_logging_status(data: &[u8]) -> HashMap<u8, f32> {
 
     result
 }
+
+pub fn decode_lv_battery_1(data: &[u8]) -> HashMap<u8, f32> {
+    let mut result = HashMap::new();
+    result.insert(134, (pd::little_endian(&data[0..2], 8)) as f32);
+    result.insert(135, data[2] as f32);
+    result.insert(136, (pd::little_endian(&data[3..5], 8)) as f32);
+    result.insert(137, data[5] as f32);
+    result.insert(138, (pd::little_endian(&data[6..8], 8)) as f32);
+    result
+}
+
+pub fn decode_lv_battery_2(data: &[u8]) -> HashMap<u8, f32> {
+    let mut result = HashMap::new();
+    result.insert(139, (pd::twos_comp(pd::little_endian(&data[0..2], 8), 16) as f32) * (192.264 / 1000000.0) * 4.0);
+    result.insert(140, (pd::twos_comp(pd::little_endian(&data[2..4], 8), 16) as f32) * (1.648 / 1000.0));
+    result.insert(141, (pd::twos_comp(pd::little_endian(&data[4..6], 8), 16) as f32) * (1.648 / 1000.0));
+    result.insert(142, (pd::twos_comp(pd::little_endian(&data[6..8], 8), 16) as f32) * (1.46487 / 1000000.0) / (0.5 / 1000.0));
+    result
+}

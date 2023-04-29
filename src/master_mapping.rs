@@ -70,6 +70,8 @@ pub fn get_message_info(id: &u32) -> MessageInfo {
         8 => return MessageInfo::new("Cell Temperatures".to_string(), decode_cell_temps),
         9 => return MessageInfo::new("Segment Temperatures".to_string(), decode_segment_temps),
         775 => return MessageInfo::new("Logging Status".to_string(), decode_logging_status),
+        1025 => return MessageInfo::new("LV Battery 1".to_string(), decode_lv_battery_1),
+        1026 => return MessageInfo::new("LV Battery 2".to_string(), decode_lv_battery_2),
         _ => return MessageInfo::new("Unknown".to_string(), decode_mock),
     }
 }
@@ -226,6 +228,15 @@ pub fn get_data_info(id: u8) -> DataInfo {
         131 => return DataInfo::new("Motor Fan Percentage".to_string(), "%".to_string()),
         132 => return DataInfo::new("Torque Limit Percentage".to_string(), "%".to_string()),
         133 => return DataInfo::new("Regen Strength value".to_string(), "".to_string()),
+        134 => return DataInfo::new("Carger State".to_string(), "".to_string()),
+        135 => return DataInfo::new("Measurement System Valid".to_string(), "".to_string()),
+        136 => return DataInfo::new("System Status".to_string(), "".to_string()),
+        137 => return DataInfo::new("Charge Status".to_string(), "".to_string()),
+        138 => return DataInfo::new("ibat".to_string(), "A".to_string()),
+        139 => return DataInfo::new("vbat".to_string(), "V".to_string()),
+        140 => return DataInfo::new("vin".to_string(), "V".to_string()),
+        141 => return DataInfo::new("vsys".to_string(), "V".to_string()),
+        142 => return DataInfo::new("iin".to_string(), "A".to_string()),
         _ => return DataInfo::new("".to_string(), "".to_string()),
     }
 }
