@@ -40,18 +40,18 @@ pub fn decode3(data: &[u8]) -> HashMap<u8, f32> {
 }
 
 pub fn decode_cell_voltages(data: &[u8]) -> HashMap<u8, f32> {
-    let high_cell_volt_chip_number = (data[2] >> 0) & 15;
-    let high_cell_volt_cell_number = (data[2] >> 4) & 15;
-    let low_cell_volt_chip_number = (data[5] >> 0) & 15;
-    let low_cell_volt_cell_number = (data[5] >> 4) & 15;
+    let high_cell_volt_chip_number = (data[2] >> 4) & 15;
+    let high_cell_volt_cell_number = (data[2] >> 0) & 15;
+    let low_cell_volt_chip_number = (data[5] >> 4) & 15;
+    let low_cell_volt_cell_number = (data[5] >> 0) & 15;
     let mut result = HashMap::new();
-    result.insert(13, pd::big_endian(&data[0..2], 8) as f32);
+    result.insert(13, pd::little_endian(&data[0..2], 8) as f32);
     result.insert(121, high_cell_volt_chip_number as f32);
     result.insert(122, high_cell_volt_cell_number as f32);
-    result.insert(15, pd::big_endian(&data[3..5], 8) as f32);
+    result.insert(15, pd::little_endian(&data[3..5], 8) as f32);
     result.insert(123, low_cell_volt_chip_number as f32);
     result.insert(124, low_cell_volt_cell_number as f32);
-    result.insert(17, pd::big_endian(&data[6..8], 8) as f32);
+    result.insert(17, pd::little_endian(&data[6..8], 8) as f32);
     result
 }
 
@@ -363,10 +363,10 @@ pub fn decode_gps_3(data: &[u8]) -> HashMap<u8, f32> {
 }
 
 pub fn decode_cell_temps(data: &[u8]) -> HashMap<u8, f32> {
-    let high_cell_temp_chip_number = (data[2] >> 0) & 15;
-    let high_cell_temp_cell_number = (data[2] >> 4) & 15;
-    let low_cell_temp_chip_number = (data[5] >> 0) & 15;
-    let low_cell_temp_cell_number = (data[5] >> 4) & 15;
+    let high_cell_temp_chip_number = (data[2] >> 4) & 15;
+    let high_cell_temp_cell_number = (data[2] >> 0) & 15;
+    let low_cell_temp_chip_number = (data[5] >> 4) & 15;
+    let low_cell_temp_cell_number = (data[5] >> 0) & 15;
 
     let mut result = HashMap::new();
     result.insert(114, pd::twos_comp(pd::little_endian(&data[0..2], 8), 16) as f32);
