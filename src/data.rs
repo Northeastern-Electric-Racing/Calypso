@@ -39,12 +39,12 @@ impl ProcessData {
             .collect()
     }
 
-    pub fn twos_comp(val: u32, bits: usize) -> i32 {
+    pub fn twos_comp(val: u32, bits: usize) -> i64 {
         // Computes the twos complement of the given value.
         if (val & (1 << (bits - 1))) != 0 {
-            (val as i32) - (1 << bits)
+            (val as i64) - (1 << bits)
         } else {
-            val as i32
+            val as i64
         }
     }
 
@@ -72,7 +72,7 @@ impl ProcessData {
         result
     }
 
-    pub fn default_decode(byte_vals: &[u8]) -> Vec<i32> {
+    pub fn default_decode(byte_vals: &[u8]) -> Vec<i64> {
         // Default decode structure seen by a majority of the messages.
 
         let grouped_vals = ProcessData::group_bytes(byte_vals, 2);
@@ -82,7 +82,7 @@ impl ProcessData {
             .map(|val| ProcessData::little_endian(val, 8))
             .collect();
         println!("CUCKED LITTLE ENDIAN");
-        let decoded_vals: Vec<i32> = parsed_vals
+        let decoded_vals: Vec<i64> = parsed_vals
             .iter()
             .map(|val| ProcessData::twos_comp(*val, 16))
             .collect();
@@ -96,35 +96,35 @@ pub struct FormatData {
 }
 
 impl FormatData {
-    pub fn temperature(value: i32) -> f32 {
+    pub fn temperature(value: i64) -> f32 {
         value as f32 / 10.0
     }
 
-    pub fn low_voltage(value: i32) -> f32 {
+    pub fn low_voltage(value: i64) -> f32 {
         value as f32 / 100.0
     }
 
-    pub fn torque(value: i32) -> f32 {
+    pub fn torque(value: i64) -> f32 {
         value as f32 / 10.0
     }
 
-    pub fn high_voltage(value: i32) -> f32 {
+    pub fn high_voltage(value: i64) -> f32 {
         value as f32 / 10.0
     }
 
-    pub fn current(value: i32) -> f32 {
+    pub fn current(value: i64) -> f32 {
         value as f32 / 10.0
     }
 
-    pub fn angle(value: i32) -> f32 {
+    pub fn angle(value: i64) -> f32 {
         value as f32 / 10.0
     }
 
-    pub fn angular_velocity(value: i32) -> i32 {
+    pub fn angular_velocity(value: i64) -> i64 {
         -value
     }
 
-    pub fn frequency(value: i32) -> f32 {
+    pub fn frequency(value: i64) -> f32 {
         value as f32 / 10.0
     }
 
@@ -136,7 +136,7 @@ impl FormatData {
         value as f32 * 0.003
     }
 
-    pub fn flux(value: i32) -> f32 {
+    pub fn flux(value: i64) -> f32 {
         value as f32 / 1000.0
     }
 }

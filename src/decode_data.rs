@@ -1,6 +1,7 @@
 // This file specifies methods to decode messages into the many pieces of data they contain.
 
 use std::collections::HashMap;
+use nalgebra::{Matrix3, Vector3};
 
 use super::data::FormatData as fd;
 use super::data::ProcessData as pd;
@@ -241,25 +242,22 @@ pub fn decode19(data: &[u8]) -> HashMap<u8, f32> {
 }
 
 pub fn decode_accelerometer_data(data: &[u8]) -> HashMap<u8, f32> {
-    // let decoded_data = pd::default_decode(&data);
-    // let converted_data = decoded_data
-    //     .iter()
-    //     .map(|val| *val as f32 * 0.0029)
-    //     .collect::<Vec<f32>>();
-    // let mut matrix_data = vec![0.0; 3];
-    // transpose::transpose(&converted_data[0..3], &mut matrix_data, 3, 1);
-    // let transform_matrix = vec![
-    //     1.0, 0.0, 0.0,
-    //     0.0, f32::cos(f32::to_radians(70.0)), f32::sin(f32::to_radians(70.0)),
-    //     0.0, -f32::sin(f32::to_radians(70.0)), f32::cos(f32::to_radians(70.0))
-    // ];
-    //TODO: matrix multiplication
-    // let transformed_data = 
-    // matrixmultiply::sgemm(3, 3, 0, alpha, a, rsa, csa, b, rsb, csb, beta, c, rsc, csc)transform_matrix * matrix_data;
+    let decoded_data = pd::default_decode(&data);
+    let converted_data = decoded_data
+        .iter()
+        .map(|val| *val as f32 * 0.0029)
+        .collect::<Vec<f32>>();
+    let mut matrix_data = Matrix3::from_row_slice(&converted_data[0..3]);
+    let transform_matrix = Matrix3::new(
+        1.0, 0.0, 0.0,
+        0.0, f32::cos(f32::to_radians(70.0)), f32::sin(f32::to_radians(70.0)),
+        0.0, -f32::sin(f32::to_radians(70.0)), f32::cos(f32::to_radians(70.0))
+    );
+    let transformed_data = transform_matrix * matrix_data.column(0);
     let mut result = HashMap::new();
-    result.insert(91, 0.0);
-    result.insert(92, 0.0);
-    result.insert(93, 0.0);
+    result.insert(91, transformed_data[0]);
+    result.insert(92, transformed_data[1]);
+    result.insert(93, transformed_data[2]);
     result
 }
 
