@@ -120,8 +120,8 @@ impl FormatData {
         value as f32 / 10.0
     }
 
-    pub fn angular_velocity(value: i32) -> i8 {
-        -(value as i8)
+    pub fn angular_velocity(value: i32) -> i32 {
+        -value
     }
 
     pub fn frequency(value: i32) -> f32 {
