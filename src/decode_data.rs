@@ -13,7 +13,7 @@ pub fn decode_mock(data: &[u8]) -> HashMap<u8, f32> {
 
 pub fn decode_accumulator_status(data: &[u8]) -> HashMap<u8, f32> {
     let mut result = HashMap::new();
-    result.insert(1, pd::big_endian(&data[0..2], 8) as f32);
+    result.insert(1, (pd::big_endian(&data[0..2], 8) as f32) / 10);
     result.insert(
         2,
         pd::twos_comp(pd::big_endian(&data[2..4], 8) as u32, 16) as f32 / 10.0,
