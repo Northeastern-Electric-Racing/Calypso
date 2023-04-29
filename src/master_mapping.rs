@@ -64,7 +64,7 @@ pub fn get_message_info(id: &u32) -> MessageInfo {
         771 => return MessageInfo::new("Strain Gauge".to_string(), decode34),
         1024 => return MessageInfo::new("Wheel State".to_string(), decode35),
         10 => return MessageInfo::new("MPU States".to_string(), decode_mpu_dashboard_info),
-        772 => return MessageInfo::new("GPS Data 1".to_string(), decode_gps_1),
+        772 => return MessageInfo::new("GPS Data 1".to_string(), decode_mock),
         773 => return MessageInfo::new("GPS Data 2".to_string(), decode_gps_2),
         774 => return MessageInfo::new("GPS Data 3".to_string(), decode_gps_3),
         8 => return MessageInfo::new("Cell Temperatures".to_string(), decode_cell_temps),
