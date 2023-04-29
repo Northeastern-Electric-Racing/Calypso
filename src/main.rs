@@ -71,8 +71,8 @@ fn main() {
         println!("CREATED MESSAGE");
         let decoded_data = message.decode();
         println!("CUCKY MAGOO");
-        for (i, data) in decoded_data.iter().enumerate() {
-            tx.send(format!("index:{},{}", data.id.to_string(), data.value.to_string())).unwrap();
+        for (_i, data) in decoded_data.iter().enumerate() {
+            tx.send(format!("index:{},{}}}", data.id.to_string(), data.value.to_string())).unwrap();
             println!("SENDING: index:{},{}", data.id, data.value);
         }
     });
