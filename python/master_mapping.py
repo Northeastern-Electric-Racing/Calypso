@@ -86,7 +86,7 @@ MESSAGE_IDS = {
     },
     768: {
         "description": "nerduino accelerometer",
-        "decoder": decode20,
+        "decoder": decodeAcceleromterData,
     },
     769: {
         "description": "nerduino humidity",
@@ -171,6 +171,10 @@ MESSAGE_IDS = {
     775: {
         "description": "Logging Status",
         "decoder": decodeLoggingStatus,
+    },
+    177: {
+        "description": "unknown 177",
+        "decoder": decodeMock
     }
 }
 
@@ -696,4 +700,20 @@ DATA_IDS = {
         "name": "Logging Status",
         "units": ""
     },
+    130: {
+        "name": "Accumulator Fan Percentage",
+        "units": "%"
+    },
+    131: {
+        "name": "Motor Fan Percentage",
+        "units": "%"
+    },
+    132: {
+        "name": "Torque Limit Percentage",
+        "units": "%"
+    },
+    133: {
+        "name": "Regen Strength Value",
+        "units": ""
+    }
 }
