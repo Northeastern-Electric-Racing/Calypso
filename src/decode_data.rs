@@ -1,7 +1,8 @@
 // This file specifies methods to decode messages into the many pieces of data they contain.
 
-use std::collections::HashMap;
+use nalgebra::convert;
 use nalgebra::{Matrix3, Vector3};
+use std::collections::HashMap;
 
 use super::data::FormatData as fd;
 use super::data::ProcessData as pd;
@@ -247,13 +248,20 @@ pub fn decode_accelerometer_data(data: &[u8]) -> HashMap<u8, f32> {
         .iter()
         .map(|val| *val as f32 * 0.0029)
         .collect::<Vec<f32>>();
-    let mut matrix_data = Matrix3::from_row_slice(&converted_data[0..3]);
+    let matrix_data: Vector3<f32> =
+        Vector3::new(converted_data[0], converted_data[1], converted_data[2]);
     let transform_matrix = Matrix3::new(
-        1.0, 0.0, 0.0,
-        0.0, f32::cos(f32::to_radians(70.0)), f32::sin(f32::to_radians(70.0)),
-        0.0, -f32::sin(f32::to_radians(70.0)), f32::cos(f32::to_radians(70.0))
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        f32::cos(f32::to_radians(70.0)),
+        f32::sin(f32::to_radians(70.0)),
+        0.0,
+        -f32::sin(f32::to_radians(70.0)),
+        f32::cos(f32::to_radians(70.0)),
     );
-    let transformed_data = transform_matrix * matrix_data.column(0);
+    let transformed_data = transform_matrix * matrix_data;
     let mut result = HashMap::new();
     result.insert(91, transformed_data[0]);
     result.insert(92, transformed_data[1]);
@@ -369,13 +377,22 @@ pub fn decode_cell_temps(data: &[u8]) -> HashMap<u8, f32> {
     let low_cell_temp_cell_number = (data[5] >> 0) & 15;
 
     let mut result = HashMap::new();
-    result.insert(114, pd::twos_comp(pd::little_endian(&data[0..2], 8), 16) as f32);
+    result.insert(
+        114,
+        pd::twos_comp(pd::little_endian(&data[0..2], 8), 16) as f32,
+    );
     result.insert(115, high_cell_temp_chip_number as f32);
     result.insert(116, high_cell_temp_cell_number as f32);
-    result.insert(117, pd::twos_comp(pd::little_endian(&data[3..5], 8), 16) as f32);
+    result.insert(
+        117,
+        pd::twos_comp(pd::little_endian(&data[3..5], 8), 16) as f32,
+    );
     result.insert(118, low_cell_temp_chip_number as f32);
     result.insert(119, low_cell_temp_cell_number as f32);
-    result.insert(120, pd::twos_comp(pd::little_endian(&data[6..8], 8), 16) as f32);
+    result.insert(
+        120,
+        pd::twos_comp(pd::little_endian(&data[6..8], 8), 16) as f32,
+    );
 
     result
 }
@@ -409,9 +426,22 @@ pub fn decode_lv_battery_1(data: &[u8]) -> HashMap<u8, f32> {
 
 pub fn decode_lv_battery_2(data: &[u8]) -> HashMap<u8, f32> {
     let mut result = HashMap::new();
-    result.insert(139, (pd::twos_comp(pd::little_endian(&data[0..2], 8), 16) as f32) * (192.264 / 1000000.0) * 4.0);
-    result.insert(140, (pd::twos_comp(pd::little_endian(&data[2..4], 8), 16) as f32) * (1.648 / 1000.0));
-    result.insert(141, (pd::twos_comp(pd::little_endian(&data[4..6], 8), 16) as f32) * (1.648 / 1000.0));
-    result.insert(142, (pd::twos_comp(pd::little_endian(&data[6..8], 8), 16) as f32) * (1.46487 / 1000000.0) / (0.5 / 1000.0));
+    result.insert(
+        139,
+        (pd::twos_comp(pd::little_endian(&data[0..2], 8), 16) as f32) * (192.264 / 1000000.0) * 4.0,
+    );
+    result.insert(
+        140,
+        (pd::twos_comp(pd::little_endian(&data[2..4], 8), 16) as f32) * (1.648 / 1000.0),
+    );
+    result.insert(
+        141,
+        (pd::twos_comp(pd::little_endian(&data[4..6], 8), 16) as f32) * (1.648 / 1000.0),
+    );
+    result.insert(
+        142,
+        (pd::twos_comp(pd::little_endian(&data[6..8], 8), 16) as f32) * (1.46487 / 1000000.0)
+            / (0.5 / 1000.0),
+    );
     result
 }
