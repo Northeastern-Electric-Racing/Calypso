@@ -248,6 +248,7 @@ pub fn decode_accelerometer_data(data: &[u8]) -> HashMap<u8, f32> {
         .iter()
         .map(|val| *val as f32 * 0.0029)
         .collect::<Vec<f32>>();
+    println!("BEFORE VECTOR");
     let matrix_data: Vector3<f32> =
         Vector3::new(converted_data[0], converted_data[1], converted_data[2]);
     println!("CUCK VECTOR");
