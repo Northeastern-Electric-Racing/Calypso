@@ -244,6 +244,7 @@ pub fn decode19(data: &[u8]) -> HashMap<u8, f32> {
 
 pub fn decode_accelerometer_data(data: &[u8]) -> HashMap<u8, f32> {
     let decoded_data = pd::default_decode(&data);
+    println!("AFTER DEFAULT");
     let converted_data = decoded_data
         .iter()
         .map(|val| *val as f32 * 0.0029)
