@@ -239,6 +239,7 @@ pub fn get_data_info(id: u8) -> DataInfo {
         142 => return DataInfo::new("iin".to_string(), "A".to_string()),
         143 => return DataInfo::new("Cell Burning Status".to_string(), "".to_string()),
         144 => return DataInfo::new("Traction Control On".to_string(), "".to_string()),
+        145 => return DataInfo::new("Precharge State".to_string(), "".to_string()),
         _ => return DataInfo::new("".to_string(), "".to_string()),
         
     }
