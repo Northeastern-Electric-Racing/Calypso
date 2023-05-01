@@ -250,6 +250,7 @@ pub fn decode_accelerometer_data(data: &[u8]) -> HashMap<u8, f32> {
         .collect::<Vec<f32>>();
     let matrix_data: Vector3<f32> =
         Vector3::new(converted_data[0], converted_data[1], converted_data[2]);
+    println!("CUCK VECTOR");
     let transform_matrix = Matrix3::new(
         1.0,
         0.0,
@@ -261,6 +262,7 @@ pub fn decode_accelerometer_data(data: &[u8]) -> HashMap<u8, f32> {
         -f32::sin(f32::to_radians(70.0)),
         f32::cos(f32::to_radians(70.0)),
     );
+    println!("CUCK MATRIX");
     let transformed_data = transform_matrix * matrix_data;
     let mut result = HashMap::new();
     result.insert(91, transformed_data[0]);
