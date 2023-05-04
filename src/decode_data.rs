@@ -244,15 +244,12 @@ pub fn decode19(data: &[u8]) -> HashMap<u8, f32> {
 
 pub fn decode_accelerometer_data(data: &[u8]) -> HashMap<u8, f32> {
     let decoded_data = pd::default_decode(&data);
-    println!("AFTER DEFAULT");
     let converted_data = decoded_data
         .iter()
         .map(|val| *val as f32 * 0.0029)
         .collect::<Vec<f32>>();
-    println!("BEFORE VECTOR");
     let matrix_data: Vector3<f32> =
         Vector3::new(converted_data[0], converted_data[1], converted_data[2]);
-    println!("CUCK VECTOR");
     let transform_matrix = Matrix3::new(
         1.0,
         0.0,
@@ -264,7 +261,6 @@ pub fn decode_accelerometer_data(data: &[u8]) -> HashMap<u8, f32> {
         -f32::sin(f32::to_radians(70.0)),
         f32::cos(f32::to_radians(70.0)),
     );
-    println!("CUCK MATRIX");
     let transformed_data = transform_matrix * matrix_data;
     let mut result = HashMap::new();
     result.insert(91, transformed_data[0]);
@@ -343,6 +339,7 @@ pub fn decode_mpu_dashboard_info(data: &[u8]) -> HashMap<u8, f32> {
     result.insert(133, data[4] as f32);
     result.insert(144, data[5] as f32);
     result.insert(145, data[6] as f32);
+    result.insert(146, data[7] as f32);
     result
 }
 

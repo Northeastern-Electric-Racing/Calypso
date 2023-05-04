@@ -240,6 +240,7 @@ pub fn get_data_info(id: u8) -> DataInfo {
         143 => return DataInfo::new("Cell Burning Status".to_string(), "".to_string()),
         144 => return DataInfo::new("Traction Control On".to_string(), "".to_string()),
         145 => return DataInfo::new("Precharge State".to_string(), "".to_string()),
+        146 => return DataInfo::new("BMS Prefault Status".to_string(), "".to_string()),
         _ => return DataInfo::new("".to_string(), "".to_string()),
         
     }
