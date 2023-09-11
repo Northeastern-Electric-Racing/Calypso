@@ -1,0 +1,16 @@
+[package]
+name = "ner_processing"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+rayon = "1.5.1"
+chrono = "0.4.19"
+systemstat = "0.2.1"
+socketcan = "1.7.0"
+transpose = "0.2.2"
+matrixmultiply = "0.3.3"
+nalgebra = "0.32.2"

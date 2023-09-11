@@ -6,7 +6,7 @@ a line in a log file.
 from enum import Enum
 from datetime import datetime
 
-from message import Message
+from python.message import Message
 
 
 class LogFormat(Enum):
@@ -75,5 +75,3 @@ def _processTextual2(line: str) -> Message:
 
 def _processBinary(line: str) -> Message:
     raise RuntimeError("Binary files not currently supported.")
-
-

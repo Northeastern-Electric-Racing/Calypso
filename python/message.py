@@ -1,8 +1,8 @@
 from typing import List, Dict, Any
 from datetime import datetime
 
-from data import Data
-from master_mapping import MESSAGE_IDS
+from python.data import Data
+from python.master_mapping import MESSAGE_IDS
 
 
 class MessageFormatException(Exception):

@@ -6,8 +6,8 @@ import csv
 import sys
 from typing import List
 
-from master_mapping import DATA_IDS
-from thread import thread
+from python.master_mapping import DATA_IDS
+from python.thread import thread
 
 DEFAULT_LOGS_DIRECTORY = "./logs/"
 DEFAULT_OUTPUT_PATH = "./output.csv"
@@ -39,7 +39,6 @@ def getLineCount(filepaths: List[str]) -> int:
                 if tested_lines >= N:
                     return int(total_size / (tested_size / tested_lines))
     return int(total_size / (tested_size / tested_lines))
-
 
 def find_time(start, finish):
     """
