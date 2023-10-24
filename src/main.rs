@@ -1,91 +1,102 @@
-extern crate systemstat;
-use chrono::DateTime;
-use chrono::TimeZone;
-use chrono::Utc;
-use socketcan::*;
-use std::env;
-use std::io::Write;
-use std::os::unix::net::UnixStream;
-use std::process::Command;
-use std::sync::mpsc::channel;
-use std::thread;
-mod data;
-mod decode_data;
-mod master_mapping;
-mod message;
+use std::{
+    env,
+    process,
+    thread,
+    time::Duration
+};
+
+extern crate paho_mqtt as mqtt;
+
+const DFLT_BROKER:&str = "tcp://localhost:1883";
+const DFLT_CLIENT:&str = "rust_subscribe";
+const DFLT_TOPICS:&[&str] = &["/mpu", "/tpu"];
+// The qos list that match topics above.
+const DFLT_QOS:&[i32] = &[0, 1];
+
+// Reconnect to the broker when connection is lost.
+fn try_reconnect(cli: &mqtt::Client) -> bool
+{
+    println!("Connection lost. Waiting to retry connection");
+    for _ in 0..12 {
+        thread::sleep(Duration::from_millis(5000));
+        if cli.reconnect().is_ok() {
+            println!("Successfully reconnected");
+            return true;
+        }
+    }
+    println!("Unable to reconnect after several attempts.");
+    false
+}
+
+// Subscribes to multiple topics.
+fn subscribe_topics(cli: &mqtt::Client) {
+    if let Err(e) = cli.subscribe_many(DFLT_TOPICS, DFLT_QOS) {
+        println!("Error subscribes topics: {:?}", e);
+        process::exit(1);
+    }
+}
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let default = "tmp/ipc.sock".to_owned();
-    let ipc_path = args.get(0).unwrap_or(&default);
+    let host = env::args().nth(1).unwrap_or_else(||
+        DFLT_BROKER.to_string()
+    );
 
-    let mut down_command = Command::new("sudo")
-        .arg("ifconfig")
-        .arg("can0")
-        .arg("down")
-        .spawn()
-        .expect("down command did not work");
-    down_command
-        .wait()
-        .expect("Fail while waiting for down command");
-    let mut bit_rate_commmand = Command::new("sudo")
-        .arg("ip")
-        .arg("link")
-        .arg("set")
-        .arg("can0")
-        .arg("type")
-        .arg("can")
-        .arg("bitrate")
-        .arg("1000000")
-        .spawn()
-        .expect("bit rate command did not work");
-    bit_rate_commmand
-        .wait()
-        .expect("Fail while waiting for bit rate");
-    let mut up_command = Command::new("sudo")
-        .arg("ifconfig")
-        .arg("can0")
-        .arg("up")
-        .spawn()
-        .expect("up command did nto work");
-    up_command
-        .wait()
-        .expect("Fail while waiting for up command");
+    // Define the set of options for the create.
+    // Use an ID for a persistent session.
+    let create_opts = mqtt::CreateOptionsBuilder::new()
+        .server_uri(host)
+        .client_id(DFLT_CLIENT.to_string())
+        .finalize();
 
-    let mut stream = UnixStream::connect(ipc_path).unwrap();
-    let (tx, rx) = channel();
-    //open can socket channel at name can0
-    const CAN_CHANNEL: &str = "can0";
-    let socket = CANSocket::open(&CAN_CHANNEL);
-    let socket = match socket {
-        Ok(socket) => socket,
-        Err(err) => {
-            println!("Failed to open CAN socket: {}", err);
-            return;
-        }
-    };
-    thread::spawn(move || loop {
-        let msg = socket.read_frame().unwrap();
-        let date: DateTime<Utc> = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
-        let data = msg.data();
-        let message = message::Message::new(&date, &msg.id(), &data);
-        let decoded_data = message.decode();
-        for (_i, data) in decoded_data.iter().enumerate() {
-            let message = format!(
-                "{{
-                    index:{},
-                    value:{}
-                }}",
-                data.id.to_string(),
-                data.value.to_string()
-            );
-            println!("Sending message: {}", message);
-            tx.send(message).unwrap();
-        }
+    // Create a client.
+    let mut cli = mqtt::Client::new(create_opts).unwrap_or_else(|err| {
+        println!("Error creating the client: {:?}", err);
+        process::exit(1);
     });
-    loop {
-        let _ = rx
-            .try_recv()
-            .map(|reply| stream.write_all(reply.as_bytes()));
+
+    // Initialize the consumer before connecting.
+    let rx = cli.start_consuming();
+
+    // Define the set of options for the connection.
+    let lwt = mqtt::MessageBuilder::new()
+        .topic("test")
+        .payload("Consumer lost connection")
+        .finalize();
+    let conn_opts = mqtt::ConnectOptionsBuilder::new()
+        .keep_alive_interval(Duration::from_secs(20))
+        .clean_session(false)
+        .will_message(lwt)
+        .finalize();
+
+    // Connect and wait for it to complete or fail.
+    if let Err(e) = cli.connect(conn_opts) {
+        println!("Unable to connect:\n\t{:?}", e);
+        process::exit(1);
     }
+
+    // Subscribe topics.
+    subscribe_topics(&cli);
+
+    println!("Processing requests...");
+    for msg in rx.iter() {
+        if let Some(msg) = msg {
+            println!("{}", msg);
+        }
+        else if !cli.is_connected() {
+            if try_reconnect(&cli) {
+                println!("Resubscribe topics...");
+                subscribe_topics(&cli);
+            } else {
+                break;
+            }
+        }
+    }
+
+    // If still connected, then disconnect now.
+    if cli.is_connected() {
+        println!("Disconnecting");
+        cli.unsubscribe_many(DFLT_TOPICS).unwrap();
+        cli.disconnect(None).unwrap();
+    }
+    println!("Exiting");
 }
