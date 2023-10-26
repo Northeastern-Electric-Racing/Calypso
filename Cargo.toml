@@ -14,3 +14,15 @@ socketcan = "1.7.0"
 transpose = "0.2.2"
 matrixmultiply = "0.3.3"
 nalgebra = "0.32.2"
+paho-mqtt = { git = "https://github.com/eclipse/paho.mqtt.rust.git", branch = "master" }
+
+[[bin]]
+name = "sub"
+path = "src/sub/main.rs"
+
+[[bin]]
+name = "pub"
+path = "src/pub/main.rs"
+
+
+
