@@ -1,0 +1,43 @@
+1:
+    id: 1
+    string: "accumulator status"
+    fields:
+        - field_id: 1
+          name: "Pack Inst Voltage"
+          units: "V"
+          size: 2
+          correcting_factor: 1/10.0
+          decoding:
+            - big_endian:
+                - bits: 8
+                - final_type: "f32"
+        - field_id: 2
+          name: "Pack Current"
+          units: "A"
+          size: 2
+          correcting_factor: 1/10.0
+          decoding:
+            - big_endian:
+                - bits: 8
+                - final_type: "u32"
+            - twos_complement:
+                - bits: 8
+                - final_type: "f32"
+        - field_id: 3
+          name: "Pack Amp-hours"
+          units: "Ah"
+          size: 2
+          decoding:
+            - big_endian:
+                - bits: 8
+                - final_type: "f32"
+        - field_id: 4
+          name: "Pack SOC"
+          units: "%"
+          size: 1
+          final_type: "f32"
+        - field_id: 5
+          name: "Pack Health"
+          units: "%"
+          size: 1
+          final_type: "f32"
