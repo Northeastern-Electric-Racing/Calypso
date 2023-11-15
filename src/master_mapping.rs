@@ -88,6 +88,7 @@ impl DataInfo {
     }
 }
 
+// maps from data id to DataInfo containing the name of the data and its units
 pub fn get_data_info(id: u8) -> DataInfo {
     match id {
         0 => return DataInfo::new("Mock Data".to_string(), "".to_string()),
@@ -242,6 +243,5 @@ pub fn get_data_info(id: u8) -> DataInfo {
         145 => return DataInfo::new("Precharge State".to_string(), "".to_string()),
         146 => return DataInfo::new("BMS Prefault Status".to_string(), "".to_string()),
         _ => return DataInfo::new("".to_string(), "".to_string()),
-        
     }
 }
