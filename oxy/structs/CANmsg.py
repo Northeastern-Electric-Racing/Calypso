@@ -5,7 +5,7 @@ from .CANField import CANField
 from dataclasses import dataclass
 
 @dataclass
-class CANmsg:
+class CANMsg:
     '''
     Represents a CAN message. Has an id, a description, and a number of individual fields.
     '''

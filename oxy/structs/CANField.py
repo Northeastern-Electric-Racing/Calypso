@@ -9,7 +9,7 @@ class CANField:
     '''
     Represents a field in a CAN message. Has an id, a name, units, a size,
     and an optional CorrectingFactor and Decodings. Also knows its own
-    index within its parent CANmsg, which is assigned at load from YAML.
+    index within its parent CANMsg, which is assigned at load from YAML.
     '''
     id: int
     name: str

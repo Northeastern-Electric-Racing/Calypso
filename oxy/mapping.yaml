@@ -1,4 +1,4 @@
-!CANmsg
+!CANMsg
 id: 1
 desc: "accumulator status"
 fields:

@@ -1,18 +1,18 @@
 from structs.CANField import CANField
-from structs.CANmsg import CANmsg
-from typing import Optional
+from structs.CANMsg import CANMsg
 from structs.Decoding import Decoding
 
+from typing import Optional
 
 class RustSynth:
     '''
-    A class to synthesize Rust from a given CANmsg spec.
+    A class to synthesize Rust from a given CANMsg spec.
     '''
 
     inst_hashmap: str = "    let mut result = HashMap::new();"
     closing: str = "    result\n}"
 
-    def synthesize(self, msg: CANmsg) -> str:
+    def synthesize(self, msg: CANMsg) -> str:
         signature: str = self.signature(msg.desc)
         generated_lines: list[str] = []
         for field in msg.fields:
