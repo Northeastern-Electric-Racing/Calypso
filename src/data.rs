@@ -1,13 +1,18 @@
 use chrono::prelude::*;
 use std::fmt;
 
+/**
+ * Wrapper Class for Data coming off the car
+ */
 pub struct Data {
-    // Wrapper class for an individual piece of data.
     pub(crate) timestamp: DateTime<Utc>,
     pub id: u8,
     pub value: f32,
 }
 
+/**
+ * Implementation for the format of the data for debugging purposes
+ */
 impl fmt::Display for Data {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Overrides the string representation of the class.
@@ -16,7 +21,16 @@ impl fmt::Display for Data {
     }
 }
 
+/**
+ * Implementation fo the Data Structs' methods
+ */
 impl Data {
+    /**
+     * Constructor
+     * param timestamp: The time the data is collected
+     * param id: the id of the data
+     * param value: the value of the data
+     */
     pub fn new(timestamp: DateTime<Utc>, id: u8, value: f32) -> Self {
         Self {
             timestamp,
@@ -26,9 +40,10 @@ impl Data {
     }
 }
 
-pub struct ProcessData {
-    // Utility functions to process message data.
-}
+/**
+ * Class to contain the data processing functions
+ */
+pub struct ProcessData {}
 
 impl ProcessData {
     pub fn group_bytes(data_bytes: &[u8], group_length: usize) -> Vec<Vec<u8>> {

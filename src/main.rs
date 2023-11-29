@@ -15,7 +15,7 @@ fn configure_can() {
         .arg("down")
         .spawn()
         .expect("down command did not work");
-    down_command
+    down_command // Takes down any current can networks
         .wait()
         .expect("Fail while waiting for down command");
     let mut bit_rate_commmand = Command::new("sudo")
@@ -29,7 +29,7 @@ fn configure_can() {
         .arg("1000000")
         .spawn()
         .expect("bit rate command did not work");
-    bit_rate_commmand
+    bit_rate_commmand //sets the bit rate of the can network
         .wait()
         .expect("Fail while waiting for bit rate");
     let mut up_command = Command::new("sudo")
@@ -38,11 +38,14 @@ fn configure_can() {
         .arg("up")
         .spawn()
         .expect("up command did nto work");
-    up_command
+    up_command // Brings up the new can network
         .wait()
         .expect("Fail while waiting for up command");
 }
 
+/**
+ * Reads the can socket and publishes the data to the given client.
+ */
 fn read_can(mut publisher: Box<dyn Client + Send>) -> () {
     //open can socket channel at name can0
     const CAN_CHANNEL: &str = "can0";
@@ -66,6 +69,10 @@ fn read_can(mut publisher: Box<dyn Client + Send>) -> () {
     });
 }
 
+/**
+ * Parses the command line arguments.
+ * Returns the client type and the path to connect to.
+ */
 fn parse_args() -> (String, Box<dyn Client + 'static + Send>) {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
