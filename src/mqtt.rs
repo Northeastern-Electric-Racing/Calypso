@@ -63,7 +63,7 @@ impl MqttClient {
      * Creates a new MqttClient with the given host name.
      * param host_name: The host name of the broker.
      */
-    pub fn set_host(&mut self, host_name: &String) {
+    fn set_host(&mut self, host_name: &String) {
         let create_options = mqtt::CreateOptionsBuilder::new()
             .server_uri(host_name)
             .client_id(DFLT_CLIENT.to_string())
@@ -78,7 +78,7 @@ impl MqttClient {
      * Connects to the broker.
      * Sets the last will and testament.
      */
-    pub fn connect(&mut self) {
+    fn connect(&mut self) {
         if let Some(client) = &self.client {
             let lastwilltestatment = mqtt::MessageBuilder::new()
                 .topic("Calypso/Status")
@@ -101,7 +101,7 @@ impl MqttClient {
     /**
      * Check if the client is connected to the broker.
      */
-    pub fn is_connected(&self) -> bool {
+    fn _is_connected(&self) -> bool {
         if let Some(client) = &self.client {
             client.is_connected()
         } else {
@@ -113,7 +113,7 @@ impl MqttClient {
     /**
      * Reconnect to the broker.
      */
-    pub fn reconnect(&mut self) -> Result<ServerResponse, mqtt::Error> {
+    fn _reconnect(&mut self) -> Result<ServerResponse, mqtt::Error> {
         if let Some(client) = &self.client {
             client.reconnect()
         } else {
@@ -126,7 +126,7 @@ impl MqttClient {
     /**
      * Disconnect from the broker.
      */
-    pub fn disconnect(&mut self) -> Result<(), mqtt::Error> {
+    fn _disconnect(&mut self) -> Result<(), mqtt::Error> {
         if let Some(client) = &self.client {
             client.disconnect(None)
         } else {

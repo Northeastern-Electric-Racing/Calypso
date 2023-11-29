@@ -45,7 +45,7 @@ impl IPCConnection {
      * Sends the given data to the IPC server.
      * param data: The data object to format and send.
      */
-    pub fn send(&mut self, data: &Data) {
+    fn send(&mut self, data: &Data) {
         if let Some(sender) = &self.sender {
             let message = format!(
                 "{{
