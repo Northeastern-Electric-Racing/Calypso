@@ -46,16 +46,20 @@ impl Data {
 pub struct ProcessData {}
 
 impl ProcessData {
+    /**
+     * Groups the given data bytes into lists of specified length.
+     */
     pub fn group_bytes(data_bytes: &[u8], group_length: usize) -> Vec<Vec<u8>> {
-        // Splits the given data bytes into lists of specified length.
         data_bytes
             .chunks(group_length)
             .map(|chunk| chunk.to_vec())
             .collect()
     }
 
+    /**
+     * Computes the twos complement of the given value.
+     */
     pub fn twos_comp(val: u32, bits: usize) -> i64 {
-        // Computes the twos complement of the given value.
         if (val & (1 << (bits - 1))) != 0 {
             (val as i64) - (1 << bits)
         } else {
@@ -63,52 +67,52 @@ impl ProcessData {
         }
     }
 
+    /**
+     * Transforms the given data bytes into a value in little endian.
+     * Little Endian byte order stores low order bytes first.
+     */
     pub fn little_endian(data_bytes: &[u8], bits: usize) -> u32 {
-        // Transforms the given data bytes into a value in little endian.
-        // Little Endian byte order stores low order bytes first.
         let mut result: u32 = 0;
         for (i, byte) in data_bytes.iter().enumerate() {
-            // println!("Little End Byte: {}", byte);
             result |= (*byte as u32) << (bits * i);
-            // println!("Little End Result: {}", result)
         }
         result
     }
 
+    /**
+     * Transforms the given data bytes into a value in big endian.
+     * Big Endian byte order stores low order bytes last.
+     */
     pub fn big_endian(bytes: &[u8], bits: usize) -> u32 {
-        // Transforms the given data bytes into a value in big endian.
-        // Big Endian byte order stores low order bytes last.
         let mut result: u32 = 0;
         for (i, byte) in bytes.iter().enumerate() {
-            // println!("Big End Byte: {}", byte);
             result |= (*byte as u32) << (bits * (bytes.len() - i - 1));
-            // println!("Big End Result: {}", result);
         }
         result
     }
 
+    /**
+     * Decodes the given data bytes by grouping them into 2 byte chunks,
+     * transforming them into little endian, and then computing the twos complement.
+     */
     pub fn default_decode(byte_vals: &[u8]) -> Vec<i64> {
-        // Default decode structure seen by a majority of the messages.
-
         let grouped_vals = ProcessData::group_bytes(byte_vals, 2);
-        println!("CUCKED GROUP BYTES");
         let parsed_vals: Vec<u32> = grouped_vals
             .iter()
             .map(|val| ProcessData::little_endian(val, 8))
             .collect();
-        println!("CUCKED LITTLE ENDIAN");
         let decoded_vals: Vec<i64> = parsed_vals
             .iter()
             .map(|val| ProcessData::twos_comp(*val, 16))
             .collect();
-        println!("CUCKED TWOS COMP");
         decoded_vals
     }
 }
 
-pub struct FormatData {
-    // Utility functions to scale data values of a specific type.
-}
+/**
+ * Class to contain the data formatting functions
+ */
+pub struct FormatData {}
 
 impl FormatData {
     pub fn temperature(value: i64) -> f32 {
