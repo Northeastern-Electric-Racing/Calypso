@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::data::Data;
+
 // Mapping from data IDs to the status bits they encode
 // Each data ID contains a hash map with keys that are bit names and values that are the indexes
 const STATUS_MAP: HashMap<u8, HashMap<&str, u8>> = [(6, HashMap::new()), // Failsafe Statuses

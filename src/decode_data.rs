@@ -1,13 +1,13 @@
 // This file specifies methods to decode messages into the many pieces of data they contain.
 
-use nalgebra::convert;
+// use nalgebra::convert;
 use nalgebra::{Matrix3, Vector3};
 use std::collections::HashMap;
 
 use super::data::FormatData as fd;
 use super::data::ProcessData as pd;
 
-pub fn decode_mock(data: &[u8]) -> HashMap<u8, f32> {
+pub fn decode_mock(_data: &[u8]) -> HashMap<u8, f32> {
     let mut result = HashMap::new();
     result.insert(0, 0.0);
     result
@@ -101,7 +101,7 @@ pub fn decode7(data: &[u8]) -> HashMap<u8, f32> {
 }
 
 // TODO: Fill this method out (complicated with bit shifts)
-pub fn decode8(data: &[u8]) -> HashMap<u8, f32> {
+pub fn decode8(_data: &[u8]) -> HashMap<u8, f32> {
     let mut result = HashMap::new();
     result.insert(30, 0.0);
     result.insert(31, 0.0);

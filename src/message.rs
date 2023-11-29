@@ -1,4 +1,3 @@
-
 use chrono::prelude::*;
 
 use super::data::Data;
@@ -23,12 +22,7 @@ impl<'a> Message<'a> {
         self.decode_message(&self.timestamp, &self.id, &self.data)
     }
 
-    fn decode_message(
-        &self,
-        timestamp: &DateTime<Utc>,
-        id: &u32,
-        data: &[u8],
-    ) -> Vec<Data> {
+    fn decode_message(&self, timestamp: &DateTime<Utc>, id: &u32, data: &[u8]) -> Vec<Data> {
         let decoder = get_message_info(id).decoder;
         println!("ATTEMPTING TO CUCK: {}", id);
         let mut decoded_data: Vec<Data> = Vec::new();

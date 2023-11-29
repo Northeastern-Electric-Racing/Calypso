@@ -1,3 +1,6 @@
 {
-  "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  "editor.defaultFormatter": "rust-lang.rust-analyzer",
+  "rust-analyzer.linkedProjects": [
+    "./Cargo.toml"
+  ]
 }
