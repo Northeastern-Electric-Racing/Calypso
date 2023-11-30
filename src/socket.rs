@@ -51,10 +51,7 @@ impl IPCConnection {
         if let Some(stream) = &mut self.stream {
             let cloned_data = data.clone(); // Clone the data
             let message = format!(
-                "{{
-               index:{},
-               value:{}
-            }}",
+                "{{index:{},value:{}}}",
                 cloned_data.id.to_string(),
                 cloned_data.value.to_string()
             );
