@@ -35,7 +35,7 @@ impl Client for MqttClient {
                 .payload(payload)
                 .finalize();
             client.publish(msg).unwrap();
-            thread::sleep(Duration::from_millis(50));
+            thread::sleep(Duration::from_millis(10));
             return;
         } else {
             println!("Client not initialized, please set host first and connect")
