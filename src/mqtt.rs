@@ -1,7 +1,7 @@
 extern crate paho_mqtt as mqtt;
 use mqtt::ServerResponse;
-use std::process;
 use std::time::Duration;
+use std::{process, thread};
 
 use crate::client::Client;
 use crate::data::Data;
@@ -35,6 +35,7 @@ impl Client for MqttClient {
                 .payload(payload)
                 .finalize();
             client.publish(msg).unwrap();
+            thread::sleep(Duration::from_millis(50));
             return;
         } else {
             println!("Client not initialized, please set host first and connect")
