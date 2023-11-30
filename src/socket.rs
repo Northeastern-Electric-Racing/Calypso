@@ -57,7 +57,7 @@ impl IPCConnection {
             );
             sender
                 .send(message)
-                .unwrap_or(println!("Failed to send data"));
+                .unwrap_or(println!("Failed to send message, is NERO running?"));
         } else {
             println!("Sender not initialized, please connect first")
         }
