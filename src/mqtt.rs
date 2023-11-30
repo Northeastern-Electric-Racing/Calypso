@@ -7,7 +7,7 @@ use crate::client::Client;
 use crate::data::Data;
 
 pub const DFLT_BROKER: &str = "mqtt://localhost:1883";
-const DFLT_CLIENT: &str = "rust_subscribe";
+const DFLT_CLIENT: &str = "calypso";
 
 /**
  * MqttClient is a wrapper around the paho_mqtt::Client.
@@ -34,6 +34,7 @@ impl Client for MqttClient {
                 .topic(topic)
                 .payload(payload)
                 .finalize();
+            println!("Publishing message: {:?}", msg);
             client.publish(msg).unwrap();
             return;
         } else {

@@ -104,6 +104,8 @@ fn parse_args() -> (String, Box<dyn Client + 'static + Send>) {
 /**
  * Main Function
  * Configures the can network, retrieves the client based on the command line arguments, connects the client and then reads the can socket.
+ * Sample Calls for IPC "/home/ner/Desktop/Calypso/target/release/calypso ipc /tmp/ipc.sock &"
+ * Sample Call for Mqtt "/home/ner/Desktop/Calypso/target/release/calypso mqtt localhost:1883 &"
  */
 fn main() {
     configure_can();
