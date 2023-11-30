@@ -25,7 +25,7 @@ impl Client for MqttClient {
      * param data: The data object to format and send.
      */
     fn publish(&mut self, data: &Data) {
-        let topic = format!("Calypso");
+        let topic = format!("/Calypso");
         let payload = data.value.to_string();
 
         /* If the client is initialized, publish the data. */
