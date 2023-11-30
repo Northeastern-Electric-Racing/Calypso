@@ -44,7 +44,6 @@ impl<'a> Message<'a> {
      */
     fn decode_message(&self, timestamp: &DateTime<Utc>, id: &u32, data: &[u8]) -> Vec<Data> {
         let decoder = get_message_info(id).decoder;
-        println!("ATTEMPTING TO CUCK: {}", id);
         let mut decoded_data: Vec<Data> = Vec::new();
         let result = decoder(data);
         for (data_id, value) in result {

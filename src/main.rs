@@ -56,16 +56,13 @@ fn read_can(mut publisher: Box<dyn Client + Send>) -> () {
             return;
         }
     };
-    println!("Opened CAN socket");
     loop {
-        println!("Reading frame");
         let msg = socket.read_frame().unwrap();
         let date: DateTime<Utc> = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
         let data = msg.data();
         let message = Message::new(&date, &msg.id(), &data);
         let decoded_data = message.decode();
         for (_i, data) in decoded_data.iter().enumerate() {
-            println!("{}", data);
             publisher.publish(data)
         }
     }
