@@ -64,6 +64,7 @@ fn read_can(mut publisher: Box<dyn Client + Send>) -> () {
         let message = Message::new(&date, &msg.id(), &data);
         let decoded_data = message.decode();
         for (_i, data) in decoded_data.iter().enumerate() {
+            println!("{} {} {}", data.timestamp, data.id, data.value);
             publisher.publish(data)
         }
     });
@@ -75,12 +76,16 @@ fn read_can(mut publisher: Box<dyn Client + Send>) -> () {
  */
 fn parse_args() -> (String, Box<dyn Client + 'static + Send>) {
     let args: Vec<String> = env::args().collect();
+    println!("{:?}", args);
     if args.len() < 2 {
         println!("Please provide a client type");
         process::exit(1);
     }
     let client_type = &args[1];
     let path = &args[2];
+
+    println!("Client type: {}", client_type);
+    println!("Path: {}", path);
 
     match client_type.as_str() {
         "mqtt" => (

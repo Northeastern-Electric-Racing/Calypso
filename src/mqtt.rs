@@ -8,7 +8,6 @@ use crate::data::Data;
 
 pub const DFLT_BROKER: &str = "mqtt://localhost:1883";
 const DFLT_CLIENT: &str = "rust_subscribe";
-// The qos list that match topics above.
 
 /**
  * MqttClient is a wrapper around the paho_mqtt::Client.
