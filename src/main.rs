@@ -1,7 +1,6 @@
 use std::{
     env,
     process::{self, Command},
-    thread,
 };
 
 use calypso::{client::Client, message::Message, mqtt::MqttClient, socket::IPCConnection};
@@ -58,7 +57,8 @@ fn read_can(mut publisher: Box<dyn Client + Send>) -> () {
         }
     };
     println!("Opened CAN socket");
-    thread::spawn(move || loop {
+    loop {
+        println!("Reading frame");
         let msg = socket.read_frame().unwrap();
         let date: DateTime<Utc> = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
         let data = msg.data();
@@ -68,7 +68,7 @@ fn read_can(mut publisher: Box<dyn Client + Send>) -> () {
             println!("{}", data);
             publisher.publish(data)
         }
-    });
+    }
 }
 
 /**
