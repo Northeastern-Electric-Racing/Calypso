@@ -55,7 +55,9 @@ impl IPCConnection {
                 data.id.to_string(),
                 data.value.to_string()
             );
-            sender.send(message).unwrap();
+            sender
+                .send(message)
+                .unwrap_or(println!("Failed to send data"));
         } else {
             println!("Sender not initialized, please connect first")
         }
