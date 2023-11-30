@@ -4,7 +4,7 @@ use std::{
 };
 
 use calypso::{client::Client, message::Message, mqtt::MqttClient, socket::IPCConnection};
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use socketcan::CANSocket;
 
 fn configure_can() {
@@ -58,7 +58,7 @@ fn read_can(mut publisher: Box<dyn Client + Send>) -> () {
     };
     loop {
         let msg = socket.read_frame().unwrap();
-        let date: DateTime<Utc> = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
+        let date: DateTime<Utc> = Utc::now();
         let data = msg.data();
         let message = Message::new(&date, &msg.id(), &data);
         let decoded_data = message.decode();
@@ -101,6 +101,10 @@ fn parse_args() -> (String, Box<dyn Client + 'static + Send>) {
     }
 }
 
+/**
+ * Main Function
+ * Configures the can network, retrieves the client based on the command line arguments, connects the client and then reads the can socket.
+ */
 fn main() {
     configure_can();
     let (path, mut client) = parse_args();
