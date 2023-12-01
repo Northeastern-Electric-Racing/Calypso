@@ -1,4 +1,4 @@
-use chrono::prelude::*;
+use chrono::{DateTime, Utc};
 
 use super::data::Data;
 use super::master_mapping::get_message_info;
