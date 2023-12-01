@@ -18,7 +18,7 @@ pub fn decode_accumulator_status(data: &[u8]) -> HashMap<u8, f32> {
     result.insert(1, (pd::big_endian(&data[0..2], 8) as f32) / 10.0);
     result.insert(
         2,
-        pd::twos_comp(pd::big_endian(&data[2..4], 8) as u32, 16) as f32 / 10.0,
+        pd::twos_comp(pd::big_endian(&data[2..4], 8), 16) as f32 / 10.0,
     );
     result.insert(3, pd::big_endian(&data[4..6], 8) as f32);
     result.insert(4, data[6] as f32);
@@ -44,9 +44,9 @@ pub fn decode3(data: &[u8]) -> HashMap<u8, f32> {
 
 pub fn decode_cell_voltages(data: &[u8]) -> HashMap<u8, f32> {
     let high_cell_volt_chip_number = (data[2] >> 4) & 15;
-    let high_cell_volt_cell_number = (data[2] >> 0) & 15;
+    let high_cell_volt_cell_number = data[2] & 15;
     let low_cell_volt_chip_number = (data[5] >> 4) & 15;
-    let low_cell_volt_cell_number = (data[5] >> 0) & 15;
+    let low_cell_volt_cell_number = data[5] & 15;
     let mut result = HashMap::new();
     result.insert(13, (pd::little_endian(&data[0..2], 8) as f32) / 10000.0);
     result.insert(121, high_cell_volt_chip_number as f32);
@@ -153,7 +153,7 @@ pub fn decode11(data: &[u8]) -> HashMap<u8, f32> {
 }
 
 pub fn decode12(data: &[u8]) -> HashMap<u8, f32> {
-    let decoded_data = pd::default_decode(&data);
+    let decoded_data = pd::default_decode(data);
     let final_data: Vec<f32> = decoded_data.iter().map(|d| fd::high_voltage(*d)).collect();
     let mut result = HashMap::new();
     result.insert(52, final_data[0]);
@@ -164,7 +164,7 @@ pub fn decode12(data: &[u8]) -> HashMap<u8, f32> {
 }
 
 pub fn decode13(data: &[u8]) -> HashMap<u8, f32> {
-    let decoded_data = pd::default_decode(&data);
+    let decoded_data = pd::default_decode(data);
     let mut result = HashMap::new();
     result.insert(56, fd::flux(decoded_data[0]));
     result.insert(57, fd::flux(decoded_data[1]));
@@ -174,7 +174,7 @@ pub fn decode13(data: &[u8]) -> HashMap<u8, f32> {
 }
 
 pub fn decode14(data: &[u8]) -> HashMap<u8, f32> {
-    let decoded_data = pd::default_decode(&data);
+    let decoded_data = pd::default_decode(data);
     let final_data: Vec<f32> = decoded_data.iter().map(|d| fd::low_voltage(*d)).collect();
     let mut result = HashMap::new();
     result.insert(60, final_data[0]);
@@ -201,7 +201,7 @@ pub fn decode15(data: &[u8]) -> HashMap<u8, f32> {
 }
 
 pub fn decode16(data: &[u8]) -> HashMap<u8, f32> {
-    let binding = pd::group_bytes(&data, 2);
+    let binding = pd::group_bytes(data, 2);
     let data = binding.iter().map(|d| pd::little_endian(d, 8) as f32);
     let grouped_data = data.collect::<Vec<f32>>();
     let mut result = HashMap::new();
@@ -223,7 +223,7 @@ pub fn decode17(data: &[u8]) -> HashMap<u8, f32> {
 }
 
 pub fn decode18(data: &[u8]) -> HashMap<u8, f32> {
-    let decoded_data = pd::default_decode(&data);
+    let decoded_data = pd::default_decode(data);
     let mut result = HashMap::new();
     result.insert(82, fd::torque(decoded_data[0]));
     result.insert(83, fd::angular_velocity(decoded_data[1]) as f32);
@@ -243,7 +243,7 @@ pub fn decode19(data: &[u8]) -> HashMap<u8, f32> {
 }
 
 pub fn decode_accelerometer_data(data: &[u8]) -> HashMap<u8, f32> {
-    let decoded_data = pd::default_decode(&data);
+    let decoded_data = pd::default_decode(data);
     let converted_data = decoded_data
         .iter()
         .map(|val| *val as f32 * 0.0029)
@@ -374,9 +374,9 @@ pub fn decode_gps_3(data: &[u8]) -> HashMap<u8, f32> {
 
 pub fn decode_cell_temps(data: &[u8]) -> HashMap<u8, f32> {
     let high_cell_temp_chip_number = (data[2] >> 4) & 15;
-    let high_cell_temp_cell_number = (data[2] >> 0) & 15;
+    let high_cell_temp_cell_number = data[2] & 15;
     let low_cell_temp_chip_number = (data[5] >> 4) & 15;
-    let low_cell_temp_cell_number = (data[5] >> 0) & 15;
+    let low_cell_temp_cell_number = data[5] & 15;
 
     let mut result = HashMap::new();
     result.insert(

@@ -25,7 +25,7 @@ impl Client for MqttClient {
      * param data: The data object to format and send.
      */
     fn publish(&mut self, data: &Data) {
-        let topic = format!("/Calypso");
+        let topic = "/Calypso".to_string();
         let payload = data.value.to_string();
 
         /* If the client is initialized, publish the data. */
@@ -34,9 +34,12 @@ impl Client for MqttClient {
                 .topic(topic)
                 .payload(payload)
                 .finalize();
-            client.publish(msg).unwrap();
+
+            match { client.publish(msg) } {
+                Ok(_) => (),
+                Err(e) => println!("Error sending message: {:?}", e),
+            }
             thread::sleep(Duration::from_millis(1));
-            return;
         } else {
             println!("Client not initialized, please set host first and connect")
         }
@@ -52,6 +55,18 @@ impl Client for MqttClient {
     }
 }
 
+impl Default for MqttClient {
+    /**
+     * Creates a new MqttClient.
+     */
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/**
+ * Implementation of the MqttClient struct.
+ */
 impl MqttClient {
     /**
      * Creates a new MqttClient.
@@ -59,6 +74,7 @@ impl MqttClient {
     pub fn new() -> MqttClient {
         MqttClient { client: None }
     }
+
     /**
      * Creates a new MqttClient with the given host name.
      * param host_name: The host name of the broker.
@@ -68,10 +84,13 @@ impl MqttClient {
             .server_uri(host_name)
             .client_id(DFLT_CLIENT.to_string())
             .finalize();
-        self.client = Some(mqtt::Client::new(create_options).unwrap_or_else(|err| {
-            println!("Error creating the client: {:?}", err);
-            process::exit(1);
-        }));
+        self.client = Some(match { mqtt::Client::new(create_options) } {
+            Ok(client) => client,
+            Err(e) => {
+                println!("Error creating the client: {:?}", e);
+                process::exit(1);
+            }
+        });
     }
 
     /**
@@ -117,9 +136,9 @@ impl MqttClient {
         if let Some(client) = &self.client {
             client.reconnect()
         } else {
-            Err(mqtt::Error::from(mqtt::Error::General(
+            Err(mqtt::Error::General(
                 "Client not initialized, please set host first",
-            )))
+            ))
         }
     }
 
@@ -130,9 +149,9 @@ impl MqttClient {
         if let Some(client) = &self.client {
             client.disconnect(None)
         } else {
-            Err(mqtt::Error::from(mqtt::Error::General(
+            Err(mqtt::Error::General(
                 "Client not initialized, please set host first",
-            )))
+            ))
         }
     }
 }

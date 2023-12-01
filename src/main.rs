@@ -45,10 +45,10 @@ fn configure_can() {
 /**
  * Reads the can socket and publishes the data to the given client.
  */
-fn read_can(mut publisher: Box<dyn Client + Send>) -> () {
+fn read_can(mut publisher: Box<dyn Client + Send>) {
     //open can socket channel at name can0
     const CAN_CHANNEL: &str = "can0";
-    let socket = CANSocket::open(&CAN_CHANNEL);
+    let socket = CANSocket::open(CAN_CHANNEL);
     let socket = match socket {
         Ok(socket) => socket,
         Err(err) => {
@@ -57,10 +57,16 @@ fn read_can(mut publisher: Box<dyn Client + Send>) -> () {
         }
     };
     loop {
-        let msg = socket.read_frame().unwrap();
+        let msg = match { socket.read_frame() } {
+            Ok(msg) => msg,
+            Err(err) => {
+                println!("Failed to read CAN frame: {}", err);
+                continue;
+            }
+        };
         let date: DateTime<Utc> = Utc::now();
         let data = msg.data();
-        let message = Message::new(&date, &msg.id(), &data);
+        let message = Message::new(date, msg.id(), data.to_vec());
         let decoded_data = message.decode();
         for (_i, data) in decoded_data.iter().enumerate() {
             publisher.publish(data)

@@ -7,10 +7,10 @@ pub trait Client {
     /**
      * Connects to the server at the given path.
      */
-    fn connect(&mut self, path: &str) -> ();
+    fn connect(&mut self, path: &str);
 
     /**
      * Publishes the given data to the server.
      */
-    fn publish(&mut self, data: &Data) -> ();
+    fn publish(&mut self, data: &Data);
 }

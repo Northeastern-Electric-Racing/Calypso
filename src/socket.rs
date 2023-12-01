@@ -36,6 +36,15 @@ impl Client for IPCConnection {
     }
 }
 
+impl Default for IPCConnection {
+    /**
+     * Creates a new IPCConnection.
+     */
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IPCConnection {
     /**
      * Creates a new IPCConnection.
@@ -49,12 +58,7 @@ impl IPCConnection {
      */
     fn send(&mut self, data: &Data) {
         if let Some(stream) = &mut self.stream {
-            let cloned_data = data.clone(); // Clone the data
-            let message = format!(
-                "{{index:{},value:{}}}",
-                cloned_data.id.to_string(),
-                cloned_data.value.to_string()
-            );
+            let message = format!("{{index:{},value:{}}}", data.id, data.value);
             stream
                 .write_all(message.as_bytes())
                 .unwrap_or_else(|_| println!("Failed to send message, is NERO running?"));

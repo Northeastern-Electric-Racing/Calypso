@@ -6,23 +6,23 @@ use super::master_mapping::get_message_info;
 /**
  * Wrapper class for an individual message.
  */
-pub struct Message<'a> {
+pub struct Message {
     timestamp: DateTime<Utc>,
     id: u32,
-    data: &'a [u8],
+    data: Vec<u8>,
 }
 
 /**
- * Implementation of Message. Static memory allocation.
+ * Implementation of Message.
  */
-impl<'a> Message<'a> {
+impl Message {
     /**
      * Creates a new message with the given timestamp, id, and data.
      */
-    pub fn new(timestamp: &DateTime<Utc>, id: &u32, data: &'a [u8]) -> Self {
+    pub fn new(timestamp: DateTime<Utc>, id: u32, data: Vec<u8>) -> Self {
         Self {
-            timestamp: *timestamp,
-            id: *id,
+            timestamp,
+            id,
             data,
         }
     }
@@ -49,6 +49,6 @@ impl<'a> Message<'a> {
         for (data_id, value) in result {
             decoded_data.push(Data::new(*timestamp, data_id, value));
         }
-        return decoded_data;
+        decoded_data
     }
 }
