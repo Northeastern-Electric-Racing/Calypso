@@ -31,7 +31,7 @@ impl Message {
      * Decodes the message and returns a vector of Data objects.
      */
     pub fn decode(&self) -> Vec<Data> {
-        self.decode_message(&self.timestamp, &self.id, &self.data)
+        self.decode_message(self.timestamp, &self.id, &self.data)
     }
 
     /**
@@ -42,12 +42,12 @@ impl Message {
      * param data: The data of the message.
      * return: A vector of Data objects.
      */
-    fn decode_message(&self, timestamp: &DateTime<Utc>, id: &u32, data: &[u8]) -> Vec<Data> {
+    fn decode_message(&self, timestamp: DateTime<Utc>, id: &u32, data: &[u8]) -> Vec<Data> {
         let decoder = get_message_info(id).decoder;
         let mut decoded_data: Vec<Data> = Vec::new();
         let result = decoder(data);
         for (data_id, value) in result {
-            decoded_data.push(Data::new(*timestamp, data_id, value));
+            decoded_data.push(Data::new(timestamp, data_id, value));
         }
         decoded_data
     }

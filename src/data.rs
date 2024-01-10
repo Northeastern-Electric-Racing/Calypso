@@ -5,7 +5,7 @@ use std::fmt;
  * Wrapper Class for Data coming off the car
  */
 pub struct Data {
-    pub(crate) timestamp: DateTime<Utc>,
+    pub timestamp: DateTime<Utc>,
     pub id: u8,
     pub value: f32,
 }
