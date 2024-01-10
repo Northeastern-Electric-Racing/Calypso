@@ -1,10 +1,18 @@
+# editor things
+.idea/
+.zed/
+.vscode/
+
+# misc things
+.DS_Store
+.gitignore
+
+# python things
+pyrightconfig.json
+__pycache__/
+
+# Added by cargo (rust things)
+/target
 build/
 dist/
-__pycache__/
 logs/
-.idea/
-output.csv
-
-# Added by cargo
-
-/target

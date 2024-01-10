@@ -84,6 +84,7 @@ impl DataInfo {
     }
 }
 
+// maps from data id to DataInfo containing the name of the data and its units
 pub fn get_data_info(id: u8) -> DataInfo {
     match id {
         0 =>  DataInfo::new("Mock Data".to_string(), "".to_string()),
