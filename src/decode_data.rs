@@ -1,4 +1,5 @@
-#![allow(clippy)]use super::data::{Data,FormatData as fd, ProcessData as pd}; 
+#![allow(clippy::all)]
+use super::data::{Data,FormatData as fd, ProcessData as pd}; 
 
 pub fn decode_mock(_data: &[u8]) -> Vec::<Data> {
     let result = vec![

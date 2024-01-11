@@ -8,7 +8,7 @@ class RustSynth:
     A class to synthesize Rust from a given CANMsg spec.
     '''
 
-    ignore_clippy: str = "#![allow(clippy)]"
+    ignore_clippy: str = "#![allow(clippy::all)]\n"
     decode_data_import: str = "use super::data::{Data,FormatData as fd, ProcessData as pd}; \n"
 
     decode_return_type: str = "Vec::<Data>"
