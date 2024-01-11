@@ -11,8 +11,8 @@ class RustSynth:
     decode_data_import: str = "use super::data::{Data,FormatData as fd, ProcessData as pd}; \n"
 
     decode_return_type: str = "Vec::<Data>"
-    decode_return_value: str = f"    let mut result = {decode_return_type}::new();"
-    decode_closing: str = "    result\n}"
+    decode_return_value: str = f"    let result = vec!["
+    decode_close: str = "    ]; \n    result\n}\n"
 
     decode_mock: str = """
 pub fn decode_mock(_data: &[u8]) -> Vec::<Data> {
@@ -66,7 +66,7 @@ impl MessageInfo {
         generated_lines: list[str] = []
         for field in msg.fields:
             generated_lines.append(self.finalize_line(field.name, field.unit, f"{self.format_data(field, self.parse_decoders(field))}"))
-        total_list: list[str] = [signature, self.decode_return_value] + generated_lines + [self.decode_closing]
+        total_list: list[str] = [signature, self.decode_return_value] + generated_lines + [self.decode_close]
         return "\n".join(total_list)
     
     def function_name(self, desc: str) -> str:
@@ -76,7 +76,7 @@ impl MessageInfo {
         return f"pub fn {self.function_name(desc)}(data: &[u8]) -> {self.decode_return_type} {{"
 
     def finalize_line(self, topic: str, unit: str, val: str) -> str:
-        return f"    result.push(Data::new({val}, \"{topic}\", \"{unit}\"));"
+        return f"    Data::new({val}, \"{topic}\", \"{unit}\"),"
 
     def parse_decoders(self, field: CANField) -> str:
         if isinstance(field.decodings, type(None)):

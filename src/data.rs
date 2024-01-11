@@ -52,11 +52,11 @@ impl ProcessData {
     /**
      * Computes the twos complement of the given value.
      */
-    pub fn twos_comp(val: u32, bits: usize) -> f32 {
+    pub fn twos_comp(val: u32, bits: usize) -> i64 {
         if (val & (1 << (bits - 1))) != 0 {
-            (val as f32) - ((1 << bits) as f32)
+            (val as i64) - ((1 << bits) as i64)
         } else {
-            val as f32
+            val as i64
         }
     }
 
