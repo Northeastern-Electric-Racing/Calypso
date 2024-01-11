@@ -66,7 +66,7 @@ fn read_can(mut publisher: Box<dyn Client + Send>) {
         let data = msg.data();
         let message = Message::new(msg.id(), data.to_vec());
         let decoded_data = message.decode();
-        for (_i, data) in decoded_data.iter().enumerate() {
+        for data in decoded_data.iter() {
             publisher.publish(data)
         }
     }
