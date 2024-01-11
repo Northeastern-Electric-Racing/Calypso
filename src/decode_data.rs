@@ -1,8 +1,9 @@
-use super::data::{Data,FormatData as fd, ProcessData as pd}; 
+#![allow(clippy)]use super::data::{Data,FormatData as fd, ProcessData as pd}; 
 
 pub fn decode_mock(_data: &[u8]) -> Vec::<Data> {
-    let mut result = Vec::<Data>::new();
-    result.push(Data::new(0.0, "Mock", ""));
+    let result = vec![
+    Data::new(0.0, "Mock", "")
+    ];
     result
 }
 pub fn decode_accumulator_status(data: &[u8]) -> Vec::<Data> {

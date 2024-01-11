@@ -8,6 +8,7 @@ class RustSynth:
     A class to synthesize Rust from a given CANMsg spec.
     '''
 
+    ignore_clippy: str = "#![allow(clippy)]"
     decode_data_import: str = "use super::data::{Data,FormatData as fd, ProcessData as pd}; \n"
 
     decode_return_type: str = "Vec::<Data>"
@@ -16,8 +17,9 @@ class RustSynth:
 
     decode_mock: str = """
 pub fn decode_mock(_data: &[u8]) -> Vec::<Data> {
-    let mut result = Vec::<Data>::new();
-    result.push(Data::new(0.0, "Mock", ""));
+    let result = vec![
+    Data::new(0.0, "Mock", "")
+    ];
     result
 }
 """
@@ -44,6 +46,7 @@ impl MessageInfo {
 
     def parse_messages(self, msgs: Messages) -> Result:
         result = Result("", "")
+        result.decode_data += self.ignore_clippy
         result.decode_data += self.decode_data_import
         result.decode_data += self.decode_mock
 
