@@ -21,5 +21,5 @@ class YAMLParser:
             self.yaml.register_class(decoding)
 
 
-    def parse(self, file: Any) -> CANMsg:
+    def parse(self, file: Any) -> Messages:
         return self.yaml.load(file)

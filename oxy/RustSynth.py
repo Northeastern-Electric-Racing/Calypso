@@ -44,7 +44,7 @@ impl MessageInfo {
 }
 """
 
-    def parse_messages(self, msgs: Messages) -> Result:
+    def parse_messages(self, msgs: [CANMsg]) -> Result:
         result = Result("", "")
         result.decode_data += self.ignore_clippy
         result.decode_data += self.decode_data_import
@@ -54,7 +54,7 @@ impl MessageInfo {
         result.master_mapping += self.message_info
         result.master_mapping += self.master_mapping_signature
 
-        for msg in msgs.msgs:
+        for msg in msgs:
             result.decode_data += self.synthesize(msg) + "\n"
             result.master_mapping += self.map_msg_to_decoder(msg)
 

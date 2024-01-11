@@ -4,7 +4,15 @@ from RustSynth import RustSynth
 decode_data = open("../src/decode_data.rs", "w")
 master_mapping = open("../src/master_mapping.rs", "w")
 
-result = RustSynth().parse_messages(YAMLParser().parse(open("mapping.yaml", "r")))
+bms_messages = YAMLParser().parse(open("yaml/bms.yaml", "r"))
+mpu_messages = YAMLParser().parse(open("yaml/mpu.yaml", "r"))
+wheel_messages = YAMLParser().parse(open("yaml/wheel.yaml", "r"))
+
+
+bms_messages.msgs.extend(mpu_messages.msgs)
+bms_messages.msgs.extend(wheel_messages.msgs)
+
+result = RustSynth().parse_messages(bms_messages.msgs)
 
 decode_data.write(result.decode_data)
 decode_data.close()
