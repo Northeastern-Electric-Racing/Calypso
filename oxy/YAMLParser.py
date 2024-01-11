@@ -4,6 +4,7 @@ from structs.CANMsg import CANMsg
 from structs.CANField import CANField
 from structs.Format import Format
 from structs.Decoding import Decoding
+from structs.Messages import Messages
 
 class YAMLParser:
     '''
@@ -13,6 +14,7 @@ class YAMLParser:
 
     def __init__(self):
         self.yaml = YAML()
+        self.yaml.register_class(Messages)
         self.yaml.register_class(CANMsg)
         self.yaml.register_class(CANField)
         for decoding in Decoding.__subclasses__():

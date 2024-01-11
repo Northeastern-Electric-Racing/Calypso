@@ -1,349 +1,312 @@
+!Messages
+msgs: 
 #BMS BROADCAST
-!CANMsg
-id: "0x80"
-desc: "accumulator status"
-fields:
-- !CANField
-    name: "BMS/Pack/Voltage"
-    units: "V"
-    size: 2
-    decodings:
-    - !BigEndian
-        bits: 8
-        final_type: "f32"
-    format: "high_voltage"
-- !CANField
-    name: "BMS/Pack/Current"
-    units: "A"
-    size: 2
-    decodings:
-    - !BigEndian
-        bits: 8
-        final_type: "u32"
-    - !TwosComplement
-        bits: 16
-        final_type: "f32"
-    format: "current"
-- !CANField
-    name: "BMS/Pack/Amp-hours"
-    units: "Ah"
-    size: 2
-    decodings:
-    - !BigEndian
-        bits: 8
-        final_type: "f32"
-- !CANField
-    name: "BMS/Pack/SOC"
-    units: "%"
-    size: 1
-    final_type: "f32"
-- !CANField
-    name: "BMS/Pack/Health"
-    units: "%"
-    size: 1
-    final_type: "f32"
+- !CANMsg
+    id: "0x80"
+    desc: "accumulator status"
+    fields:
+    - !CANField
+        name: "BMS/Pack/Voltage"
+        unit: "V"
+        size: 2
+        decodings:
+        - !BigEndian
+            bits: 8
+        format: "high_voltage"
+    - !CANField
+        name: "BMS/Pack/Current"
+        unit: "A"
+        size: 2
+        decodings:
+        - !BigEndian
+            bits: 8
+        - !TwosComplement
+            bits: 16
+        format: "current"
+    - !CANField
+        name: "BMS/Pack/Amp-hours"
+        unit: "Ah"
+        size: 2
+        decodings:
+        - !BigEndian
+            bits: 8
+    - !CANField
+        name: "BMS/Pack/SOC"
+        unit: "%"
+        size: 1
+    - !CANField
+        name: "BMS/Pack/Health"
+        unit: "%"
+        size: 1
 
-!CANMsg
-id: "0x81"
-desc: "BMS Status"
-fields:
-- !CANField
-    name: "BMS/State"
-    units: ""
-    size: 1
-    final_type: "f32"
-- !CANField
-    name: "BMS/Faults"
-    unit: ""
-    size: 4
-    decodings:
-    - !LittleEndian
-        bits: 8
-        final_type: "f32"
-- !CANField
-    name: "BMS/Temps/Average"
-    units: "C"
-    size: 1
-    decodings:
-    - !TwosComplement
-        bits: 8
-        final_type: "f32"
-- !CANField
-    name: "BMS/Temps/Internal"
-    size: 1
-    units: "C"
-    decodings:
-    - !TwosComplement
-        bits: 8
-        final_type: "f32"
-- !CANField
-    name: "BMS/Cells/BurningStatus"
-    size: 1
-    units: ""
+- !CANMsg
+    id: "0x81"
+    desc: "BMS Status"
+    fields:
+    - !CANField
+        name: "BMS/State"
+        unit: ""
+        size: 1
+    - !CANField
+        name: "BMS/Faults"
+        unit: ""
+        size: 4
+        decodings:
+        - !LittleEndian
+            bits: 8
+    - !CANField
+        name: "BMS/Temps/Average"
+        unit: "C"
+        size: 1
+        decodings:
+        - !TwosComplement
+            bits: 8
+    - !CANField
+        name: "BMS/Temps/Internal"
+        size: 1
+        unit: "C"
+        decodings:
+        - !TwosComplement
+            bits: 8
+    - !CANField
+        name: "BMS/Cells/BurningStatus"
+        size: 1
+        unit: ""
 
-!CANMsg
-id: "0x82"
-desc: "Shutdown Control"
-fields:
-- !CANField
-    name: "BMS/Shutdown/MPE"
-    size: 1
-    units: ""
-    final_type: "f32"
+- !CANMsg
+    id: "0x82"
+    desc: "Shutdown Control"
+    fields:
+    - !CANField
+        name: "BMS/Shutdown/MPE"
+        size: 1
+        unit: ""
 
-!CANMsg
-id: "0x83"
-desc: "Cell Data"
-fields:
-- !CANField
-    name: "BMS/Cells/Volts/High/Value"
-    size: 2
-    units: "V"
-    decodings: 
-    - !LittleEndian
-        bits: 8
-        final_type: "i32"
-    format: "cell_voltage"
-- !CANField
-    name: "BMS/Cells/Volts/High/Chip"
-    size: 1
-    units: ""
-    decodings: 
-    - !Half
-        bits: 4
-        final_type: "f32"
-- !CANField
-    name: "BMS/Cells/Volts/High/Cell"
-    index: 2
-    size: 1
-    units: ""
-    decodings: 
-    - !Half
-        bits: 0
-        final_type: "f32"
-- !CANField
-    name: "BMS/Cells/Volts/Low/Value"
-    size: 2
-    index: 3
-    units: "V"
-    decodings:
-    - !LittleEndian
-        bits: 8
-        final_type: i32
-    format: "cell_voltage"
-- !CANField
-    name: "BMS/Cells/Volts/Low/Chip"
-    index: 5
-    size: 1
-    units: ""
-    decodings: 
-    - !Half
-        bits: 4
-        final_type: "f32"
-- !CANField
-    name: "BMS/Cells/Volts/Low/Cell"
-    index: 5
-    size: 1
-    units: ""
-    - !Half
-        bits: 0
-        final_type: "f32"
-- !CANField
-    name: "BMS/Cells/Volts/Ave/Value"
-    size: 2
-    index: 6
-    units: "V"
-    decodings:
-    - !LittleEndian
-        bits: 8
-        final_type: i32
-    format: "cell_voltage"
+- !CANMsg
+    id: "0x83"
+    desc: "Cell Data"
+    fields:
+    - !CANField
+        name: "BMS/Cells/Volts/High/Value"
+        size: 2
+        unit: "V"
+        decodings: 
+        - !LittleEndian
+            bits: 8
+        format: "cell_voltage"
+    - !CANField
+        name: "BMS/Cells/Volts/High/Chip"
+        size: 1
+        unit: ""
+        decodings: 
+        - !Half
+            bits: 4
+    - !CANField
+        name: "BMS/Cells/Volts/High/Cell"
+        index: 2
+        size: 1
+        unit: ""
+        decodings: 
+        - !Half
+            bits: 0
+    - !CANField
+        name: "BMS/Cells/Volts/Low/Value"
+        size: 2
+        index: 3
+        unit: "V"
+        decodings:
+        - !LittleEndian
+            bits: 8
+        format: "cell_voltage"
+    - !CANField
+        name: "BMS/Cells/Volts/Low/Chip"
+        index: 5
+        size: 1
+        unit: ""
+        decodings: 
+        - !Half
+            bits: 4
+    - !CANField
+        name: "BMS/Cells/Volts/Low/Cell"
+        index: 5
+        size: 1
+        unit: ""
+        decodings:
+        - !Half
+            bits: 0
+    - !CANField
+        name: "BMS/Cells/Volts/Ave/Value"
+        size: 2
+        index: 6
+        unit: "V"
+        decodings:
+        - !LittleEndian
+            bits: 8
+        format: "cell_voltage"
 
-!CANMsg
-id: "0x84"
-desc: "Cell Temperatures"
-fields: 
-- !CANField
-    name: "BMS/Cells/Temp/High/Value"
-    units: "C"
-    size: 2
-    decodings:
-    - !LittleEndian
-        bits: 8
-        final_type: u32
-    - !TwosComplement
-        bits: 16
-        final_type: f32
-- !CANField
-    name: "BMS/Cells/Temp/High/Cell"
-    units: ""
-    size: 1
-    decodings:
-    - !Half
-        bits: 4
-        final_type: f32
-- !CANField
-    name: "BMS/Cells/Temp/High/Chip"
-    units: ""
-    size: 1
-    index: 2
-    decodings:
-    - !Half
-        bits: 0
-        final_type: f32
-- !CANField
-    name: "BMS/Cells/Temp/Low/Value"
-    units: "C"
-    size: 2
-    index: 3
-    decodings: 
-    - !LittleEndian
-        bits: 8
-        final_type: u32
-    - !TwosComplement
-        bits: 16
-        final_type: f32
-- !CANField
-    name: "BMS/Cells/Temp/Low/Cell"
-    units: ""
-    size: 1
-    index: 5
-    decodings: 
-    - !Half
-        bits: 4
-        final_type: f32
-- !CANField
-    name: "BMS/Cells/Temp/Low/Chip"
-    units: ""
-    size: 1
-    index: 5
-    decodings:
-    - !Half
-        bits: 0
-        final_type: f32
-- !CANField
-    name: "BMS/Cells/Temp/Ave/Value"
-    units: "C"
-    size: 2
-    index: 6
-    decodings:
-    - !LittleEndian
-        bits: 8
-        final_type: u32
-    - !TwosComplement
-        bits: 16
-        final_type: f32 
+- !CANMsg
+    id: "0x84"
+    desc: "Cell Temperatures"
+    fields: 
+    - !CANField
+        name: "BMS/Cells/Temp/High/Value"
+        unit: "C"
+        size: 2
+        decodings:
+        - !LittleEndian
+            bits: 8
+        - !TwosComplement
+            bits: 16
+    - !CANField
+        name: "BMS/Cells/Temp/High/Cell"
+        unit: ""
+        size: 1
+        decodings:
+        - !Half
+            bits: 4
+    - !CANField
+        name: "BMS/Cells/Temp/High/Chip"
+        unit: ""
+        size: 1
+        index: 2
+        decodings:
+        - !Half
+            bits: 0
+    - !CANField
+        name: "BMS/Cells/Temp/Low/Value"
+        unit: "C"
+        size: 2
+        index: 3
+        decodings: 
+        - !LittleEndian
+            bits: 8
+        - !TwosComplement
+            bits: 16
+    - !CANField
+        name: "BMS/Cells/Temp/Low/Cell"
+        unit: ""
+        size: 1
+        index: 5
+        decodings: 
+        - !Half
+            bits: 4
+    - !CANField
+        name: "BMS/Cells/Temp/Low/Chip"
+        unit: ""
+        size: 1
+        index: 5
+        decodings:
+        - !Half
+            bits: 0
+    - !CANField
+        name: "BMS/Cells/Temp/Ave/Value"
+        unit: "C"
+        size: 2
+        index: 6
+        decodings:
+        - !LittleEndian
+            bits: 8
+        - !TwosComplement
+            bits: 16
 
-!CANMsg
-id: "0x85"
-desc: "Segment Temperatures"
-fields:
-- !CANField
-    name: "BMS/Segment/Temp/1"
-    units: "C"
-    size: 1
-    decodings:
-    - !TwosComplement
-        bits: 8
-        final_type: f32
-- !CANField
-    name: "BMS/Segment/Temp/2"
-    units: "C"
-    size: 1
-    decodings: 
-    - !TwosComplement
-        bits: 8
-        final_type: f32
-- !CANField
-    name: "BMS/Segment/Temp/3"
-    units: "C"
-    size: 1
-    decodings: 
-    - !TwosComplement
-        bits: 8
-        final_type: f32
-- !CANField
-    name: "BMS/Segment/Temp/4"
-    units: "C"
-    size: 1
-    decodings: 
-    - !TwosComplement
-        bits: 8
-        final_type: f32
+- !CANMsg
+    id: "0x85"
+    desc: "Segment Temperatures"
+    fields:
+    - !CANField
+        name: "BMS/Segment/Temp/1"
+        unit: "C"
+        size: 1
+        decodings:
+        - !TwosComplement
+            bits: 8
+    - !CANField
+        name: "BMS/Segment/Temp/2"
+        unit: "C"
+        size: 1
+        decodings: 
+        - !TwosComplement
+            bits: 8
+    - !CANField
+        name: "BMS/Segment/Temp/3"
+        unit: "C"
+        size: 1
+        decodings: 
+        - !TwosComplement
+            bits: 8
+    - !CANField
+        name: "BMS/Segment/Temp/4"
+        unit: "C"
+        size: 1
+        decodings: 
+        - !TwosComplement
+            bits: 8
 
 # MPU BROADCAST
-!CANMsg
-id: "0x500"
-desc: "NERduino Acceleromter"
-fields: 
-- !CANField
-    name: "MPU/Accel/X"
-    units: "g"
-    size: 2
-    decodings: 
-    - !BigEndian
-        bits: 8
-        final_type: f32
-    format: "acceleration"
-- !CANField
-    name: "MPU/Accel/Y"
-    units: "g"
-    size: 2
-    decodings: 
-    - !BigEndian
-        bits: 8
-        final_type: f32
-    format: "acceleration"
-- !CANField
-    name: "MPU/Accel/Z"
-    units: "g"
-    size: 2
-    decodings: 
-    - !BigEndian
-        bits: 8
-        final_type: f32
-    format: "acceleration"
+- !CANMsg
+    id: "0x500"
+    desc: "NERduino Acceleromter"
+    fields: 
+    - !CANField
+        name: "MPU/Accel/X"
+        unit: "g"
+        size: 2
+        decodings: 
+        - !BigEndian
+            bits: 8
+        format: "acceleration"
+    - !CANField
+        name: "MPU/Accel/Y"
+        unit: "g"
+        size: 2
+        decodings: 
+        - !BigEndian
+            bits: 8
+        format: "acceleration"
+    - !CANField
+        name: "MPU/Accel/Z"
+        unit: "g"
+        size: 2
+        decodings: 
+        - !BigEndian
+            bits: 8
+        format: "acceleration"
 
-!CANMsg
-id: "0x501"
-desc: "MPU Status"
-fields:
-- !CANField
-    name: "MPU/State/Mode"
-    units: ""
-    size: 1
-    final_type: f32
-- !CANField
-    name: "MPU/State/Torque_Limit_Percentage"
-    units: ""
-    size: 1
-    final_type: f32
-- !CANField
-    name: "MPU/State/Regen_Strength"
-    units: ""
-    size: 1
-    final_type: f32
-- !CANField
-    name: "MPU/State/Traction_Control"
-    units: ""
-    size: 1
-    final_type: f32
+- !CANMsg
+    id: "0x501"
+    desc: "MPU Status"
+    fields:
+    - !CANField
+        name: "MPU/State/Mode"
+        unit: ""
+        size: 1
+    - !CANField
+        name: "MPU/State/Torque_Limit_Percentage"
+        unit: ""
+        size: 1
+    - !CANField
+        name: "MPU/State/Regen_Strength"
+        unit: ""
+        size: 1
+    - !CANField
+        name: "MPU/State/Traction_Control"
+        unit: ""
+        size: 1
 
 
 #STEERINGWHEEL
-!CANMsg
-id: "0x680"
-desc: "Wheel State"
-- !CANField
-    name: "WHEEL/Buttons/1"
-    units: ""
-    size: 1
-    final_type: f32
-- !CANField
-    name: "WHEEL/Buttons/2"
-    units: ""
-    size: 1
-    final_type: f32
+- !CANMsg
+    id: "0x680"
+    desc: "Wheel State"
+    fields: 
+    - !CANField
+        name: "WHEEL/Buttons/1"
+        unit: ""
+        size: 1
+    - !CANField
+        name: "WHEEL/Buttons/2"
+        unit: ""
+        size: 1
 
 
 

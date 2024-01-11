@@ -5,7 +5,7 @@ class Format:
    '''
    Represents a format to be applied to data after decoding.
    '''
-   repr: str = "*"*42
+   repr: str = ""
 
 @dataclass
 class Temperature(Format):
