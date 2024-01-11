@@ -13,15 +13,15 @@ class RustSynth:
         signature: str = self.signature(msg.desc)
         generated_lines: list[str] = []
         for field in msg.fields:
-            generated_lines.append(self.finalize_line(field.name, field.id, f"({self.format_data(field, self.parse_decoders(field))})"))
+            generated_lines.append(self.finalize_line(field.name, field.units, f"({self.format_data(field, self.parse_decoders(field))})"))
         total_list: list[str] = [signature, self.inst_hashmap] + generated_lines + [self.closing]
         return "\n".join(total_list)
 
     def signature(self, to_decode: str) -> str:
         return f"pub fn decode_{to_decode.replace(' ', '_')}(data: &[u8]) -> {self.return_type} {{"
 
-    def finalize_line(self, topic: str, id: int, val: str) -> str:
-        return f"    result.push(Data::new({id}, {val}, \"{topic}\"));"
+    def finalize_line(self, topic: str, unit: str, val: str) -> str:
+        return f"    result.push(Data::new({val}, \"{topic}\", \"{unit}\"));"
 
     def parse_decoders(self, field: CANField) -> str:
         if isinstance(field.decodings, type(None)):

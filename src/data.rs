@@ -1,14 +1,12 @@
-use chrono::prelude::*;
 use std::fmt;
 
 /**
  * Wrapper Class for Data coming off the car
  */
 pub struct Data {
-    pub timestamp: DateTime<Utc>,
-    pub id: u8,
     pub value: f32,
     pub topic: String,
+    pub unit: String
 }
 
 /**
@@ -18,7 +16,7 @@ impl fmt::Display for Data {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Overrides the string representation of the class.
 
-        write!(f, "ID {} - {} - {}", self.id, self.timestamp, self.value)
+        write!(f, "topic: {}, value: {}, unit: {}", self.topic, self.value, self.unit)
     }
 }
 
@@ -32,13 +30,16 @@ impl Data {
      * @param value: the value of the data
      * @param topic: the topic of the data
      */
-    pub fn new(id: u8, value: f32, topic: String) -> Self {
+    pub fn new(value: f32, topic: String, unit: String) -> Self {
         Self {
-            timestamp: Utc::now(),
-            id,
             value,
             topic,
+            unit
         }
+    }
+
+    pub fn to_json(&self) -> String {
+        format!("{{\"topic\": \"{}\", \"value\": {}, \"unit\": \"{}\"}}", self.topic, self.value, self.unit)
     }
 }
 
@@ -170,5 +171,9 @@ impl FormatData {
 
     pub fn cell_voltage(value: i32) -> f32 {
         value as f32 / 10000.0
+    }
+
+    pub fn acceleration(value: i32) -> f32 {
+        value as f32 * 0.0029
     }
 }
