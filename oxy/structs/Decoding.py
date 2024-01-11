@@ -21,3 +21,7 @@ class LittleEndian(Decoding):
 @dataclass
 class TwosComplement(Decoding):
     repr: str = "twos_comp"
+
+@dataclass
+class Half(Decoding):
+    repor: str = "half"

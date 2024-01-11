@@ -1,8 +1,8 @@
 from __future__ import annotations
-from .CorrectingFactor import CorrectingFactor
 from .Decoding import *
 from ruamel.yaml import Optional
 from dataclasses import dataclass
+from .Format import Format
 
 @dataclass
 class CANField:
@@ -16,5 +16,5 @@ class CANField:
     units: str
     size: int
     index: int = -1
-    correcting_factor: Optional[CorrectingFactor] = None
     decodings: Optional[list[Decoding]] = None
+    format: Optional[str] = None

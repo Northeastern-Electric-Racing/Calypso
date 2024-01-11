@@ -1,13 +1,13 @@
 use super::decode_data::*;
-use std::collections::HashMap;
+use super::data::Data;
 
 pub struct MessageInfo {
     pub description: String,
-    pub decoder: fn(data: &[u8]) -> HashMap<u8, f32>,
+    pub decoder: fn(data: &[u8]) -> Vec<Data>,
 }
 
 impl MessageInfo {
-    pub fn new(description: String, decoder: fn(data: &[u8]) -> HashMap<u8, f32>) -> Self {
+    pub fn new(description: String, decoder: fn(data: &[u8]) -> Vec<Data>) -> Self {
         Self {
             description,
             decoder,

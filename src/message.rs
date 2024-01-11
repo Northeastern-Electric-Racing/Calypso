@@ -46,8 +46,8 @@ impl Message {
         let decoder = get_message_info(id).decoder;
         let mut decoded_data: Vec<Data> = Vec::new();
         let result = decoder(data);
-        for (data_id, value) in result {
-            decoded_data.push(Data::new(timestamp, data_id, value));
+        for data in result {
+            decoded_data.push(data);
         }
         decoded_data
     }

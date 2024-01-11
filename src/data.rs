@@ -8,6 +8,7 @@ pub struct Data {
     pub timestamp: DateTime<Utc>,
     pub id: u8,
     pub value: f32,
+    pub topic: String,
 }
 
 /**
@@ -27,15 +28,16 @@ impl fmt::Display for Data {
 impl Data {
     /**
      * Constructor
-     * param timestamp: The time the data is collected
-     * param id: the id of the data
-     * param value: the value of the data
+     * @param id: the id of the data
+     * @param value: the value of the data
+     * @param topic: the topic of the data
      */
-    pub fn new(timestamp: DateTime<Utc>, id: u8, value: f32) -> Self {
+    pub fn new(id: u8, value: f32, topic: String) -> Self {
         Self {
-            timestamp,
+            timestamp: Utc::now(),
             id,
             value,
+            topic,
         }
     }
 }
@@ -107,6 +109,13 @@ impl ProcessData {
             .collect();
         decoded_vals
     }
+
+    /**
+     * Decodes the given byte by taking the top four bits after shifting it by the given number of bits.
+     */
+    pub fn half(byte: &u8, bits: u8) -> u32 {
+        (byte >> bits & 15) as u32
+    } 
 }
 
 /**
@@ -157,5 +166,9 @@ impl FormatData {
 
     pub fn flux(value: i64) -> f32 {
         value as f32 / 1000.0
+    }
+
+    pub fn cell_voltage(value: i32) -> f32 {
+        value as f32 / 10000.0
     }
 }

@@ -15,10 +15,10 @@ pub fn decode_mock(_data: &[u8]) -> HashMap<u8, f32> {
 
 pub fn decode_accumulator_status(data: &[u8]) -> HashMap<u8, f32> {
     let mut result = HashMap::new();
-    result.insert(1, (pd::big_endian(&data[0..2], 8) as f32) / 10.0);
+    result.insert(1, fd::temperature(pd::big_endian(&data[0..2], 8).into()));
     result.insert(
         2,
-        pd::twos_comp(pd::big_endian(&data[2..4], 8), 16) as f32 / 10.0,
+        fd::temperature(pd::twos_comp(pd::big_endian(&data[2..4], 8), 16))
     );
     result.insert(3, pd::big_endian(&data[4..6], 8) as f32);
     result.insert(4, data[6] as f32);
