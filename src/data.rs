@@ -126,27 +126,27 @@ impl FormatData {
         -value
     }
 
-    pub fn frequency(value: i64) -> f32 {
-        value as f32 / 10.0
+    pub fn frequency(value: f32) -> f32 {
+        value / 10.0
     }
 
-    pub fn power(value: i32) -> f32 {
-        value as f32 / 10.0
+    pub fn power(value: f32) -> f32 {
+        value / 10.0
     }
 
-    pub fn timer(value: i32) -> f32 {
-        value as f32 * 0.003
+    pub fn timer(value: f32) -> f32 {
+        value * 0.003
     }
 
-    pub fn flux(value: i64) -> f32 {
-        value as f32 / 1000.0
+    pub fn flux(value: f32) -> f32 {
+        value / 1000.0
     }
 
     pub fn cell_voltage(value: f32) -> f32 {
-        value as f32 / 10000.0
+        value / 10000.0
     }
 
     pub fn acceleration(value: f32) -> f32 {
-        value as f32 * 0.0029
+        value * 0.0029
     }
 }

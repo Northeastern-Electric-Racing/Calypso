@@ -1,4 +1,10 @@
 use super::data::{Data,FormatData as fd, ProcessData as pd}; 
+
+pub fn decode_mock(_data: &[u8]) -> Vec::<Data> {
+    let mut result = Vec::<Data>::new();
+    result.push(Data::new(0.0, "Mock", ""));
+    result
+}
 pub fn decode_accumulator_status(data: &[u8]) -> Vec::<Data> {
     let mut result = Vec::<Data>::new();
     result.push(Data::new(fd::high_voltage(pd::big_endian(&data[0..2] as &[u8], 8) as f32), "BMS/Pack/Voltage", "V"));

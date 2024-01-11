@@ -1,34 +1,79 @@
 from structs.CANField import CANField
 from structs.CANMsg import CANMsg
 from structs.Messages import Messages
+from structs.Result import Result
 
 class RustSynth:
     '''
     A class to synthesize Rust from a given CANMsg spec.
     '''
 
-    imports: str = "use super::data::{Data,FormatData as fd, ProcessData as pd}; \n"
-    return_type: str = "Vec::<Data>"
-    inst_hashmap: str = f"    let mut result = {return_type}::new();"
-    closing: str = "    result\n}"
+    decode_data_import: str = "use super::data::{Data,FormatData as fd, ProcessData as pd}; \n"
 
-    def parse_messages(self, msgs: Messages) -> str:
-        str = ""
-        str += self.imports
+    decode_return_type: str = "Vec::<Data>"
+    decode_return_value: str = f"    let mut result = {decode_return_type}::new();"
+    decode_closing: str = "    result\n}"
+
+    decode_mock: str = """
+pub fn decode_mock(_data: &[u8]) -> Vec::<Data> {
+    let mut result = Vec::<Data>::new();
+    result.push(Data::new(0.0, "Mock", ""));
+    result
+}
+"""
+
+    master_mapping_import: str = "use super::decode_data::*; \nuse super::data::Data; \n"
+
+    master_mapping_signature: str = "pub fn get_message_info(id: &u32) -> MessageInfo { \n   match id {"
+
+    master_mapping_closing: str = "    _ => MessageInfo::new(decode_mock), \n    }\n}"
+
+    message_info = """
+pub struct MessageInfo {
+    pub decoder: fn(data: &[u8]) -> Vec<Data>,
+} 
+
+impl MessageInfo {
+    pub fn new(decoder: fn(data: &[u8]) -> Vec<Data>) -> Self {
+        Self {
+            decoder
+        }
+    }
+}
+"""
+
+    def parse_messages(self, msgs: Messages) -> Result:
+        result = Result("", "")
+        result.decode_data += self.decode_data_import
+        result.decode_data += self.decode_mock
+
+        result.master_mapping += self.master_mapping_import
+        result.master_mapping += self.message_info
+        result.master_mapping += self.master_mapping_signature
+
         for msg in msgs.msgs:
-            str += self.synthesize(msg) + "\n"
-        return str
+            result.decode_data += self.synthesize(msg) + "\n"
+            result.master_mapping += self.map_msg_to_decoder(msg)
+
+        result.master_mapping += self.master_mapping_closing
+        return result
+
+    def map_msg_to_decoder(self, msg: CANMsg) -> str:
+        return f"    {msg.id} => MessageInfo::new({self.function_name(msg.desc)}),\n"    
 
     def synthesize(self, msg: CANMsg) -> str:
         signature: str = self.signature(msg.desc)
         generated_lines: list[str] = []
         for field in msg.fields:
             generated_lines.append(self.finalize_line(field.name, field.unit, f"{self.format_data(field, self.parse_decoders(field))}"))
-        total_list: list[str] = [signature, self.inst_hashmap] + generated_lines + [self.closing]
+        total_list: list[str] = [signature, self.decode_return_value] + generated_lines + [self.decode_closing]
         return "\n".join(total_list)
+    
+    def function_name(self, desc: str) -> str:
+        return f"decode_{desc.replace(' ', '_').lower()}"
 
-    def signature(self, to_decode: str) -> str:
-        return f"pub fn decode_{to_decode.replace(' ', '_').lower()}(data: &[u8]) -> {self.return_type} {{"
+    def signature(self, desc: str) -> str:
+        return f"pub fn {self.function_name(desc)}(data: &[u8]) -> {self.decode_return_type} {{"
 
     def finalize_line(self, topic: str, unit: str, val: str) -> str:
         return f"    result.push(Data::new({val}, \"{topic}\", \"{unit}\"));"

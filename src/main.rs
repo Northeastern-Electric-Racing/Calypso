@@ -3,8 +3,7 @@ use std::{
     process::{self, Command},
 };
 
-use calypso::{client::Client, message::Message, mqtt::MqttClient, socket::IPCConnection};
-use chrono::{DateTime, Utc};
+use calypso::{client::Client, message::Message, mqtt::MqttClient};
 use socketcan::CANSocket;
 
 fn configure_can() {
@@ -64,9 +63,8 @@ fn read_can(mut publisher: Box<dyn Client + Send>) {
                 continue;
             }
         };
-        let date: DateTime<Utc> = Utc::now();
         let data = msg.data();
-        let message = Message::new(date, msg.id(), data.to_vec());
+        let message = Message::new(msg.id(), data.to_vec());
         let decoded_data = message.decode();
         for (_i, data) in decoded_data.iter().enumerate() {
             publisher.publish(data)
@@ -95,10 +93,6 @@ fn parse_args() -> (String, Box<dyn Client + 'static + Send>) {
         "mqtt" => (
             String::from(path),
             Box::new(MqttClient::new()) as Box<dyn Client + 'static + Send>,
-        ),
-        "ipc" => (
-            String::from(path),
-            Box::new(IPCConnection::new()) as Box<dyn Client + 'static + Send>,
         ),
         _ => {
             println!("Please provide a valid client type");

@@ -1,12 +1,10 @@
-use chrono::{DateTime, Utc};
-
 use super::data::Data;
 
+use super::master_mapping::get_message_info;
 /**
  * Wrapper class for an individual message.
  */
 pub struct Message {
-    timestamp: DateTime<Utc>,
     id: u32,
     data: Vec<u8>,
 }
@@ -18,9 +16,8 @@ impl Message {
     /**
      * Creates a new message with the given timestamp, id, and data.
      */
-    pub fn new(timestamp: DateTime<Utc>, id: u32, data: Vec<u8>) -> Self {
+    pub fn new(id: u32, data: Vec<u8>) -> Self {
         Self {
-            timestamp,
             id,
             data,
         }
@@ -30,7 +27,7 @@ impl Message {
      * Decodes the message and returns a vector of Data objects.
      */
     pub fn decode(&self) -> Vec<Data> {
-        self.decode_message(self.timestamp, &self.id, &self.data)
+        Message::decode_message(&self.id, &self.data)
     }
 
     /**
@@ -41,7 +38,7 @@ impl Message {
      * param data: The data of the message.
      * return: A vector of Data objects.
      */
-    fn decode_message(&self, timestamp: DateTime<Utc>, id: &u32, data: &[u8]) -> Vec<Data> {
+    fn decode_message(id: &u32, data: &[u8]) -> Vec<Data> {
         let decoder = get_message_info(id).decoder;
         let mut decoded_data: Vec<Data> = Vec::new();
         let result = decoder(data);
