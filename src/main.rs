@@ -9,7 +9,7 @@ use socketcan::CANSocket;
 fn configure_can(can_interface: &str) {
     let mut down_command = Command::new("sudo")
         .arg("ifconfig")
-        .arg(&can_interface)
+        .arg(can_interface)
         .arg("down")
         .spawn()
         .expect("down command did not work");
@@ -20,7 +20,7 @@ fn configure_can(can_interface: &str) {
         .arg("ip")
         .arg("link")
         .arg("set")
-        .arg(&can_interface)
+        .arg(can_interface)
         .arg("type")
         .arg("can")
         .arg("bitrate")
@@ -32,7 +32,7 @@ fn configure_can(can_interface: &str) {
         .expect("Fail while waiting for bit rate");
     let mut up_command = Command::new("sudo")
         .arg("ifconfig")
-        .arg(&can_interface)
+        .arg(can_interface)
         .arg("up")
         .spawn()
         .expect("up command did nto work");
@@ -86,12 +86,8 @@ fn parse_args() -> (String, Box<dyn Client + 'static + Send>, String, bool) {
     let path = &args[2];
     let can_interface = &args[3];
 
-    let skip_can_config;
-    if args.len() > 4 && args[4] == "skip_can_configure" {
-        skip_can_config = true;
-    } else {
-        skip_can_config = false;
-    }
+    
+    let skip_can_config = args.len() > 4 && args[4] == "skip_can_configure";
 
     println!("Client type: {}", client_type);
     println!("Path: {}", path);
