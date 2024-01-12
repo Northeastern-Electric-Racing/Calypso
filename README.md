@@ -30,5 +30,5 @@ run ```/home/ner/Desktop/Calypso/target/release/calypso ipc /tmp/ipc.sock```
 
 ### SIREN and NERO 2.0 Config
 Utilizes MQTT Web Socket to offload data from the car for our telemetry system
-run ```/home/ner/Desktop/Calypso/target/release/calypso mqtt localhost:1883```
+run ```/home/ner/Desktop/Calypso/target/release/calypso mqtt localhost:1883 can0```
 
