@@ -44,7 +44,7 @@ pub fn decode_cell_data(data: &[u8]) -> Vec::<Data> {
     Data::new(fd::cell_voltage(pd::little_endian(&data[4..6] as &[u8], 8) as f32), "BMS/Cells/Volts/Low/Value", "V"),
     Data::new(pd::half(data[6] as u8, 4) as f32, "BMS/Cells/Volts/Low/Chip", ""),
     Data::new(pd::half(data[7] as u8, 0) as f32, "BMS/Cells/Volts/Low/Cell", ""),
-    Data::new(fd::cell_voltage(pd::little_endian(&data[8..10] as &[u8], 8) as f32), "BMS/Cells/Volts/Ave/Value", "V"),
+    Data::new(fd::cell_voltage(pd::little_endian(&data[8..10] as &[u8], 8) as f32), "BMS/Cells/Volts/avg/Value", "V"),
     ]; 
     result
 }
@@ -57,7 +57,7 @@ pub fn decode_cell_temperatures(data: &[u8]) -> Vec::<Data> {
     Data::new(pd::twos_comp(pd::little_endian(&data[4..6] as &[u8], 8) as u32, 16) as f32, "BMS/Cells/Temp/Low/Value", "C"),
     Data::new(pd::half(data[6] as u8, 4) as f32, "BMS/Cells/Temp/Low/Cell", ""),
     Data::new(pd::half(data[7] as u8, 0) as f32, "BMS/Cells/Temp/Low/Chip", ""),
-    Data::new(pd::twos_comp(pd::little_endian(&data[8..10] as &[u8], 8) as u32, 16) as f32, "BMS/Cells/Temp/Ave/Value", "C"),
+    Data::new(pd::twos_comp(pd::little_endian(&data[8..10] as &[u8], 8) as u32, 16) as f32, "BMS/Cells/Temp/avg/Value", "C"),
     ]; 
     result
 }
@@ -72,7 +72,7 @@ pub fn decode_segment_temperatures(data: &[u8]) -> Vec::<Data> {
     result
 }
 
-pub fn decode_nerduino_acceleromter(data: &[u8]) -> Vec::<Data> {
+pub fn decode_mpu_acceleromter(data: &[u8]) -> Vec::<Data> {
     let result = vec![
     Data::new(fd::acceleration(pd::big_endian(&data[0..2] as &[u8], 8) as f32), "MPU/Accel/X", "g"),
     Data::new(fd::acceleration(pd::big_endian(&data[2..4] as &[u8], 8) as f32), "MPU/Accel/Y", "g"),
