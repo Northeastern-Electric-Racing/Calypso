@@ -6,10 +6,10 @@ use std::{
 use calypso::{client::Client, message::Message, mqtt::MqttClient};
 use socketcan::CANSocket;
 
-fn configure_can() {
+fn configure_can(can_interface: &str) {
     let mut down_command = Command::new("sudo")
         .arg("ifconfig")
-        .arg("can0")
+        .arg(can_interface)
         .arg("down")
         .spawn()
         .expect("down command did not work");
@@ -20,7 +20,7 @@ fn configure_can() {
         .arg("ip")
         .arg("link")
         .arg("set")
-        .arg("can0")
+        .arg(can_interface)
         .arg("type")
         .arg("can")
         .arg("bitrate")
@@ -32,7 +32,7 @@ fn configure_can() {
         .expect("Fail while waiting for bit rate");
     let mut up_command = Command::new("sudo")
         .arg("ifconfig")
-        .arg("can0")
+        .arg(can_interface)
         .arg("up")
         .spawn()
         .expect("up command did nto work");
@@ -44,10 +44,9 @@ fn configure_can() {
 /**
  * Reads the can socket and publishes the data to the given client.
  */
-fn read_can(mut publisher: Box<dyn Client + Send>) {
-    //open can socket channel at name can0
-    const CAN_CHANNEL: &str = "can0";
-    let socket = CANSocket::open(CAN_CHANNEL);
+fn read_can(mut publisher: Box<dyn Client + Send>, can_interface: &str) {
+    //open can socket channel at name can_interface
+    let socket = CANSocket::open(can_interface);
     let socket = match socket {
         Ok(socket) => socket,
         Err(err) => {
@@ -76,23 +75,31 @@ fn read_can(mut publisher: Box<dyn Client + Send>) {
  * Parses the command line arguments.
  * Returns the client type and the path to connect to.
  */
-fn parse_args() -> (String, Box<dyn Client + 'static + Send>) {
+fn parse_args() -> (String, Box<dyn Client + 'static + Send>, String, bool) {
     let args: Vec<String> = env::args().collect();
     println!("{:?}", args);
-    if args.len() < 2 {
-        println!("Please provide a client type");
+    if args.len() < 3 {
+        println!("Not enough arguments!");
+        println!("Client type and client path are required.");
         process::exit(1);
     }
     let client_type = &args[1];
     let path = &args[2];
+    let can_interface = if args.len() > 3 { &args[3] } else { "can0" };
+
+    let skip_can_config = args.len() > 4 && args[4] == "skip_can_configure";
 
     println!("Client type: {}", client_type);
     println!("Path: {}", path);
+    println!("Can interface: {}", can_interface);
+    println!("Skip can configuration: {}", skip_can_config);
 
     match client_type.as_str() {
         "mqtt" => (
             String::from(path),
             Box::new(MqttClient::new()) as Box<dyn Client + 'static + Send>,
+            String::from(can_interface),
+            skip_can_config,
         ),
         _ => {
             println!("Please provide a valid client type");
@@ -103,13 +110,20 @@ fn parse_args() -> (String, Box<dyn Client + 'static + Send>) {
 
 /**
  * Main Function
- * Configures the can network, retrieves the client based on the command line arguments, connects the client and then reads the can socket.
+ * Configures the can network, retrieves the client based on the command line arguments,
+ * connects the client and then reads the can socket from specified interface.
  * Sample Calls for IPC "/home/ner/Desktop/Calypso/target/release/calypso ipc /tmp/ipc.sock &"
  * Sample Call for Mqtt "/home/ner/Desktop/Calypso/target/release/calypso mqtt localhost:1883 &"
+ *
+ * 3rd argument: if a can interface is passed the program will use it instead of the default can0
+ * 4th argument: if skip_can_configure is passed the program will not call can interface setup commands
+ * Ex: "/home/ner/Desktop/Calypso/target/release/calypso mqtt localhost:1883 can0 skip_can_configure &"
  */
 fn main() {
-    configure_can();
-    let (path, mut client) = parse_args();
+    let (path, mut client, can_interface, skip_can_configure) = parse_args();
+    if !skip_can_configure {
+        configure_can(&can_interface)
+    }
     client.connect(&path);
-    read_can(client);
+    read_can(client, &can_interface);
 }
