@@ -78,16 +78,15 @@ fn read_can(mut publisher: Box<dyn Client + Send>, can_interface: &str) {
 fn parse_args() -> (String, Box<dyn Client + 'static + Send>, String, bool) {
     let args: Vec<String> = env::args().collect();
     println!("{:?}", args);
-    if args.len() < 4 {
+    if args.len() < 3 {
         println!("Not enough arguments!");
-        println!("Client type, client path, and can interface required.");
+        println!("Client type and client path are required.");
         process::exit(1);
     }
     let client_type = &args[1];
     let path = &args[2];
-    let can_interface = &args[3];
+    let can_interface = if args.len() > 3 { &args[3] } else { "can0" };
 
-    
     let skip_can_config = args.len() > 4 && args[4] == "skip_can_configure";
 
     println!("Client type: {}", client_type);
@@ -111,12 +110,13 @@ fn parse_args() -> (String, Box<dyn Client + 'static + Send>, String, bool) {
 
 /**
  * Main Function
- * Configures the can network, retrieves the client based on the command line arguments, 
+ * Configures the can network, retrieves the client based on the command line arguments,
  * connects the client and then reads the can socket from specified interface.
  * Sample Calls for IPC "/home/ner/Desktop/Calypso/target/release/calypso ipc /tmp/ipc.sock &"
- * Sample Call for Mqtt "/home/ner/Desktop/Calypso/target/release/calypso mqtt localhost:1883 can0 &"
+ * Sample Call for Mqtt "/home/ner/Desktop/Calypso/target/release/calypso mqtt localhost:1883 &"
  *
- * Additional 4th argument: if skip_can_configure is passed the program will not call can interface setup commands
+ * 3rd argument: if a can interface is passed the program will use it instead of the default can0
+ * 4th argument: if skip_can_configure is passed the program will not call can interface setup commands
  * Ex: "/home/ner/Desktop/Calypso/target/release/calypso mqtt localhost:1883 can0 skip_can_configure &"
  */
 fn main() {
