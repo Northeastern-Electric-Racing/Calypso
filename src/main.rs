@@ -78,8 +78,9 @@ fn read_can(mut publisher: Box<dyn Client + Send>, can_interface: &str) {
 fn parse_args() -> (String, Box<dyn Client + 'static + Send>, String, bool) {
     let args: Vec<String> = env::args().collect();
     println!("{:?}", args);
-    if args.len() < 2 {
-        println!("Please provide a client type");
+    if args.len() < 4 {
+        println!("Not enough arguments!");
+        println!("Client type, client path, and can interface required.");
         process::exit(1);
     }
     let client_type = &args[1];
