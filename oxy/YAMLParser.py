@@ -1,5 +1,4 @@
 from ruamel.yaml import YAML, Any
-
 from structs.CANMsg import CANMsg
 from structs.CANField import CANField
 from structs.Format import Format

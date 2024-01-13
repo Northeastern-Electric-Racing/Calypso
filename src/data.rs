@@ -6,7 +6,7 @@ use std::fmt;
 pub struct Data {
     pub value: f32,
     pub topic: String,
-    pub unit: String
+    pub unit: String,
 }
 
 /**
@@ -16,7 +16,11 @@ impl fmt::Display for Data {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Overrides the string representation of the class.
 
-        write!(f, "topic: {}, value: {}, unit: {}", self.topic, self.value, self.unit)
+        write!(
+            f,
+            "topic: {}, value: {}, unit: {}",
+            self.topic, self.value, self.unit
+        )
     }
 }
 
@@ -34,12 +38,12 @@ impl Data {
         Self {
             value,
             topic: topic.to_string(),
-            unit: unit.to_string()
+            unit: unit.to_string(),
         }
     }
 
     pub fn to_json(&self) -> String {
-        format!("{{\"topic\": \"{}\", \"value\": {}, \"unit\": \"{}\"}}", self.topic, self.value, self.unit)
+        format!("{{\"value\": {}, \"unit\": \"{}\"}}", self.value, self.unit)
     }
 }
 
@@ -89,7 +93,7 @@ impl ProcessData {
      */
     pub fn half(byte: u8, bits: u8) -> u32 {
         (byte >> bits & 15) as u32
-    } 
+    }
 }
 
 /**
@@ -98,55 +102,33 @@ impl ProcessData {
 pub struct FormatData {}
 
 impl FormatData {
+    /* Temperatures are divided by 10 for 1 decimal point precision in C */
     pub fn temperature(value: f32) -> f32 {
         value / 10.0
     }
 
-    pub fn low_voltage(value: f32) -> f32 {
-        value / 100.0
-    }
-
+    /* Torque values are divided by 10 for one decimal point precision in N-m */
     pub fn torque(value: f32) -> f32 {
         value / 10.0
     }
 
-    pub fn high_voltage(value: f32) -> f32 {
-        value / 10.0
-    }
-
+    /* Current values are divided by 10 for one decimal point precision in A */
     pub fn current(value: f32) -> f32 {
         value / 10.0
     }
 
-    pub fn angle(value: f32) -> f32 {
-        value / 10.0
-    }
-
-    pub fn angular_velocity(value: f32) -> f32 {
-        -value
-    }
-
-    pub fn frequency(value: f32) -> f32 {
-        value / 10.0
-    }
-
-    pub fn power(value: f32) -> f32 {
-        value / 10.0
-    }
-
-    pub fn timer(value: f32) -> f32 {
-        value * 0.003
-    }
-
-    pub fn flux(value: f32) -> f32 {
-        value / 1000.0
-    }
-
+    /* Cell Voltages are recorded on a 10000x multiplier for V, must be divided by 10000 to get accurate number */
     pub fn cell_voltage(value: f32) -> f32 {
         value / 10000.0
     }
 
+    /* Acceleration values must be offset by 0.0029 according to datasheet */
     pub fn acceleration(value: f32) -> f32 {
         value * 0.0029
+    }
+
+    /* High Voltage values are divided by 100 for one decimal point precision in V, high voltage is in regards to average voltage from the accumulator pack */
+    pub fn high_voltage(value: f32) -> f32 {
+        value / 100.0
     }
 }
