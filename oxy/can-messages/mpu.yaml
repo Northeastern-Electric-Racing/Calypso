@@ -2,7 +2,7 @@
 msgs:
 - !CANMsg
     id: "0x500"
-    desc: "NERduino Acceleromter"
+    desc: "MPU Acceleromter"
     fields: 
     - !CANField
         name: "MPU/Accel/X"
