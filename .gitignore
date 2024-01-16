@@ -6,6 +6,7 @@
 # misc things
 .DS_Store
 .gitignore
+*.nix
 
 # python things
 pyrightconfig.json
