@@ -1,142 +1,134 @@
-use chrono::prelude::*;
 use std::fmt;
 
+/**
+ * Wrapper Class for Data coming off the car
+ */
 pub struct Data {
-    // Wrapper class for an individual piece of data.
-    pub(crate) timestamp: DateTime<Utc>,
-    pub id: u8,
     pub value: f32,
+    pub topic: String,
+    pub unit: String,
 }
 
+/**
+ * Implementation for the format of the data for debugging purposes
+ */
 impl fmt::Display for Data {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Overrides the string representation of the class.
 
-        write!(f, "ID {} - {} - {}", self.id, self.timestamp, self.value)
+        write!(
+            f,
+            "topic: {}, value: {}, unit: {}",
+            self.topic, self.value, self.unit
+        )
     }
 }
 
+/**
+ * Implementation fo the Data Structs' methods
+ */
 impl Data {
-    pub fn new(timestamp: DateTime<Utc>, id: u8, value: f32) -> Self {
+    /**
+     * Constructor
+     * @param id: the id of the data
+     * @param value: the value of the data
+     * @param topic: the topic of the data
+     */
+    pub fn new(value: f32, topic: &str, unit: &str) -> Self {
         Self {
-            timestamp,
-            id,
             value,
+            topic: topic.to_string(),
+            unit: unit.to_string(),
         }
     }
+
+    pub fn to_json(&self) -> String {
+        format!("{{\"value\": {}, \"unit\": \"{}\"}}", self.value, self.unit)
+    }
 }
 
-pub struct ProcessData {
-    // Utility functions to process message data.
-}
+/**
+ * Class to contain the data processing functions
+ */
+pub struct ProcessData {}
 
 impl ProcessData {
-    pub fn group_bytes(data_bytes: &[u8], group_length: usize) -> Vec<Vec<u8>> {
-        // Splits the given data bytes into lists of specified length.
-        data_bytes
-            .chunks(group_length)
-            .map(|chunk| chunk.to_vec())
-            .collect()
-    }
-
+    /**
+     * Computes the twos complement of the given value.
+     */
     pub fn twos_comp(val: u32, bits: usize) -> i64 {
-        // Computes the twos complement of the given value.
         if (val & (1 << (bits - 1))) != 0 {
-            (val as i64) - (1 << bits)
+            (val as i64) - ((1 << bits) as i64)
         } else {
             val as i64
         }
     }
 
+    /**
+     * Transforms the given data bytes into a value in little endian.
+     * Little Endian byte order stores low order bytes first.
+     */
     pub fn little_endian(data_bytes: &[u8], bits: usize) -> u32 {
-        // Transforms the given data bytes into a value in little endian.
-        // Little Endian byte order stores low order bytes first.
         let mut result: u32 = 0;
         for (i, byte) in data_bytes.iter().enumerate() {
-            // println!("Little End Byte: {}", byte);
             result |= (*byte as u32) << (bits * i);
-            // println!("Little End Result: {}", result)
         }
         result
     }
 
+    /**
+     * Transforms the given data bytes into a value in big endian.
+     * Big Endian byte order stores low order bytes last.
+     */
     pub fn big_endian(bytes: &[u8], bits: usize) -> u32 {
-        // Transforms the given data bytes into a value in big endian.
-        // Big Endian byte order stores low order bytes last.
         let mut result: u32 = 0;
         for (i, byte) in bytes.iter().enumerate() {
-            // println!("Big End Byte: {}", byte);
             result |= (*byte as u32) << (bits * (bytes.len() - i - 1));
-            // println!("Big End Result: {}", result);
         }
         result
     }
 
-    pub fn default_decode(byte_vals: &[u8]) -> Vec<i64> {
-        // Default decode structure seen by a majority of the messages.
-
-        let grouped_vals = ProcessData::group_bytes(byte_vals, 2);
-        println!("CUCKED GROUP BYTES");
-        let parsed_vals: Vec<u32> = grouped_vals
-            .iter()
-            .map(|val| ProcessData::little_endian(val, 8))
-            .collect();
-        println!("CUCKED LITTLE ENDIAN");
-        let decoded_vals: Vec<i64> = parsed_vals
-            .iter()
-            .map(|val| ProcessData::twos_comp(*val, 16))
-            .collect();
-        println!("CUCKED TWOS COMP");
-        decoded_vals
+    /**
+     * Decodes the given byte by taking the top four bits after shifting it by the given number of bits.
+     */
+    pub fn half(byte: u8, bits: u8) -> u32 {
+        (byte >> bits & 15) as u32
     }
 }
 
-pub struct FormatData {
-    // Utility functions to scale data values of a specific type.
-}
+/**
+ * Class to contain the data formatting functions
+ */
+pub struct FormatData {}
 
 impl FormatData {
-    pub fn temperature(value: i64) -> f32 {
-        value as f32 / 10.0
+    /* Temperatures are divided by 10 for 1 decimal point precision in C */
+    pub fn temperature(value: f32) -> f32 {
+        value / 10.0
     }
 
-    pub fn low_voltage(value: i64) -> f32 {
-        value as f32 / 100.0
+    /* Torque values are divided by 10 for one decimal point precision in N-m */
+    pub fn torque(value: f32) -> f32 {
+        value / 10.0
     }
 
-    pub fn torque(value: i64) -> f32 {
-        value as f32 / 10.0
+    /* Current values are divided by 10 for one decimal point precision in A */
+    pub fn current(value: f32) -> f32 {
+        value / 10.0
     }
 
-    pub fn high_voltage(value: i64) -> f32 {
-        value as f32 / 10.0
+    /* Cell Voltages are recorded on a 10000x multiplier for V, must be divided by 10000 to get accurate number */
+    pub fn cell_voltage(value: f32) -> f32 {
+        value / 10000.0
     }
 
-    pub fn current(value: i64) -> f32 {
-        value as f32 / 10.0
+    /* Acceleration values must be offset by 0.0029 according to datasheet */
+    pub fn acceleration(value: f32) -> f32 {
+        value * 0.0029
     }
 
-    pub fn angle(value: i64) -> f32 {
-        value as f32 / 10.0
-    }
-
-    pub fn angular_velocity(value: i64) -> i64 {
-        -value
-    }
-
-    pub fn frequency(value: i64) -> f32 {
-        value as f32 / 10.0
-    }
-
-    pub fn power(value: i32) -> f32 {
-        value as f32 / 10.0
-    }
-
-    pub fn timer(value: i32) -> f32 {
-        value as f32 * 0.003
-    }
-
-    pub fn flux(value: i64) -> f32 {
-        value as f32 / 1000.0
+    /* High Voltage values are divided by 100 for one decimal point precision in V, high voltage is in regards to average voltage from the accumulator pack */
+    pub fn high_voltage(value: f32) -> f32 {
+        value / 100.0
     }
 }

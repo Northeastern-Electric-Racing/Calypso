@@ -1,0 +1,14 @@
+!Messages
+msgs:
+- !CANMsg
+    id: "0x680"
+    desc: "Wheel State"
+    fields: 
+    - !CANField
+        name: "WHEEL/Buttons/1"
+        unit: ""
+        size: 1
+    - !CANField
+        name: "WHEEL/Buttons/2"
+        unit: ""
+        size: 1

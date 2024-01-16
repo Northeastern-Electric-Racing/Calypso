@@ -1,10 +1,9 @@
-from io import TextIOWrapper
 from ruamel.yaml import YAML, Any
-
 from structs.CANMsg import CANMsg
 from structs.CANField import CANField
-from structs.CorrectingFactor import CorrectingFactor
-import structs.Decoding
+from structs.Format import Format
+from structs.Decoding import Decoding
+from structs.Messages import Messages
 
 class YAMLParser:
     '''
@@ -14,12 +13,12 @@ class YAMLParser:
 
     def __init__(self):
         self.yaml = YAML()
+        self.yaml.register_class(Messages)
         self.yaml.register_class(CANMsg)
         self.yaml.register_class(CANField)
-        self.yaml.register_class(CorrectingFactor)
-        for decoding in structs.Decoding.Decoding.__subclasses__():
+        for decoding in Decoding.__subclasses__():
             self.yaml.register_class(decoding)
 
 
-    def parse(self, file: Any) -> CANMsg:
+    def parse(self, file: Any) -> Messages:
         return self.yaml.load(file)
