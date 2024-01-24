@@ -5,6 +5,7 @@ use std::{process, thread};
 
 use crate::client::Client;
 use crate::data::Data;
+use crate::serverdata;
 
 pub const DFLT_BROKER: &str = "mqtt://localhost:1883";
 const DFLT_CLIENT: &str = "calypso";
@@ -26,7 +27,11 @@ impl Client for MqttClient {
      */
     fn publish(&mut self, data: &Data) {
         let topic = data.topic.to_string();
-        let payload = data.to_json();
+        let payload = serverdata::ServerData::new()
+            .set_value(data.value.to_string())
+            .set_unit(data.unit.to_string())
+            .write_to_bytes()
+            .unwrap();
 
         /* If the client is initialized, publish the data. */
         if let Some(client) = &self.client {
