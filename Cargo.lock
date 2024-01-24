@@ -57,6 +57,7 @@ name = "calypso"
 version = "0.1.0"
 dependencies = [
  "paho-mqtt",
+ "protobuf",
  "protobuf-codegen",
  "socketcan",
 ]

@@ -1,5 +1,6 @@
 extern crate paho_mqtt as mqtt;
 use mqtt::ServerResponse;
+use protobuf::Message;
 use std::time::Duration;
 use std::{process, thread};
 
@@ -27,17 +28,15 @@ impl Client for MqttClient {
      */
     fn publish(&mut self, data: &Data) {
         let topic = data.topic.to_string();
-        let payload = serverdata::ServerData::new()
-            .set_value(data.value.to_string())
-            .set_unit(data.unit.to_string())
-            .write_to_bytes()
-            .unwrap();
+        let mut payload = serverdata::ServerData::new();
+        payload.unit = data.unit.to_string();
+        payload.value = data.value.to_string();
 
         /* If the client is initialized, publish the data. */
         if let Some(client) = &self.client {
             let msg = mqtt::MessageBuilder::new()
                 .topic(topic)
-                .payload(payload)
+                .payload(payload.write_to_bytes().unwrap())
                 .finalize();
 
             match { client.publish(msg) } {
