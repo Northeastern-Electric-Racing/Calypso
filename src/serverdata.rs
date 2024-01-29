@@ -30,7 +30,7 @@ const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_3_3_0;
 pub struct ServerData {
     // message fields
     // @@protoc_insertion_point(field:serverdata.v1.ServerData.value)
-    pub value: ::std::string::String,
+    pub value: ::std::vec::Vec<::std::string::String>,
     // @@protoc_insertion_point(field:serverdata.v1.ServerData.unit)
     pub unit: ::std::string::String,
     // special fields
@@ -52,7 +52,7 @@ impl ServerData {
     fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
         let mut fields = ::std::vec::Vec::with_capacity(2);
         let mut oneofs = ::std::vec::Vec::with_capacity(0);
-        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+        fields.push(::protobuf::reflect::rt::v2::make_vec_simpler_accessor::<_, _>(
             "value",
             |m: &ServerData| { &m.value },
             |m: &mut ServerData| { &mut m.value },
@@ -81,7 +81,7 @@ impl ::protobuf::Message for ServerData {
         while let Some(tag) = is.read_raw_tag_or_eof()? {
             match tag {
                 10 => {
-                    self.value = is.read_string()?;
+                    self.value.push(is.read_string()?);
                 },
                 18 => {
                     self.unit = is.read_string()?;
@@ -98,9 +98,9 @@ impl ::protobuf::Message for ServerData {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u64 {
         let mut my_size = 0;
-        if !self.value.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.value);
-        }
+        for value in &self.value {
+            my_size += ::protobuf::rt::string_size(1, &value);
+        };
         if !self.unit.is_empty() {
             my_size += ::protobuf::rt::string_size(2, &self.unit);
         }
@@ -110,9 +110,9 @@ impl ::protobuf::Message for ServerData {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
-        if !self.value.is_empty() {
-            os.write_string(1, &self.value)?;
-        }
+        for v in &self.value {
+            os.write_string(1, &v)?;
+        };
         if !self.unit.is_empty() {
             os.write_string(2, &self.unit)?;
         }
@@ -140,7 +140,7 @@ impl ::protobuf::Message for ServerData {
 
     fn default_instance() -> &'static ServerData {
         static instance: ServerData = ServerData {
-            value: ::std::string::String::new(),
+            value: ::std::vec::Vec::new(),
             unit: ::std::string::String::new(),
             special_fields: ::protobuf::SpecialFields::new(),
         };
@@ -167,16 +167,16 @@ impl ::protobuf::reflect::ProtobufValue for ServerData {
 
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x1asrc/proto/serverdata.proto\x12\rserverdata.v1\"6\n\nServerData\x12\
-    \x14\n\x05value\x18\x01\x20\x01(\tR\x05value\x12\x12\n\x04unit\x18\x02\
-    \x20\x01(\tR\x04unitJ\xa2\x01\n\x06\x12\x04\0\0\x07\x01\n\x08\n\x01\x0c\
+    \x14\n\x05value\x18\x01\x20\x03(\tR\x05value\x12\x12\n\x04unit\x18\x02\
+    \x20\x01(\tR\x04unitJ\xb0\x01\n\x06\x12\x04\0\0\x07\x01\n\x08\n\x01\x0c\
     \x12\x03\0\0\x12\n\x08\n\x01\x02\x12\x03\x02\0\x16\n\n\n\x02\x04\0\x12\
     \x04\x04\0\x07\x01\n\n\n\x03\x04\0\x01\x12\x03\x04\x08\x12\n\x0b\n\x04\
-    \x04\0\x02\0\x12\x03\x05\x03\x14\n\x0c\n\x05\x04\0\x02\0\x05\x12\x03\x05\
-    \x03\t\n\x0c\n\x05\x04\0\x02\0\x01\x12\x03\x05\n\x0f\n\x0c\n\x05\x04\0\
-    \x02\0\x03\x12\x03\x05\x12\x13\n\x0b\n\x04\x04\0\x02\x01\x12\x03\x06\x03\
-    \x13\n\x0c\n\x05\x04\0\x02\x01\x05\x12\x03\x06\x03\t\n\x0c\n\x05\x04\0\
-    \x02\x01\x01\x12\x03\x06\n\x0e\n\x0c\n\x05\x04\0\x02\x01\x03\x12\x03\x06\
-    \x11\x12b\x06proto3\
+    \x04\0\x02\0\x12\x03\x05\x03\x1d\n\x0c\n\x05\x04\0\x02\0\x04\x12\x03\x05\
+    \x03\x0b\n\x0c\n\x05\x04\0\x02\0\x05\x12\x03\x05\x0c\x12\n\x0c\n\x05\x04\
+    \0\x02\0\x01\x12\x03\x05\x13\x18\n\x0c\n\x05\x04\0\x02\0\x03\x12\x03\x05\
+    \x1b\x1c\n\x0b\n\x04\x04\0\x02\x01\x12\x03\x06\x03\x13\n\x0c\n\x05\x04\0\
+    \x02\x01\x05\x12\x03\x06\x03\t\n\x0c\n\x05\x04\0\x02\x01\x01\x12\x03\x06\
+    \n\x0e\n\x0c\n\x05\x04\0\x02\x01\x03\x12\x03\x06\x11\x12b\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file

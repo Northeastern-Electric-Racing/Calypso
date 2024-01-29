@@ -2,6 +2,7 @@ from structs.CANField import CANField
 from structs.CANMsg import CANMsg
 from structs.Messages import Messages
 from structs.Result import Result
+from structs.NetworkEncoding import CSV, SinglePoint
 
 class RustSynth:
     '''
@@ -18,7 +19,7 @@ class RustSynth:
     decode_mock: str = """
 pub fn decode_mock(_data: &[u8]) -> Vec::<Data> {
     let result = vec![
-    Data::new(0.0, "Mock", "")
+    Data::new(vec![0.0], "Mock", "")
     ];
     result
 }
@@ -71,10 +72,28 @@ impl MessageInfo {
         signature: str = self.signature(msg.desc)
         generated_lines: list[str] = []
         # Generate a line for each field in the message
-        for field in msg.fields:
-            generated_lines.append(self.finalize_line(field.name, field.unit, f"{self.format_data(field, self.parse_decoders(field))}"))
+        generated_lines += self.parse_network_encoding(msg)
         total_list: list[str] = [signature, self.decode_return_value] + generated_lines + [self.decode_close]
         return "\n".join(total_list)
+
+    def parse_network_encoding(self, msg: CANMsg) -> list[str]:  # Change return type to list[str]
+        result = []
+        networkEncoding = msg.networkEncoding[0]
+        if networkEncoding.id == "csv":
+            result.append(f"        {networkEncoding.start}")
+            result.append(f"            {','.join(self.decode_field_value(field) for field in networkEncoding.fields)}")
+            result.append(f"        {networkEncoding.closing}")
+            result.append(f"        , \"{networkEncoding.topic}\", \"{networkEncoding.unit}\")")
+        elif networkEncoding.id == "single_point":
+            for field in networkEncoding.fields:
+                result.append(f"        {networkEncoding.start}")
+                result.append(f"             {self.decode_field_value(field)}")
+                result.append(f"        {networkEncoding.closing}")
+                result.append(f"        , \"{networkEncoding.topic}\", \"{networkEncoding.unit}\"), ")
+        return result
+
+    def decode_field_value(self, field: CANField) -> str:
+        return f"{self.format_data(field, self.parse_decoders(field))}"
 
     # Helper function that generates the name of a decode function for a given CANMsg based off the can message description
     def function_name(self, desc: str) -> str:
