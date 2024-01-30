@@ -4,7 +4,7 @@ use std::fmt;
  * Wrapper Class for Data coming off the car
  */
 pub struct Data {
-    pub value: f32,
+    pub value: Vec<f32>,
     pub topic: String,
     pub unit: String,
 }
@@ -18,7 +18,7 @@ impl fmt::Display for Data {
 
         write!(
             f,
-            "topic: {}, value: {}, unit: {}",
+            "topic: {}, value: {:#?}, unit: {}",
             self.topic, self.value, self.unit
         )
     }
@@ -34,7 +34,7 @@ impl Data {
      * @param value: the value of the data
      * @param topic: the topic of the data
      */
-    pub fn new(value: f32, topic: &str, unit: &str) -> Self {
+    pub fn new(value: Vec<f32>, topic: &str, unit: &str) -> Self {
         Self {
             value,
             topic: topic.to_string(),
@@ -43,7 +43,7 @@ impl Data {
     }
 
     pub fn to_json(&self) -> String {
-        format!("{{\"value\": {}, \"unit\": \"{}\"}}", self.value, self.unit)
+        format!("{{\"value\": {:#?}, \"unit\": \"{}\"}}", self.value, self.unit)
     }
 }
 
