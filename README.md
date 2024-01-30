@@ -32,3 +32,18 @@ run ```/home/ner/Desktop/Calypso/target/release/calypso ipc /tmp/ipc.sock```
 Utilizes MQTT Web Socket to offload data from the car for our telemetry system
 run ```/home/ner/Desktop/Calypso/target/release/calypso mqtt localhost:1883```
 
+### Generate code
+
+#### linux
+`apt-get install protobuf-compiler -y`
+
+#### mac
+`brew install protobuf` 
+
+`cargo install protobuf-codegen`
+
+`PATH="$HOME/.cargo/bin:$PATH"`
+
+`protoc --rust_out ./src ./src/proto/serverdata.proto`
+
+delete the `mod.rs` file
