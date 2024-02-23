@@ -30,10 +30,7 @@ impl Client for MqttClient {
         let topic = data.topic.to_string();
         let mut payload = serverdata::ServerData::new();
         payload.unit = data.unit.to_string();
-        payload.value = data.value
-                            .iter()
-                            .map(|x| x.to_string())
-                            .collect();
+        payload.value = data.value.iter().map(|x| x.to_string()).collect();
 
         /* If the client is initialized, publish the data. */
         if let Some(client) = &self.client {
