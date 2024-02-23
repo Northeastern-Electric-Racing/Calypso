@@ -39,7 +39,7 @@ impl Client for MqttClient {
                 .payload(payload.write_to_bytes().unwrap())
                 .finalize();
 
-            match { client.publish(msg) } {
+            match client.publish(msg) {
                 Ok(_) => (),
                 Err(e) => println!("Error sending message: {:?}", e),
             }
@@ -88,7 +88,7 @@ impl MqttClient {
             .server_uri(host_name)
             .client_id(DFLT_CLIENT.to_string())
             .finalize();
-        self.client = Some(match { mqtt::Client::new(create_options) } {
+        self.client = Some(match mqtt::Client::new(create_options) {
             Ok(client) => client,
             Err(e) => {
                 println!("Error creating the client: {:?}", e);
