@@ -36,7 +36,10 @@ impl Client for MqttClient {
         if let Some(client) = &self.client {
             let msg = mqtt::MessageBuilder::new()
                 .topic(topic)
-                .payload(payload.write_to_bytes().unwrap())
+                .payload(
+                    protobuf::Message::write_to_bytes(&payload)
+                        .unwrap_or("failed to serialize".as_bytes().to_vec()),
+                )
                 .finalize();
 
             match client.publish(msg) {
