@@ -32,7 +32,12 @@ run ```/home/ner/Desktop/Calypso/target/release/calypso ipc /tmp/ipc.sock```
 Utilizes MQTT Web Socket to offload data from the car for our telemetry system
 run ```/home/ner/Desktop/Calypso/target/release/calypso mqtt localhost:1883```
 
-### Generate code
+### Synthesize Rust
+`cd oxy`
+
+`python3 typedpoc.py`
+
+### Generate Proto
 
 #### linux
 `apt-get install protobuf-compiler -y`
