@@ -1,6 +1,5 @@
 extern crate paho_mqtt as mqtt;
 use mqtt::ServerResponse;
-use protobuf::Message;
 use std::time::Duration;
 use std::{process, thread};
 
