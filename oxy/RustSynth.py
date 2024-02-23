@@ -3,6 +3,7 @@ from structs.CANMsg import CANMsg
 from structs.Messages import Messages
 from structs.Result import Result
 from structs.NetworkEncoding import CSV, SinglePoint
+from typing import List
 
 class RustSynth:
     '''
@@ -46,7 +47,7 @@ impl MessageInfo {
 """ # The MessageInfo struct that is used to store the decode function for a given message
 
     # The main function of the RustSynth class. Takes a list of CANMsgs and returns a Result object that contains the synthesized Rust code for the decode_data.rs and master_mapping.rs files
-    def parse_messages(self, msgs: [CANMsg]) -> Result:
+    def parse_messages(self, msgs: List[CANMsg]) -> Result:
         result = Result("", "")
         result.decode_data += self.ignore_clippy
         result.decode_data += self.decode_data_import
@@ -89,7 +90,7 @@ impl MessageInfo {
                 result.append(f"        {networkEncoding.start}")
                 result.append(f"             {self.decode_field_value(field)}")
                 result.append(f"        {networkEncoding.closing}")
-                result.append(f"        , \"{networkEncoding.topic}\", \"{networkEncoding.unit}\"), ")
+                result.append(f"        , \"{field.name}\", \"{field.unit}\"), ")
         return result
 
     def decode_field_value(self, field: CANField) -> str:
