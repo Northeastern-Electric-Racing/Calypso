@@ -116,7 +116,6 @@ impl MqttClient {
                 .finalize();
             if let Err(e) = client.connect(conn_opts) {
                 println!("Unable to connect:\n\t{:?}", e);
-                process::exit(1);
             }
         } else {
             println!("Client not initialized, please set host first");

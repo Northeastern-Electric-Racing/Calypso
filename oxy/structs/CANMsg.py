@@ -1,8 +1,6 @@
 from __future__ import annotations
-from .CANField import CANField
 from dataclasses import dataclass
 from .NetworkEncoding import NetworkEncoding
-from ruamel.yaml import Optional
 
 @dataclass
 class CANMsg:
