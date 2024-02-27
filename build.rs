@@ -4,13 +4,17 @@ use std::process::Command;
 fn main() {
     println!("cargo:rerun-if-env-changed=ALWAYS_RUN");
 
-    // Create a new command that runs bash
-    let mut command = Command::new("python3");
-
-    // Pass the script name as an argument
-    command.arg("./calypsogen.py");
-
-    // Execute the command
-    // This will download a file called ncbi_dataset.zip in the current directory
-    command.output().expect("Failed to generate can messages!");
+    match Command::new("python3").arg("./calypsogen.py").status() {
+        Ok(status) if status.success() => {
+            println!("Python script executed successfully");
+        },
+        Ok(status) => {
+            eprintln!("Python script exited with status: {}", status);
+            std::process::exit(1);
+        },
+        Err(e) => {
+            eprintln!("Failed to execute Python script: {}", e);
+            std::process::exit(1);
+        },
+    }
 }
