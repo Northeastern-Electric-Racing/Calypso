@@ -113,6 +113,7 @@ impl MqttClient {
                 .keep_alive_interval(Duration::from_secs(20))
                 .clean_session(false)
                 .will_message(lastwilltestatment)
+                .automatic_reconnect(1, 10)
                 .finalize();
             if let Err(e) = client.connect(conn_opts) {
                 println!("Unable to connect:\n\t{:?}", e);
