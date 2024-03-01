@@ -55,7 +55,7 @@ fn read_can(mut publisher: Box<dyn Client + Send>, can_interface: &str) {
         }
     };
     loop {
-        let msg = match { socket.read_frame() } {
+        let msg = match socket.read_frame() {
             Ok(msg) => msg,
             Err(err) => {
                 println!("Failed to read CAN frame: {}", err);
