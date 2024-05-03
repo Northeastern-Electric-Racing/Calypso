@@ -23,10 +23,13 @@ bms_messages = cangen.YAMLParser().parse(open(f"{EMBEDDED_BASE_PATH}/{module_nam
 mpu_messages = cangen.YAMLParser().parse(open(f"{EMBEDDED_BASE_PATH}/{module_name}/can-messages/mpu.yaml", "r"))
 wheel_messages = cangen.YAMLParser().parse(open(f"{EMBEDDED_BASE_PATH}/{module_name}/can-messages/wheel.yaml", "r"))
 dti_messages = cangen.YAMLParser().parse(open(f"{EMBEDDED_BASE_PATH}/{module_name}/can-messages/dti.yaml", "r"))
+charger_messages = cangen.YAMLParser().parse(open(f"{EMBEDDED_BASE_PATH}/{module_name}/can-messages/charger.yaml", "r"))
+
 
 bms_messages.msgs.extend(mpu_messages.msgs)
 bms_messages.msgs.extend(wheel_messages.msgs)
 bms_messages.msgs.extend(dti_messages.msgs)
+bms_messages.msgs.extend(charger_messages.msgs)
 
 result = cangen.RustSynth().parse_messages(bms_messages.msgs)
 
