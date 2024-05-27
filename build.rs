@@ -2,7 +2,7 @@ use std::process::Command;
 
 /* Prebuild script */
 fn main() {
-    println!("cargo:rerun-if-env-changed=ALWAYS_RUN");
+    println!("cargo:rerun-if-changed=Embedded-Base");
 
     match Command::new("python3").arg("./calypsogen.py").status() {
         Ok(status) if status.success() => {

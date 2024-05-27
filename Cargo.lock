@@ -53,9 +53,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed570934406eb16438a4e976b1b4500774099c13b8cb96eec99f620f05090ddf"
 
 [[package]]
+name = "bitstream-io"
+version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c12d1856e42f0d817a835fe55853957c85c8c8a470114029143d3f12671446e"
+
+[[package]]
 name = "calypso"
 version = "0.1.0"
 dependencies = [
+ "bitstream-io",
  "paho-mqtt",
  "protobuf",
  "protobuf-codegen",
