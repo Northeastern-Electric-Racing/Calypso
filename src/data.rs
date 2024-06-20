@@ -41,8 +41,4 @@ impl Data {
             unit: unit.to_string(),
         }
     }
-
-    pub fn to_json(&self) -> String {
-        format!("{{\"value\": {:#?}, \"unit\": \"{}\"}}", self.value, self.unit)
-    }
 }

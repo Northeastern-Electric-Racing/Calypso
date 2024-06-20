@@ -17,10 +17,7 @@ impl Message {
      * Creates a new message with the given timestamp, id, and data.
      */
     pub fn new(id: u32, data: Vec<u8>) -> Self {
-        Self {
-            id,
-            data,
-        }
+        Self { id, data }
     }
 
     /**

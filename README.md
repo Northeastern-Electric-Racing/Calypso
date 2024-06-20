@@ -1,16 +1,8 @@
 # Calypso
-Custom CAN Decoder for all the data being streamed around the car
+Custom CAN decoder to translate CAN messages to MQTT protobuf encoded packets with low latency and a YAML configuration structure.
 
-### Recommended Extensions
-View https://www.youtube.com/watch?v=BU1LYFkpJuk for more information
 
-- rust-analyzer
-- CodeLLDB
-- Even Better TOML
-- Error Lens
-- Todo Tree
-- crates
-
+### Develop setup
 #### Go to Settings in VSCode
 search Rust-analyzer check and set the command from check -> clippy
 
@@ -23,19 +15,29 @@ add following information:
 } 
 ```
 
-### NERO 1.0 Config
-Utilizes a linux IPC to stream data to the NERO frontend
+To test it on linux, please install:
+- mosquitto broker: https://mosquitto.org
+- can-utils
+- mqttui: https://github.com/EdJoPaTo/mqttui
 
-run ```/home/ner/Desktop/Calypso/target/release/calypso ipc /tmp/ipc.sock```
 
-### SIREN and NERO 2.0 Config
-Utilizes MQTT Web Socket to offload data from the car for our telemetry system
-run ```/home/ner/Desktop/Calypso/target/release/calypso mqtt localhost:1883```
+### Developing
 
-### Synthesize Rust
-`cd oxy`
+Process for testing:  
+- run `mosquitto` and leave it open
+- run `mqttui` and leave it open
+- setup the can network:
+    - `sudo ip link add dev vcan0 type vcan`
+    - `sudo ip link set dev vcan0 up`
 
-`python3 typedpoc.py`
+run ```cargo run localhost:1883 vcan0```
+
+To send a can message:
+- `cansend vcan0 <ID_IN_HEX>#<PAYLOAD_IN_HEX>`
+Ex. `cansend vcan0 702#01010101FFFFFFFF`  
+Now view calypso interpret the can message and broadcast it on `mqttui`
+
+
 
 ### Generate Proto
 
