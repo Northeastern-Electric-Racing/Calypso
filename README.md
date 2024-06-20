@@ -23,19 +23,12 @@ add following information:
 } 
 ```
 
-### NERO 1.0 Config
-Utilizes a linux IPC to stream data to the NERO frontend
-
-run ```/home/ner/Desktop/Calypso/target/release/calypso ipc /tmp/ipc.sock```
-
 ### SIREN and NERO 2.0 Config
 Utilizes MQTT Web Socket to offload data from the car for our telemetry system
-run ```/home/ner/Desktop/Calypso/target/release/calypso mqtt localhost:1883```
 
-### Synthesize Rust
-`cd oxy`
+Developers:
+run ```cargo run localhost:1883 vcan0```
 
-`python3 typedpoc.py`
 
 ### Generate Proto
 

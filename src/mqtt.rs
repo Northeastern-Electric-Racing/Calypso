@@ -3,11 +3,9 @@ use mqtt::ServerResponse;
 use std::time::Duration;
 use std::{process, thread};
 
-use crate::client::Client;
 use crate::data::Data;
 use crate::serverdata;
 
-pub const DFLT_BROKER: &str = "mqtt://localhost:1883";
 const DFLT_CLIENT: &str = "calypso";
 
 /**
@@ -17,15 +15,33 @@ pub struct MqttClient {
     client: Option<mqtt::Client>,
 }
 
-/**
- * Implement the Publish trait for MqttClient.
- */
-impl Client for MqttClient {
+impl Default for MqttClient {
     /**
-     * Publishes the given data to the broker.
-     * param data: The data object to format and send.
+     * Creates a new MqttClient.
      */
-    fn publish(&mut self, data: &Data) {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/**
+ * Implementation of the MqttClient struct.
+ */
+impl MqttClient {
+    /**
+     * Creates a new MqttClient.
+     */
+    pub fn new() -> MqttClient {
+        MqttClient { client: None }
+    }
+    
+
+    pub fn connect(&mut self, host: &str) {
+        self._set_host(&host.to_string());
+        self._connect();
+    }
+
+    pub fn publish(&mut self, data: &Data) {
         let topic = data.topic.to_string();
         let mut payload = serverdata::ServerData::new();
         payload.unit = data.unit.to_string();
@@ -51,41 +67,7 @@ impl Client for MqttClient {
         }
     }
 
-    /**
-     * Connects to the broker.
-     * Sets the host and then connects
-     */
-    fn connect(&mut self, host: &str) {
-        self.set_host(&host.to_string());
-        self.connect();
-    }
-}
-
-impl Default for MqttClient {
-    /**
-     * Creates a new MqttClient.
-     */
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/**
- * Implementation of the MqttClient struct.
- */
-impl MqttClient {
-    /**
-     * Creates a new MqttClient.
-     */
-    pub fn new() -> MqttClient {
-        MqttClient { client: None }
-    }
-
-    /**
-     * Creates a new MqttClient with the given host name.
-     * param host_name: The host name of the broker.
-     */
-    fn set_host(&mut self, host_name: &String) {
+    fn _set_host(&mut self, host_name: &String) {
         let create_options = mqtt::CreateOptionsBuilder::new()
             .server_uri(host_name)
             .client_id(DFLT_CLIENT.to_string())
@@ -103,7 +85,7 @@ impl MqttClient {
      * Connects to the broker.
      * Sets the last will and testament.
      */
-    fn connect(&mut self) {
+    fn _connect(&mut self) {
         if let Some(client) = &self.client {
             let lastwilltestatment = mqtt::MessageBuilder::new()
                 .topic("Calypso/Status")
