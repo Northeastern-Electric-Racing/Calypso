@@ -17,4 +17,14 @@ fn main() {
             std::process::exit(1);
         }
     }
+
+    protobuf_codegen::Codegen::new()
+        .pure()
+        // All inputs and imports from the inputs must reside in `includes` directories.
+        .includes(&["src/proto"])
+        // Inputs must reside in some of include paths.
+        .input("src/proto/command_data.proto")
+        // Specify output directory relative to Cargo output directory.
+        .out_dir("src")
+        .run_from_script();
 }

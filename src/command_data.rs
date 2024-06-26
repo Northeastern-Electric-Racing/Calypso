@@ -19,59 +19,52 @@
 #![allow(unused_results)]
 #![allow(unused_mut)]
 
-//! Generated file from `serverdata.proto`
+//! Generated file from `command_data.proto`
 
 /// Generated files are compatible only with the same version
 /// of protobuf runtime.
 const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_3_3_0;
 
-// @@protoc_insertion_point(message:serverdata.v1.ServerData)
+// @@protoc_insertion_point(message:command_data.v1.CommandData)
 #[derive(PartialEq,Clone,Default,Debug)]
-pub struct ServerData {
+pub struct CommandData {
     // message fields
-    // @@protoc_insertion_point(field:serverdata.v1.ServerData.value)
-    pub value: ::std::vec::Vec<::std::string::String>,
-    // @@protoc_insertion_point(field:serverdata.v1.ServerData.unit)
-    pub unit: ::std::string::String,
+    // @@protoc_insertion_point(field:command_data.v1.CommandData.data)
+    pub data: ::std::vec::Vec<f32>,
     // special fields
-    // @@protoc_insertion_point(special_field:serverdata.v1.ServerData.special_fields)
+    // @@protoc_insertion_point(special_field:command_data.v1.CommandData.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
 }
 
-impl<'a> ::std::default::Default for &'a ServerData {
-    fn default() -> &'a ServerData {
-        <ServerData as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a CommandData {
+    fn default() -> &'a CommandData {
+        <CommandData as ::protobuf::Message>::default_instance()
     }
 }
 
-impl ServerData {
-    pub fn new() -> ServerData {
+impl CommandData {
+    pub fn new() -> CommandData {
         ::std::default::Default::default()
     }
 
     fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
-        let mut fields = ::std::vec::Vec::with_capacity(2);
+        let mut fields = ::std::vec::Vec::with_capacity(1);
         let mut oneofs = ::std::vec::Vec::with_capacity(0);
         fields.push(::protobuf::reflect::rt::v2::make_vec_simpler_accessor::<_, _>(
-            "value",
-            |m: &ServerData| { &m.value },
-            |m: &mut ServerData| { &mut m.value },
+            "data",
+            |m: &CommandData| { &m.data },
+            |m: &mut CommandData| { &mut m.data },
         ));
-        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
-            "unit",
-            |m: &ServerData| { &m.unit },
-            |m: &mut ServerData| { &mut m.unit },
-        ));
-        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<ServerData>(
-            "ServerData",
+        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<CommandData>(
+            "CommandData",
             fields,
             oneofs,
         )
     }
 }
 
-impl ::protobuf::Message for ServerData {
-    const NAME: &'static str = "ServerData";
+impl ::protobuf::Message for CommandData {
+    const NAME: &'static str = "CommandData";
 
     fn is_initialized(&self) -> bool {
         true
@@ -81,10 +74,10 @@ impl ::protobuf::Message for ServerData {
         while let Some(tag) = is.read_raw_tag_or_eof()? {
             match tag {
                 10 => {
-                    self.value.push(is.read_string()?);
+                    is.read_repeated_packed_float_into(&mut self.data)?;
                 },
-                18 => {
-                    self.unit = is.read_string()?;
+                13 => {
+                    self.data.push(is.read_float()?);
                 },
                 tag => {
                     ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
@@ -98,24 +91,16 @@ impl ::protobuf::Message for ServerData {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u64 {
         let mut my_size = 0;
-        for value in &self.value {
-            my_size += ::protobuf::rt::string_size(1, &value);
-        };
-        if !self.unit.is_empty() {
-            my_size += ::protobuf::rt::string_size(2, &self.unit);
-        }
+        my_size += 5 * self.data.len() as u64;
         my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
         self.special_fields.cached_size().set(my_size as u32);
         my_size
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
-        for v in &self.value {
-            os.write_string(1, &v)?;
+        for v in &self.data {
+            os.write_float(1, *v)?;
         };
-        if !self.unit.is_empty() {
-            os.write_string(2, &self.unit)?;
-        }
         os.write_unknown_fields(self.special_fields.unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -128,47 +113,44 @@ impl ::protobuf::Message for ServerData {
         &mut self.special_fields
     }
 
-    fn new() -> ServerData {
-        ServerData::new()
+    fn new() -> CommandData {
+        CommandData::new()
     }
 
     fn clear(&mut self) {
-        self.value.clear();
-        self.unit.clear();
+        self.data.clear();
         self.special_fields.clear();
     }
 
-    fn default_instance() -> &'static ServerData {
-        static instance: ServerData = ServerData {
-            value: ::std::vec::Vec::new(),
-            unit: ::std::string::String::new(),
+    fn default_instance() -> &'static CommandData {
+        static instance: CommandData = CommandData {
+            data: ::std::vec::Vec::new(),
             special_fields: ::protobuf::SpecialFields::new(),
         };
         &instance
     }
 }
 
-impl ::protobuf::MessageFull for ServerData {
+impl ::protobuf::MessageFull for CommandData {
     fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
         static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
-        descriptor.get(|| file_descriptor().message_by_package_relative_name("ServerData").unwrap()).clone()
+        descriptor.get(|| file_descriptor().message_by_package_relative_name("CommandData").unwrap()).clone()
     }
 }
 
-impl ::std::fmt::Display for ServerData {
+impl ::std::fmt::Display for CommandData {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for ServerData {
+impl ::protobuf::reflect::ProtobufValue for CommandData {
     type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x10serverdata.proto\x12\rserverdata.v1\"6\n\nServerData\x12\x14\n\x05\
-    value\x18\x01\x20\x03(\tR\x05value\x12\x12\n\x04unit\x18\x02\x20\x01(\tR\
-    \x04unitb\x06proto3\
+    \n\x12command_data.proto\x12\x0fcommand_data.v1\"!\n\x0bCommandData\x12\
+    \x12\n\x04data\x18\x01\x20\x03(\x02R\x04datab\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
@@ -187,7 +169,7 @@ pub fn file_descriptor() -> &'static ::protobuf::reflect::FileDescriptor {
         let generated_file_descriptor = generated_file_descriptor_lazy.get(|| {
             let mut deps = ::std::vec::Vec::with_capacity(0);
             let mut messages = ::std::vec::Vec::with_capacity(1);
-            messages.push(ServerData::generated_message_descriptor_data());
+            messages.push(CommandData::generated_message_descriptor_data());
             let mut enums = ::std::vec::Vec::with_capacity(0);
             ::protobuf::reflect::GeneratedFileDescriptor::new_generated(
                 file_descriptor_proto(),

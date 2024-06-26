@@ -17,5 +17,12 @@ __pycache__/
 build/
 dist/
 logs/
-master_mapping.rs
+
+mod.rs
+
+# cangen files generaed by calypsogen.py
+decode_master_mapping.rs
 decode_data.rs
+encode_data.rs
+encode_master_mapping.rs
+format_data.rs
