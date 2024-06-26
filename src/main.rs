@@ -56,7 +56,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> Result<JoinHandle<u32>, Stri
             client.publish(data)
         }
     });
-    return Ok(join_handle);
+    Ok(join_handle)
 }
 
 /**
@@ -93,7 +93,7 @@ fn read_siren(
                 }
                 let key = msg
                     .topic()
-                    .split("/")
+                    .split('/')
                     .last()
                     .unwrap_or("Reserved")
                     .to_owned();
@@ -117,7 +117,7 @@ fn read_siren(
             }
         }
     });
-    return Ok(join_handle);
+    Ok(join_handle)
 }
 
 fn send_out(
@@ -137,14 +137,13 @@ fn send_out(
         for msg in sender.iter() {
             // let id = u32::from_str_radix((msg.1.1).trim_start_matches("0x"), 16).expect("Invalid CAN ID!");
 
-            let id: Id;
-            if !msg.1.is_ext {
-                id = socketcan::StandardId::new(msg.1.id.try_into().unwrap())
+            let id: Id = if !msg.1.is_ext {
+                socketcan::StandardId::new(msg.1.id.try_into().unwrap())
                     .unwrap()
-                    .into();
+                    .into()
             } else {
-                id = socketcan::ExtendedId::new(msg.1.id).unwrap().into();
-            }
+                socketcan::ExtendedId::new(msg.1.id).unwrap().into()
+            };
 
             match CanFrame::new(id, &msg.1.value) {
                 Some(packet) => {
@@ -159,7 +158,7 @@ fn send_out(
             }
         }
     });
-    return Ok(join_handle);
+    Ok(join_handle)
 }
 
 /**

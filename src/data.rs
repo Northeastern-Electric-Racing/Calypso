@@ -78,10 +78,6 @@ impl EncodeData {
      * @param topic: whether the can message is extended format
      */
     pub fn new(id: u32, value: Vec<u8>, is_ext: bool) -> Self {
-        Self {
-            id: id,
-            value: value,
-            is_ext: is_ext,
-        }
+        Self { id, value, is_ext }
     }
 }

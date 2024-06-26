@@ -64,7 +64,7 @@ impl MqttClient {
     }
 
     pub fn start_consumer(&mut self) -> Option<Receiver<Option<Message>>> {
-        return Some(self.client.start_consuming());
+        Some(self.client.start_consuming())
     }
 
     pub fn subscribe(&mut self, topic: &str) {
