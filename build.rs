@@ -21,7 +21,7 @@ fn main() {
     protobuf_codegen::Codegen::new()
         .pure()
         // All inputs and imports from the inputs must reside in `includes` directories.
-        .includes(&["src/proto"])
+        .includes(["src/proto"])
         // Inputs must reside in some of include paths.
         .input("src/proto/command_data.proto")
         .input("src/proto/serverdata.proto")
