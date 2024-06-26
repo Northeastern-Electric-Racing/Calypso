@@ -18,7 +18,10 @@ build/
 dist/
 logs/
 
+# protobuf
 mod.rs
+command_data.rs
+serverdata.rs
 
 # cangen files generaed by calypsogen.py
 decode_master_mapping.rs

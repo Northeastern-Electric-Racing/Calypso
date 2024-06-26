@@ -24,6 +24,7 @@ fn main() {
         .includes(&["src/proto"])
         // Inputs must reside in some of include paths.
         .input("src/proto/command_data.proto")
+        .input("src/proto/serverdata.proto")
         // Specify output directory relative to Cargo output directory.
         .out_dir("src")
         .run_from_script();
