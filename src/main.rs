@@ -9,7 +9,7 @@ use std::{
 use calypso::{
     command_data, data::EncodeData, decodable_message::DecodableMessage,
     encodable_message::EncodableMessage, encode_master_mapping::ENCODABLE_KEY_LIST,
-    mqtt::MqttClient,
+    mqtt::MqttClient, serverdata,
 };
 use protobuf::Message;
 use socketcan::{CanFrame, CanSocket, EmbeddedFrame, Id, Socket};
@@ -20,13 +20,9 @@ use socketcan::{CanFrame, CanSocket, EmbeddedFrame, Id, Socket};
 fn read_can(pub_path: &str, can_interface: &str) -> Result<JoinHandle<u32>, String> {
     //open can socket channel at name can_interface
     let mut client = MqttClient::new(pub_path, "calypso-decoder");
-    client.connect();
-    let socket = match CanSocket::open(can_interface) {
-        Ok(socket) => socket,
-        Err(err) => {
-            return Err(format!("Failed to open CAN socket: {}", err));
-        }
-    };
+    client.connect().expect("Could not connect to Siren!");
+    let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
+
     let join_handle: JoinHandle<_> = thread::spawn(move || loop {
         let msg = match socket.read_frame() {
             Ok(CanFrame::Data(msg)) => msg,
@@ -53,7 +49,20 @@ fn read_can(pub_path: &str, can_interface: &str) -> Result<JoinHandle<u32>, Stri
         );
         let decoded_data = message.decode();
         for data in decoded_data.iter() {
-            client.publish(data)
+            let mut payload = serverdata::ServerData::new();
+            payload.unit = data.unit.to_string();
+            payload.value = data.value.iter().map(|x| x.to_string()).collect();
+
+            client
+                .publish(
+                    data.topic.to_string(),
+                    protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
+                        format!("failed to serialize {}", e).as_bytes().to_vec()
+                    }),
+                )
+                .expect("Could not publish!");
+            // TODO: investigate disabling this
+            thread::sleep(Duration::from_micros(100));
         }
     });
     Ok(join_handle)
@@ -67,9 +76,11 @@ fn read_siren(
     send_map: Arc<RwLock<HashMap<u32, EncodeData>>>,
 ) -> Result<JoinHandle<()>, String> {
     let mut client = MqttClient::new(pub_path, "calypso-encoder");
-    client.connect();
+    client.connect().expect("Could not connect to Siren!");
     let rx = client.start_consumer().expect("Could not begin consuming");
-    client.subscribe("Calypso/Bidir/Command/#");
+    client
+        .subscribe("Calypso/Bidir/Command/#")
+        .expect("Could not subscribe!");
 
     // do the default initialization for all, do outside of the thread to save time negotiating when send_can comes up
     let mut writable_send_map = send_map.write().expect("Could not modify send messages!");
@@ -83,24 +94,23 @@ fn read_siren(
     let join_handle = thread::spawn(move || {
         for msg in rx.iter() {
             if let Some(msg) = msg {
-                let mut buf = command_data::CommandData::new();
-                match buf.merge_from_bytes(msg.payload()) {
-                    Ok(_) => (),
-                    Err(_) => {
-                        println!("Could not decode command!");
+                let buf = match command_data::CommandData::parse_from_bytes(msg.payload()) {
+                    Ok(buf) => buf,
+                    Err(err) => {
+                        println!("Could not decode command: {}", err);
                         continue;
                     }
-                }
-                let key = msg
-                    .topic()
-                    .split('/')
-                    .last()
-                    .unwrap_or("Reserved")
-                    .to_owned();
+                };
+                let key = match msg.topic().split('/').last() {
+                    Some(key) => key.to_owned(),
+                    None => {
+                        println!("Could not parse the key value in {}", msg.topic());
+                        continue;
+                    }
+                };
 
                 let packet = EncodableMessage::new(String::clone(&key), buf.data);
                 let ret = packet.encode();
-                println!("{ret}");
                 send_map
                     .write()
                     .expect("Could not modify send messages!")
@@ -112,7 +122,11 @@ fn read_siren(
                 println!("Client is {}", is_conn);
                 if !is_conn {
                     println!("Trying to reconnect");
-                    client.reconnect().expect("Could not reconnect");
+                    match client.reconnect() {
+                        Ok(_) => println!("Reconnected!"),
+                        Err(_) => println!("Could not reconnect!"),
+                    }
+                    continue;
                 }
             }
         }
@@ -124,25 +138,27 @@ fn send_out(
     can_interface: &str,
     send_map: Arc<RwLock<HashMap<u32, EncodeData>>>,
 ) -> Result<JoinHandle<()>, String> {
-    let socket = match CanSocket::open(can_interface) {
-        Ok(socket) => socket,
-        Err(err) => {
-            return Err(format!("Failed to open CAN socket: {}", err));
-        }
-    };
+    let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
 
     let join_handle = thread::spawn(move || loop {
-        thread::sleep(Duration::from_secs(1));
+        thread::sleep(Duration::from_millis(750));
         let sender = send_map.read().expect("Cannot read map of sendables!");
         for msg in sender.iter() {
             // let id = u32::from_str_radix((msg.1.1).trim_start_matches("0x"), 16).expect("Invalid CAN ID!");
 
             let id: Id = if !msg.1.is_ext {
-                socketcan::StandardId::new(msg.1.id.try_into().unwrap())
-                    .unwrap()
-                    .into()
+                socketcan::StandardId::new(
+                    msg.1
+                        .id
+                        .try_into()
+                        .unwrap_or_else(|_| panic!("Invalid standard ID: {}", msg.1.id)),
+                )
+                .unwrap_or_else(|| panic!("Invalid standard ID: {}", msg.1.id))
+                .into()
             } else {
-                socketcan::ExtendedId::new(msg.1.id).unwrap().into()
+                socketcan::ExtendedId::new(msg.1.id)
+                    .unwrap_or_else(|| panic!("Invalid extended ID: {}", msg.1.id))
+                    .into()
             };
 
             match CanFrame::new(id, &msg.1.value) {

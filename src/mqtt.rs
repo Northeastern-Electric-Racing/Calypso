@@ -1,11 +1,7 @@
 extern crate paho_mqtt as mqtt;
 use mqtt::ServerResponse;
 use paho_mqtt::{Message, Receiver};
-use std::thread;
 use std::time::Duration;
-
-use crate::data::DecodeData;
-use crate::serverdata;
 
 /**
  * MqttClient is a wrapper around the paho_mqtt::Client.
@@ -34,49 +30,34 @@ impl MqttClient {
     /**
      * Sets the hostname and connects to the server
      */
-    pub fn connect(&mut self) {
-        self._connect();
+    pub fn connect(&mut self) -> Result<ServerResponse, mqtt::Error> {
+        self._connect()
     }
 
     /**const DFLT_CLIENT: &str = "calypso";
 
     * Publishes a protobuf packet to the server
     */
-    pub fn publish(&mut self, data: &DecodeData) {
-        let topic = data.topic.to_string();
-        let mut payload = serverdata::ServerData::new();
-        payload.unit = data.unit.to_string();
-        payload.value = data.value.iter().map(|x| x.to_string()).collect();
-
+    pub fn publish(&mut self, topic: String, payload: Vec<u8>) -> Result<(), mqtt::errors::Error> {
         let msg = mqtt::MessageBuilder::new()
             .topic(topic)
-            .payload(
-                protobuf::Message::write_to_bytes(&payload)
-                    .unwrap_or("failed to serialize".as_bytes().to_vec()),
-            )
+            .payload(payload)
             .finalize();
-
-        match self.client.publish(msg) {
-            Ok(_) => (),
-            Err(e) => println!("Error sending message: {:?}", e),
-        }
-        thread::sleep(Duration::from_micros(100));
+        self.client.publish(msg)
     }
 
     pub fn start_consumer(&mut self) -> Option<Receiver<Option<Message>>> {
         Some(self.client.start_consuming())
     }
 
-    pub fn subscribe(&mut self, topic: &str) {
-        self.client
-            .subscribe(topic, 2)
-            .expect("Could not subscribe!");
+    pub fn subscribe(&mut self, topic: &str) -> Result<ServerResponse, mqtt::Error> {
+        self.client.subscribe(topic, 2)
     }
     /**
      * Connects to the broker.
      * Sets the last will and testament.
      */
-    fn _connect(&mut self) {
+    fn _connect(&mut self) -> Result<ServerResponse, mqtt::Error> {
         let lastwilltestatment = mqtt::MessageBuilder::new()
             .topic("Calypso/Status")
             .payload(format!("Calypso {} is offline", self.client.client_id()))
@@ -87,7 +68,7 @@ impl MqttClient {
             .will_message(lastwilltestatment)
             .automatic_reconnect(Duration::from_secs(1), Duration::from_secs(30))
             .finalize();
-        self.client.connect(conn_opts).expect("Unable to connect! ");
+        self.client.connect(conn_opts)
     }
 
     /**
