@@ -14,10 +14,12 @@ use calypso::{
 use protobuf::Message;
 use socketcan::{CanFrame, CanSocket, EmbeddedFrame, Id, Socket};
 
+const ENCODER_MAP_SUB: &str = "Calypso/Bidir/Command/#";
+
 /**
  * Reads the can socket and publishes the data to the given client.
  */
-fn read_can(pub_path: &str, can_interface: &str) -> Result<JoinHandle<u32>, String> {
+fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
     //open can socket channel at name can_interface
     let mut client = MqttClient::new(pub_path, "calypso-decoder");
     client.connect().expect("Could not connect to Siren!");
@@ -65,21 +67,18 @@ fn read_can(pub_path: &str, can_interface: &str) -> Result<JoinHandle<u32>, Stri
             thread::sleep(Duration::from_micros(100));
         }
     });
-    Ok(join_handle)
+    join_handle
 }
 
 /**
  * Reads the mqtt incoming messages and sends can messages based off of that
  */
-fn read_siren(
-    pub_path: &str,
-    send_map: Arc<RwLock<HashMap<u32, EncodeData>>>,
-) -> Result<JoinHandle<()>, String> {
+fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -> JoinHandle<()> {
     let mut client = MqttClient::new(pub_path, "calypso-encoder");
     client.connect().expect("Could not connect to Siren!");
-    let rx = client.start_consumer().expect("Could not begin consuming");
+    let reciever = client.start_consumer().expect("Could not begin consuming");
     client
-        .subscribe("Calypso/Bidir/Command/#")
+        .subscribe(ENCODER_MAP_SUB)
         .expect("Could not subscribe!");
 
     // do the default initialization for all, do outside of the thread to save time negotiating when send_can comes up
@@ -92,7 +91,7 @@ fn read_siren(
     drop(writable_send_map);
 
     let join_handle = thread::spawn(move || {
-        for msg in rx.iter() {
+        for msg in reciever.iter() {
             if let Some(msg) = msg {
                 let buf = match command_data::CommandData::parse_from_bytes(msg.payload()) {
                     Ok(buf) => buf,
@@ -131,13 +130,13 @@ fn read_siren(
             }
         }
     });
-    Ok(join_handle)
+    join_handle
 }
 
 fn send_out(
     can_interface: &str,
     send_map: Arc<RwLock<HashMap<u32, EncodeData>>>,
-) -> Result<JoinHandle<()>, String> {
+) -> JoinHandle<()> {
     let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
 
     let join_handle = thread::spawn(move || loop {
@@ -174,7 +173,7 @@ fn send_out(
             }
         }
     });
-    Ok(join_handle)
+    join_handle
 }
 
 /**
@@ -211,33 +210,15 @@ fn parse_args() -> (String, String, bool) {
  */
 fn main() {
     let (path, can_interface, encoding) = parse_args();
-    let can_handle = match read_can(&path, &can_interface) {
-        Ok(handle) => handle,
-        Err(err) => {
-            println!("Decoder Errored! {}", err);
-            process::exit(1);
-        }
-    };
+    let can_handle = read_can(&path, &can_interface);
 
     // use a arc for mutlithread, and a rwlock to enforce one writer
     if encoding {
         let send_map: Arc<RwLock<HashMap<u32, EncodeData>>> = Arc::new(RwLock::new(HashMap::new()));
 
-        let siren_handle = match read_siren(&path, Arc::clone(&send_map)) {
-            Ok(handle) => handle,
-            Err(err) => {
-                println!("Encoder Errored! {}", err);
-                process::exit(1);
-            }
-        };
+        let siren_handle = read_siren(&path, Arc::clone(&send_map));
 
-        let send_handle = match send_out(&can_interface, Arc::clone(&send_map)) {
-            Ok(handle) => handle,
-            Err(err) => {
-                println!("Sender Errored! {}", err);
-                process::exit(1);
-            }
-        };
+        let send_handle = send_out(&can_interface, Arc::clone(&send_map));
 
         siren_handle.join().expect("Encoder failed with ");
         println!("Encoder ended");

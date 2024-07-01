@@ -25,7 +25,7 @@ impl fmt::Display for DecodeData {
 }
 
 /**
- * Implementation fo the Data Structs' methods
+ * Implementation fo the DecodeData methods
  */
 impl DecodeData {
     /**
@@ -68,14 +68,14 @@ impl fmt::Display for EncodeData {
 }
 
 /**
- * Implementation fo the Data Structs' methods
+ * Implementation fo the DecodeData methods
  */
 impl EncodeData {
     /**
      * Constructor
      * @param id: the id of the can message
      * @param value: the can message payload
-     * @param topic: whether the can message is extended format
+     * @param is_ext: whether the can message is extended format ID
      */
     pub fn new(id: u32, value: Vec<u8>, is_ext: bool) -> Self {
         Self { id, value, is_ext }

@@ -46,10 +46,20 @@ impl MqttClient {
         self.client.publish(msg)
     }
 
+    /**
+     * Starts the client consuming messages.
+     * This starts the client receiving messages and placing them into an mpsc queue.
+     * It returns the receiving-end of the queue for the application to get the messages.
+     * This can be called at any time after the client is created, but it should be called before subscribing to any topics, otherwise messages can be lost.
+     */
     pub fn start_consumer(&mut self) -> Option<Receiver<Option<Message>>> {
         Some(self.client.start_consuming())
     }
 
+    /**
+     * Subscribes to a single topic.
+     * topic: the topic to be subscribed to
+     */
     pub fn subscribe(&mut self, topic: &str) -> Result<ServerResponse, mqtt::Error> {
         self.client.subscribe(topic, 2)
     }
