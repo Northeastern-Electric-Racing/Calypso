@@ -25,7 +25,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
     client.connect().expect("Could not connect to Siren!");
     let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
 
-    let join_handle: JoinHandle<_> = thread::spawn(move || loop {
+    thread::spawn(move || loop {
         let msg = match socket.read_frame() {
             Ok(CanFrame::Data(msg)) => msg,
             Ok(CanFrame::Remote(_)) => {
@@ -66,8 +66,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
             // TODO: investigate disabling this
             thread::sleep(Duration::from_micros(100));
         }
-    });
-    join_handle
+    })
 }
 
 /**
@@ -90,7 +89,7 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
     }
     drop(writable_send_map);
 
-    let join_handle = thread::spawn(move || {
+    thread::spawn(move || {
         for msg in reciever.iter() {
             if let Some(msg) = msg {
                 let buf = match command_data::CommandData::parse_from_bytes(msg.payload()) {
@@ -129,8 +128,7 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
                 }
             }
         }
-    });
-    join_handle
+    })
 }
 
 fn send_out(
@@ -139,7 +137,7 @@ fn send_out(
 ) -> JoinHandle<()> {
     let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
 
-    let join_handle = thread::spawn(move || loop {
+    thread::spawn(move || loop {
         thread::sleep(Duration::from_millis(750));
         let sender = send_map.read().expect("Cannot read map of sendables!");
         for msg in sender.iter() {
@@ -172,8 +170,7 @@ fn send_out(
                 }
             }
         }
-    });
-    join_handle
+    })
 }
 
 /**
