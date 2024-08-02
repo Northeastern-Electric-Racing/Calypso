@@ -174,8 +174,7 @@ fn send_out(
 }
 
 /**
- * Parses the command line a            return Err(-1);
-rguments.
+ * Parses the command line arguments.
  */
 fn parse_args() -> (String, String, bool) {
     let args: Vec<String> = env::args().collect();
