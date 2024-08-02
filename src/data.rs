@@ -3,7 +3,7 @@ use std::fmt;
 /**
  * Wrapper Class for Data coming off the car
  */
-pub struct Data {
+pub struct DecodeData {
     pub value: Vec<f32>,
     pub topic: String,
     pub unit: String,
@@ -12,7 +12,7 @@ pub struct Data {
 /**
  * Implementation for the format of the data for debugging purposes
  */
-impl fmt::Display for Data {
+impl fmt::Display for DecodeData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Overrides the string representation of the class.
 
@@ -25,9 +25,9 @@ impl fmt::Display for Data {
 }
 
 /**
- * Implementation fo the Data Structs' methods
+ * Implementation fo the DecodeData methods
  */
-impl Data {
+impl DecodeData {
     /**
      * Constructor
      * @param id: the id of the data
@@ -40,5 +40,44 @@ impl Data {
             topic: topic.to_string(),
             unit: unit.to_string(),
         }
+    }
+}
+
+/**
+ * Wrapper Class for data going into the car
+ */
+pub struct EncodeData {
+    pub value: Vec<u8>,
+    pub id: u32,
+    pub is_ext: bool,
+}
+
+/**
+ * Implementation for the format of the data for debugging purposes
+ */
+impl fmt::Display for EncodeData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Overrides the string representation of the class.
+
+        write!(
+            f,
+            "{}#{:?} (extended: {})",
+            self.id, self.value, self.is_ext
+        )
+    }
+}
+
+/**
+ * Implementation fo the DecodeData methods
+ */
+impl EncodeData {
+    /**
+     * Constructor
+     * @param id: the id of the can message
+     * @param value: the can message payload
+     * @param is_ext: whether the can message is extended format ID
+     */
+    pub fn new(id: u32, value: Vec<u8>, is_ext: bool) -> Self {
+        Self { id, value, is_ext }
     }
 }
