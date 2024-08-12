@@ -1,6 +1,7 @@
 # Calypso
 Custom CAN decoder to translate CAN messages to MQTT protobuf encoded packets with low latency and a YAML configuration structure.
 
+Usage: run `-h` to see the full usage options and defaults.
 
 ### Develop setup
 #### Go to Settings in VSCode
@@ -30,7 +31,7 @@ Process for testing:
     - `sudo ip link add dev vcan0 type vcan`
     - `sudo ip link set dev vcan0 up`
 
-run ```cargo run localhost:1883 vcan0```
+run ```cargo run -- -u localhost:1883 -c vcan0```
 
 To send a can message:
 - `cansend vcan0 <ID_IN_HEX>#<PAYLOAD_IN_HEX>`

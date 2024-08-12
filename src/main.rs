@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    env, process,
     sync::{Arc, RwLock},
     thread::{self, JoinHandle},
     time::Duration,
@@ -11,10 +10,38 @@ use calypso::{
     encodable_message::EncodableMessage, encode_master_mapping::ENCODABLE_KEY_LIST,
     mqtt::MqttClient, serverdata,
 };
+use clap::Parser;
 use protobuf::Message;
 use socketcan::{CanFrame, CanSocket, EmbeddedFrame, Id, Socket};
 
 const ENCODER_MAP_SUB: &str = "Calypso/Bidir/Command/#";
+
+/// Calypso command line arguments
+#[derive(Parser, Debug)]
+#[command(version)]
+struct CalypsoArgs {
+    /// Whether to enable CAN message encoding
+    #[arg(short = 'e', long, env = "CALYPSO_CAN_ENCODE")]
+    encode: bool,
+
+    /// The host url of the siren, including port and excluding protocol prefix
+    #[arg(
+        short = 'u',
+        long,
+        env = "CALYPSO_SIREN_HOST_URL",
+        default_value = "localhost:1883"
+    )]
+    siren_host_url: String,
+
+    /// The SocketCAN interface port
+    #[arg(
+        short = 'c',
+        long,
+        env = "CALYPSO_SOCKETCAN_IFACE",
+        default_value = "vcan0"
+    )]
+    socketcan_iface: String,
+}
 
 /**
  * Reads the can socket and publishes the data to the given client.
@@ -174,47 +201,22 @@ fn send_out(
 }
 
 /**
- * Parses the command line arguments.
- */
-fn parse_args() -> (String, String, bool) {
-    let args: Vec<String> = env::args().collect();
-    println!("{:?}", args);
-    if args.len() < 3 {
-        println!("Not enough arguments!");
-        println!("Siren (MQTT) URL and can interface are required");
-        process::exit(1);
-    }
-    let path = &args[1];
-    let can_interface = &args[2];
-    let encode_en = args.len() >= 4 && args[3] == "encode_en";
-
-    println!("Siren URL: {}", path);
-    println!("Can interface: {}", can_interface);
-
-    (String::from(path), String::from(can_interface), encode_en)
-}
-
-/**
  * Main Function
  * Configures the can network, retrieves the client based on the command line arguments,
  * connects the client and then reads the can socket from specified interface.
  *
- * Args:
- * 1 -> IP address:port of Siren mqtt server (ex. localhost:1883)
- * 2 -> Socketcan interface name (ex. vcan0)
- * 3 -> encode_en or blank, whether to enable encoding
  */
 fn main() {
-    let (path, can_interface, encoding) = parse_args();
-    let can_handle = read_can(&path, &can_interface);
+    let cli = CalypsoArgs::parse();
+    let can_handle = read_can(&cli.siren_host_url, &cli.socketcan_iface);
 
     // use a arc for mutlithread, and a rwlock to enforce one writer
-    if encoding {
+    if cli.encode {
         let send_map: Arc<RwLock<HashMap<u32, EncodeData>>> = Arc::new(RwLock::new(HashMap::new()));
 
-        let siren_handle = read_siren(&path, Arc::clone(&send_map));
+        let siren_handle = read_siren(&cli.siren_host_url, Arc::clone(&send_map));
 
-        let send_handle = send_out(&can_interface, Arc::clone(&send_map));
+        let send_handle = send_out(&cli.socketcan_iface, Arc::clone(&send_map));
 
         siren_handle.join().expect("Encoder failed with ");
         println!("Encoder ended");
