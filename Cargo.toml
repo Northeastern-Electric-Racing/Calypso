@@ -9,14 +9,14 @@ rust-version = "1.79"
 [dependencies]
 socketcan = "3.3.0"
 paho-mqtt = "0.12.5"
-protobuf-codegen = "3.3.0"
-protobuf = "3.3.0"
+protobuf-codegen = "3.5.1"
+protobuf = "3.5.1"
 bitstream-io = "2.5.3"
 clap = { version = "4.5.17", features = ["derive", "env"] }
 
 
 [build-dependencies]
-protobuf-codegen = "3.3.0"
+protobuf-codegen = "3.5.1"
 
 [profile.release]
 lto = true
