@@ -49,10 +49,23 @@ struct CalypsoArgs {
 fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
     //open can socket channel at name can_interface
     let mut client = MqttClient::new(pub_path, "calypso-decoder");
-    client.connect().expect("Could not connect to Siren!");
+    if client.connect().is_err() {
+        println!("Unable to connect to Siren, going into reconnection mode.");
+        if let Ok(_) = client.reconnect() {
+            println!("Reconnected to Siren!");
+        }
+    }
+    
     let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
-
+    
     thread::spawn(move || loop {
+        if !client.is_connected() {
+            println!("Unable to connect to Siren, going into reconnection mode.");
+            if let Ok(_) = client.reconnect() {
+                println!("Reconnected to Siren!");
+            }
+        }
+
         let msg = match socket.read_frame() {
             Ok(CanFrame::Data(msg)) => msg,
             Ok(CanFrame::Remote(_)) => {
@@ -82,14 +95,15 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
             payload.unit = data.unit.to_string();
             payload.value = data.value.iter().map(|x| x.to_string()).collect();
 
-            client
-                .publish(
+            if client.publish(
                     data.topic.to_string(),
                     protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
                         format!("failed to serialize {}", e).as_bytes().to_vec()
                     }),
-                )
-                .expect("Could not publish!");
+                ).is_err() {
+                println!("Failed to publish to Siren.");
+            }
+
             // TODO: investigate disabling this
             thread::sleep(Duration::from_micros(100));
         }
