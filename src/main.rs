@@ -51,7 +51,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
     let mut client = MqttClient::new(pub_path, "calypso-decoder");
     if client.connect().is_err() {
         println!("Unable to connect to Siren, going into reconnection mode.");
-        if let Ok(_) = client.reconnect() {
+        if client.reconnect().is_ok() {
             println!("Reconnected to Siren!");
         }
     }
@@ -61,7 +61,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
     thread::spawn(move || loop {
         if !client.is_connected() {
             println!("Unable to connect to Siren, going into reconnection mode.");
-            if let Ok(_) = client.reconnect() {
+            if client.reconnect().is_ok() {
                 println!("Reconnected to Siren!");
             }
         }
