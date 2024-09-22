@@ -60,9 +60,9 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
     
     thread::spawn(move || loop {
         if !client.is_connected() {
-            println!("Unable to connect to Siren, going into reconnection mode.");
+            println!("[read_can] Unable to connect to Siren, going into reconnection mode.");
             if client.reconnect().is_ok() {
-                println!("Reconnected to Siren!");
+                println!("[read_can] Reconnected to Siren!");
             }
         }
 
@@ -101,7 +101,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
                         format!("failed to serialize {}", e).as_bytes().to_vec()
                     }),
                 ).is_err() {
-                println!("Failed to publish to Siren.");
+                println!("[read_can] Failed to publish to Siren.");
             }
 
             // TODO: investigate disabling this
@@ -115,7 +115,15 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
  */
 fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -> JoinHandle<()> {
     let mut client = MqttClient::new(pub_path, "calypso-encoder");
-    client.connect().expect("Could not connect to Siren!");
+    // client.connect().expect("Could not connect to Siren!");
+
+    while !client.is_connected() {
+        println!("[read_siren] Unable to connect to Siren, going into reconnection mode.");
+        if client.reconnect().is_ok() {
+            println!("[read_siren] Reconnected to Siren!");
+        }
+    }
+
     let reciever = client.start_consumer().expect("Could not begin consuming");
     client
         .subscribe(ENCODER_MAP_SUB)
