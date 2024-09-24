@@ -6,13 +6,13 @@ use std::{
 };
 
 use calypso::{
-    command_data, data::EncodeData, decodable_message::DecodableMessage,
+    command_data, data::DecodeData, data::EncodeData, decodable_message::DecodableMessage,
     encodable_message::EncodableMessage, encode_master_mapping::ENCODABLE_KEY_LIST,
     mqtt::MqttClient, serverdata,
 };
 use clap::Parser;
 use protobuf::Message;
-use socketcan::{CanFrame, CanSocket, EmbeddedFrame, Id, Socket};
+use socketcan::{CanError, CanFrame, CanSocket, EmbeddedFrame, Id, Socket};
 
 const ENCODER_MAP_SUB: &str = "Calypso/Bidir/Command/#";
 
@@ -47,36 +47,88 @@ struct CalypsoArgs {
  * Reads the can socket and publishes the data to the given client.
  */
 fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
-    //open can socket channel at name can_interface
+    // Open CAN socket channel at name can_interface
     let mut client = MqttClient::new(pub_path, "calypso-decoder");
     client.connect().expect("Could not connect to Siren!");
     let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
 
     thread::spawn(move || loop {
-        let msg = match socket.read_frame() {
-            Ok(CanFrame::Data(msg)) => msg,
+        // Read from MQTT socket
+        let decoded_data = match socket.read_frame() {
+            // CanDataFrame
+            Ok(CanFrame::Data(data_frame)) => {
+                let data = data_frame.data();
+                let message = DecodableMessage::new(
+                    match data_frame.id() {
+                        socketcan::Id::Standard(std) => std.as_raw().into(),
+                        socketcan::Id::Extended(ext) => ext.as_raw(),
+                    },
+                    data.to_vec(),
+                );
+                message.decode()
+            }
+            // CanRemoteFrame
             Ok(CanFrame::Remote(_)) => {
+                // TODO: Handle
+                //
+                // Count number of remote frames over lifetime of program
+                // publish incremented value with client publish look into `select`
+
                 println!("Ignoring remote frame");
                 continue;
             }
-            Ok(CanFrame::Error(_)) => {
-                println!("Ignoring error frame");
-                continue;
+            // CanErrorFrame
+            Ok(CanFrame::Error(error_frame)) => {
+                // TODO: Handle
+                //
+                // Name: Calypso/Statistics/ErrorFrame
+                // Unit: no unit
+                // Value: index cast enum
+                // Easiest and most readable way to convert CanFrame error into a number
+                // *self as usize
+                //
+                // https://docs.rs/socketcan/latest/socketcan/errors/enum.CanError.html
+
+                // Approach 1: Publish enum index of error onto CAN
+                // TODO: Look into string representation with Display
+                let error_index: u32 = match CanError::from(error_frame) {
+                    CanError::TransmitTimeout => 0,
+                    CanError::LostArbitration(_) => 1,
+                    CanError::ControllerProblem(_) => 2,
+                    CanError::ProtocolViolation { .. } => 3,
+                    CanError::TransceiverError => 4,
+                    CanError::NoAck => 5,
+                    CanError::BusOff => 6,
+                    CanError::BusError => 7,
+                    CanError::Restarted => 8,
+                    CanError::DecodingFailure(_) => 9,
+                    CanError::Unknown(_) => 10,
+                };
+                let decoded_data: Vec<DecodeData> = vec![DecodeData::new(
+                    vec![error_index as f32],
+                    "Calypso/Statistics/ErrorFrame",
+                    "CanError enum",
+                )];
+                decoded_data
+
+                // Approach 2 (prob wrong): shit out data onto CAN
+                // let data = err_frame.data();
+                // let mut decoded_data: Vec<DecodeData> = Vec::new();
+                // for chunk in data {
+                //     decoded_data.push(
+                //         DecodeData::new(chunk, "Calypso/Statistics/ErrorFrame", "")
+                //     );
+                // }
+                // decoded_data
             }
+            // Socket failure
             Err(err) => {
-                println!("Failed to read CAN frame: {}", err);
+                println!("CAN Socket failure: {}", err);
                 continue;
             }
         };
-        let data = msg.data();
-        let message = DecodableMessage::new(
-            match msg.id() {
-                socketcan::Id::Standard(std) => std.as_raw().into(),
-                socketcan::Id::Extended(ext) => ext.as_raw(),
-            },
-            data.to_vec(),
-        );
-        let decoded_data = message.decode();
+
+        // Convert decoded CAN to Protobuf and publish over MQTT
         for data in decoded_data.iter() {
             let mut payload = serverdata::ServerData::new();
             payload.unit = data.unit.to_string();
