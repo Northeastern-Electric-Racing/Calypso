@@ -165,16 +165,24 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
             } else {
                 // the code doesnt work without this else statement
                 // idk why but never remove this else statement
-                let is_conn = client.is_connected();
-                println!("Client is {}", is_conn);
-                if !is_conn {
-                    println!("Trying to reconnect");
-                    match client.reconnect() {
-                        Ok(_) => println!("Reconnected!"),
-                        Err(_) => println!("Could not reconnect!"),
+                
+                while !client.is_connected() {
+                    println!("[read_siren] Unable to connect to Siren, going into reconnection mode.");
+                    if client.reconnect().is_ok() {
+                        println!("[read_siren] Reconnected to Siren!");
                     }
-                    continue;
                 }
+
+                // let is_conn = client.is_connected();
+                // println!("Client is {}", is_conn);
+                // if !is_conn {
+                //     println!("Trying to reconnect");
+                //     match client.reconnect() {
+                //         Ok(_) => println!("Reconnected!"),
+                //         Err(_) => println!("Could not reconnect!"),
+                //     }
+                //     continue;
+                // }
             }
         }
     })
