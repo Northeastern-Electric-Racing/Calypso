@@ -115,8 +115,8 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
  */
 fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -> JoinHandle<()> {
     let mut client = MqttClient::new(pub_path, "calypso-encoder");
-    // client.connect().expect("Could not connect to Siren!");
-
+    
+    let _ = client.connect();
     while !client.is_connected() {
         println!("[read_siren] Unable to connect to Siren, going into reconnection mode.");
         if client.reconnect().is_ok() {
@@ -165,13 +165,17 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
             } else {
                 // the code doesnt work without this else statement
                 // idk why but never remove this else statement
-                
+
                 while !client.is_connected() {
                     println!("[read_siren] Unable to connect to Siren, going into reconnection mode.");
                     if client.reconnect().is_ok() {
+                        // TODO: consider resubscribing to the topics
                         println!("[read_siren] Reconnected to Siren!");
                     }
                 }
+                client
+                    .subscribe(ENCODER_MAP_SUB)
+                    .expect("Could not subscribe!");
 
                 // let is_conn = client.is_connected();
                 // println!("Client is {}", is_conn);
