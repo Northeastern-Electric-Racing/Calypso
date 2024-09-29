@@ -55,9 +55,9 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
             println!("Reconnected to Siren!");
         }
     }
-    
+
     let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
-    
+
     thread::spawn(move || loop {
         if !client.is_connected() {
             println!("[read_can] Unable to connect to Siren, going into reconnection mode.");
@@ -95,12 +95,15 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
             payload.unit = data.unit.to_string();
             payload.value = data.value.iter().map(|x| x.to_string()).collect();
 
-            if client.publish(
+            if client
+                .publish(
                     data.topic.to_string(),
                     protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
                         format!("failed to serialize {}", e).as_bytes().to_vec()
                     }),
-                ).is_err() {
+                )
+                .is_err()
+            {
                 println!("[read_can] Failed to publish to Siren.");
             }
 
@@ -115,7 +118,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
  */
 fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -> JoinHandle<()> {
     let mut client = MqttClient::new(pub_path, "calypso-encoder");
-    
+
     let _ = client.connect();
     while !client.is_connected() {
         println!("[read_siren] Unable to connect to Siren, going into reconnection mode.");
@@ -163,30 +166,17 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
                     .expect("Could not modify send messages!")
                     .insert(ret.id, ret);
             } else {
-                // the code doesnt work without this else statement
-                // idk why but never remove this else statement
-
                 while !client.is_connected() {
-                    println!("[read_siren] Unable to connect to Siren, going into reconnection mode.");
+                    println!(
+                        "[read_siren] Unable to connect to Siren, going into reconnection mode."
+                    );
                     if client.reconnect().is_ok() {
-                        // TODO: consider resubscribing to the topics
                         println!("[read_siren] Reconnected to Siren!");
                     }
                 }
                 client
                     .subscribe(ENCODER_MAP_SUB)
                     .expect("Could not subscribe!");
-
-                // let is_conn = client.is_connected();
-                // println!("Client is {}", is_conn);
-                // if !is_conn {
-                //     println!("Trying to reconnect");
-                //     match client.reconnect() {
-                //         Ok(_) => println!("Reconnected!"),
-                //         Err(_) => println!("Could not reconnect!"),
-                //     }
-                //     continue;
-                // }
             }
         }
     })
