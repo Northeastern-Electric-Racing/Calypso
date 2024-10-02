@@ -12,7 +12,7 @@ use calypso::{
 };
 use clap::Parser;
 use protobuf::Message;
-use socketcan::{CanError, CanFrame, CanSocket, EmbeddedFrame, Id, Socket};
+use socketcan::{CanError, CanFrame, CanSocket, EmbeddedFrame, Frame, Id, Socket};
 
 const ENCODER_MAP_SUB: &str = "Calypso/Bidir/Command/#";
 
@@ -81,9 +81,9 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
             }
             // CanRemoteFrame
             Ok(CanFrame::Remote(remote_frame)) => {
-                // Send frame ID for Remote 
+                // Send frame ID for Remote
                 vec![DecodeData::new(
-                    vec![remote_frame.id() as f32],
+                    vec![remote_frame.raw_id() as f32],
                     "Calypso/Events/RemoteFrame",
                     "id",
                 )]
@@ -94,21 +94,21 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
                 // TODO: Look into string representation with Display
                 // TODO: Ask `const` impl for Display or enum?
                 // Impl from ErrorFrame -> f32
-                let error_index: u32 = match CanError::from(error_frame) {
-                    CanError::TransmitTimeout => 0,
-                    CanError::LostArbitration(_) => 1,
-                    CanError::ControllerProblem(_) => 2,
-                    CanError::ProtocolViolation { .. } => 3,
-                    CanError::TransceiverError => 4,
-                    CanError::NoAck => 5,
-                    CanError::BusOff => 6,
-                    CanError::BusError => 7,
-                    CanError::Restarted => 8,
-                    CanError::DecodingFailure(_) => 9,
-                    CanError::Unknown(_) => 10,
+                let error_index: f32 = match CanError::from(error_frame) {
+                    CanError::TransmitTimeout => 0.0,
+                    CanError::LostArbitration(_) => 1.0,
+                    CanError::ControllerProblem(_) => 2.0,
+                    CanError::ProtocolViolation { .. } => 3.0,
+                    CanError::TransceiverError => 4.0,
+                    CanError::NoAck => 5.0,
+                    CanError::BusOff => 6.0,
+                    CanError::BusError => 7.0,
+                    CanError::Restarted => 8.0,
+                    CanError::DecodingFailure(_) => 9.0,
+                    CanError::Unknown(_) => 10.0,
                 };
                 vec![DecodeData::new(
-                    vec![error_index as f32],
+                    vec![error_index],
                     "Calypso/Events/ErrorFrame",
                     "CanError enum",
                 )]
