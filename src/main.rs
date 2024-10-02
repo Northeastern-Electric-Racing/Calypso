@@ -49,10 +49,22 @@ struct CalypsoArgs {
 fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
     // Open CAN socket channel at name can_interface
     let mut client = MqttClient::new(pub_path, "calypso-decoder");
-    client.connect().expect("Could not connect to Siren!");
+    if client.connect().is_err() {
+        println!("Unable to connect to Siren, going into reconnection mode.");
+        if client.reconnect().is_ok() {
+            println!("Reconnected to Siren!");
+        }
+    }
+
     let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
 
     thread::spawn(move || loop {
+        if !client.is_connected() {
+            println!("[read_can] Unable to connect to Siren, going into reconnection mode.");
+            if client.reconnect().is_ok() {
+                println!("[read_can] Reconnected to Siren!");
+            }
+        }
         // Read from MQTT socket
         let decoded_data = match socket.read_frame() {
             // CanDataFrame
@@ -114,14 +126,18 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
             payload.unit = data.unit.to_string();
             payload.value = data.value.iter().map(|x| x.to_string()).collect();
 
-            client
+            if client
                 .publish(
                     data.topic.to_string(),
                     protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
                         format!("failed to serialize {}", e).as_bytes().to_vec()
                     }),
                 )
-                .expect("Could not publish!");
+                .is_err()
+            {
+                println!("[read_can] Failed to publish to Siren.");
+            }
+
             // TODO: investigate disabling this
             thread::sleep(Duration::from_micros(100));
         }
@@ -133,7 +149,15 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
  */
 fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -> JoinHandle<()> {
     let mut client = MqttClient::new(pub_path, "calypso-encoder");
-    client.connect().expect("Could not connect to Siren!");
+
+    let _ = client.connect();
+    while !client.is_connected() {
+        println!("[read_siren] Unable to connect to Siren, going into reconnection mode.");
+        if client.reconnect().is_ok() {
+            println!("[read_siren] Reconnected to Siren!");
+        }
+    }
+
     let reciever = client.start_consumer().expect("Could not begin consuming");
     client
         .subscribe(ENCODER_MAP_SUB)
@@ -173,18 +197,17 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
                     .expect("Could not modify send messages!")
                     .insert(ret.id, ret);
             } else {
-                // the code doesnt work without this else statement
-                // idk why but never remove this else statement
-                let is_conn = client.is_connected();
-                println!("Client is {}", is_conn);
-                if !is_conn {
-                    println!("Trying to reconnect");
-                    match client.reconnect() {
-                        Ok(_) => println!("Reconnected!"),
-                        Err(_) => println!("Could not reconnect!"),
+                while !client.is_connected() {
+                    println!(
+                        "[read_siren] Unable to connect to Siren, going into reconnection mode."
+                    );
+                    if client.reconnect().is_ok() {
+                        println!("[read_siren] Reconnected to Siren!");
                     }
-                    continue;
                 }
+                client
+                    .subscribe(ENCODER_MAP_SUB)
+                    .expect("Could not subscribe!");
             }
         }
     })
