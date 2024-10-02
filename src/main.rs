@@ -68,29 +68,20 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
                 message.decode()
             }
             // CanRemoteFrame
-            Ok(CanFrame::Remote(_)) => {
-                // TODO: Handle
-                //
-                // Count number of remote frames over lifetime of program
-                // publish incremented value with client publish look into `select`
-
-                println!("Ignoring remote frame");
-                continue;
+            Ok(CanFrame::Remote(remote_frame)) => {
+                // Send frame ID for Remote 
+                vec![DecodeData::new(
+                    vec![remote_frame.id() as f32],
+                    "Calypso/Events/RemoteFrame",
+                    "id",
+                )]
             }
             // CanErrorFrame
             Ok(CanFrame::Error(error_frame)) => {
-                // TODO: Handle
-                //
-                // Name: Calypso/Statistics/ErrorFrame
-                // Unit: no unit
-                // Value: index cast enum
-                // Easiest and most readable way to convert CanFrame error into a number
-                // *self as usize
-                //
-                // https://docs.rs/socketcan/latest/socketcan/errors/enum.CanError.html
-
-                // Approach 1: Publish enum index of error onto CAN
+                // Publish enum index of error onto CAN
                 // TODO: Look into string representation with Display
+                // TODO: Ask `const` impl for Display or enum?
+                // Impl from ErrorFrame -> f32
                 let error_index: u32 = match CanError::from(error_frame) {
                     CanError::TransmitTimeout => 0,
                     CanError::LostArbitration(_) => 1,
@@ -104,22 +95,11 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
                     CanError::DecodingFailure(_) => 9,
                     CanError::Unknown(_) => 10,
                 };
-                let decoded_data: Vec<DecodeData> = vec![DecodeData::new(
+                vec![DecodeData::new(
                     vec![error_index as f32],
-                    "Calypso/Statistics/ErrorFrame",
+                    "Calypso/Events/ErrorFrame",
                     "CanError enum",
-                )];
-                decoded_data
-
-                // Approach 2 (prob wrong): shit out data onto CAN
-                // let data = err_frame.data();
-                // let mut decoded_data: Vec<DecodeData> = Vec::new();
-                // for chunk in data {
-                //     decoded_data.push(
-                //         DecodeData::new(chunk, "Calypso/Statistics/ErrorFrame", "")
-                //     );
-                // }
-                // decoded_data
+                )]
             }
             // Socket failure
             Err(err) => {
