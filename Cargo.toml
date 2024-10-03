@@ -13,6 +13,7 @@ protobuf-codegen = "3.5.1"
 protobuf = "3.5.1"
 bitstream-io = "2.5.3"
 clap = { version = "4.5.18", features = ["derive", "env"] }
+rand = "0.8"
 
 
 [build-dependencies]
