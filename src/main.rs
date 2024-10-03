@@ -12,7 +12,7 @@ use calypso::{
 };
 use clap::Parser;
 use protobuf::Message;
-use socketcan::{CanError, CanFrame, CanSocket, EmbeddedFrame, Frame, Id, Socket};
+use socketcan::{CanError, CanFrame, CanSocket, EmbeddedFrame, Frame, Id, Socket, };
 
 const ENCODER_MAP_SUB: &str = "Calypso/Bidir/Command/#";
 
@@ -57,6 +57,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
     }
 
     let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
+    socket.set_error_filter_accept_all().expect("Failed to set error mask on CAN socket!");
 
     thread::spawn(move || loop {
         if !client.is_connected() {
