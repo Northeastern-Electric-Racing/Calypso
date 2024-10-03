@@ -13,8 +13,8 @@ pub struct SimulatedComponents {
     pub n_canpoints: u32,     // number of can points
     pub sim_min: f32,         // min value 
     pub sim_max: f32,         // max value
-    pub sim_inc_max: f32,     // max increment step
     pub sim_inc_min: f32,     // min increment step
+    pub sim_inc_max: f32,     // max increment step
     pub sim_freq: f32,        // Frequency in ms
     pub format: String,       // e.g. "divide10"
     pub id: String,           // e.g. "0x80" (or should this be a uint32?)
@@ -34,8 +34,8 @@ impl SimulatedComponents {
         unit: String, 
         sim_min: f32, 
         sim_max: f32, 
-        sim_inc_max: f32, 
         sim_inc_min: f32, 
+        sim_inc_max: f32, 
         sim_freq: f32,
         n_canpoints: u32,
         format: String,
@@ -60,8 +60,8 @@ impl SimulatedComponents {
             n_canpoints,
             sim_min,
             sim_max,
-            sim_inc_max,
             sim_inc_min,
+            sim_inc_max,
             sim_freq,
             format,
             id,

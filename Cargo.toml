@@ -3,6 +3,7 @@ name = "calypso"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.79"
+default-run = "calypso"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
