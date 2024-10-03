@@ -12,7 +12,7 @@ use calypso::{
 };
 use clap::Parser;
 use protobuf::Message;
-use socketcan::{CanError, CanFrame, CanSocket, EmbeddedFrame, Frame, Id, Socket, };
+use socketcan::{CanError, CanFrame, CanSocket, EmbeddedFrame, Frame, Id, Socket, SocketOptions};
 
 const ENCODER_MAP_SUB: &str = "Calypso/Bidir/Command/#";
 
