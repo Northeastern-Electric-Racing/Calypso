@@ -12,7 +12,7 @@ use calypso::{
 };
 use clap::Parser;
 use protobuf::Message;
-use socketcan::{CanError, CanFrame, CanSocket, EmbeddedFrame, Id, Socket};
+use socketcan::{CanError, CanFrame, CanSocket, EmbeddedFrame, Frame, Id, Socket, SocketOptions};
 
 const ENCODER_MAP_SUB: &str = "Calypso/Bidir/Command/#";
 
@@ -49,10 +49,23 @@ struct CalypsoArgs {
 fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
     // Open CAN socket channel at name can_interface
     let mut client = MqttClient::new(pub_path, "calypso-decoder");
-    client.connect().expect("Could not connect to Siren!");
+    if client.connect().is_err() {
+        println!("Unable to connect to Siren, going into reconnection mode.");
+        if client.reconnect().is_ok() {
+            println!("Reconnected to Siren!");
+        }
+    }
+
     let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
+    socket.set_error_filter_accept_all().expect("Failed to set error mask on CAN socket!");
 
     thread::spawn(move || loop {
+        if !client.is_connected() {
+            println!("[read_can] Unable to connect to Siren, going into reconnection mode.");
+            if client.reconnect().is_ok() {
+                println!("[read_can] Reconnected to Siren!");
+            }
+        }
         // Read from MQTT socket
         let decoded_data = match socket.read_frame() {
             // CanDataFrame
@@ -68,58 +81,38 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
                 message.decode()
             }
             // CanRemoteFrame
-            Ok(CanFrame::Remote(_)) => {
-                // TODO: Handle
-                //
-                // Count number of remote frames over lifetime of program
-                // publish incremented value with client publish look into `select`
-
-                println!("Ignoring remote frame");
-                continue;
+            Ok(CanFrame::Remote(remote_frame)) => {
+                // Send frame ID for Remote
+                vec![DecodeData::new(
+                    vec![remote_frame.raw_id() as f32],
+                    "Calypso/Events/RemoteFrame",
+                    "id",
+                )]
             }
             // CanErrorFrame
             Ok(CanFrame::Error(error_frame)) => {
-                // TODO: Handle
-                //
-                // Name: Calypso/Statistics/ErrorFrame
-                // Unit: no unit
-                // Value: index cast enum
-                // Easiest and most readable way to convert CanFrame error into a number
-                // *self as usize
-                //
-                // https://docs.rs/socketcan/latest/socketcan/errors/enum.CanError.html
-
-                // Approach 1: Publish enum index of error onto CAN
+                // Publish enum index of error onto CAN
                 // TODO: Look into string representation with Display
-                let error_index: u32 = match CanError::from(error_frame) {
-                    CanError::TransmitTimeout => 0,
-                    CanError::LostArbitration(_) => 1,
-                    CanError::ControllerProblem(_) => 2,
-                    CanError::ProtocolViolation { .. } => 3,
-                    CanError::TransceiverError => 4,
-                    CanError::NoAck => 5,
-                    CanError::BusOff => 6,
-                    CanError::BusError => 7,
-                    CanError::Restarted => 8,
-                    CanError::DecodingFailure(_) => 9,
-                    CanError::Unknown(_) => 10,
+                // TODO: Ask `const` impl for Display or enum?
+                // Impl from ErrorFrame -> f32
+                let error_index: f32 = match CanError::from(error_frame) {
+                    CanError::TransmitTimeout => 0.0,
+                    CanError::LostArbitration(_) => 1.0,
+                    CanError::ControllerProblem(_) => 2.0,
+                    CanError::ProtocolViolation { .. } => 3.0,
+                    CanError::TransceiverError => 4.0,
+                    CanError::NoAck => 5.0,
+                    CanError::BusOff => 6.0,
+                    CanError::BusError => 7.0,
+                    CanError::Restarted => 8.0,
+                    CanError::DecodingFailure(_) => 9.0,
+                    CanError::Unknown(_) => 10.0,
                 };
-                let decoded_data: Vec<DecodeData> = vec![DecodeData::new(
-                    vec![error_index as f32],
-                    "Calypso/Statistics/ErrorFrame",
+                vec![DecodeData::new(
+                    vec![error_index],
+                    "Calypso/Events/ErrorFrame",
                     "CanError enum",
-                )];
-                decoded_data
-
-                // Approach 2 (prob wrong): shit out data onto CAN
-                // let data = err_frame.data();
-                // let mut decoded_data: Vec<DecodeData> = Vec::new();
-                // for chunk in data {
-                //     decoded_data.push(
-                //         DecodeData::new(chunk, "Calypso/Statistics/ErrorFrame", "")
-                //     );
-                // }
-                // decoded_data
+                )]
             }
             // Socket failure
             Err(err) => {
@@ -134,14 +127,18 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
             payload.unit = data.unit.to_string();
             payload.value = data.value.iter().map(|x| x.to_string()).collect();
 
-            client
+            if client
                 .publish(
                     data.topic.to_string(),
                     protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
                         format!("failed to serialize {}", e).as_bytes().to_vec()
                     }),
                 )
-                .expect("Could not publish!");
+                .is_err()
+            {
+                println!("[read_can] Failed to publish to Siren.");
+            }
+
             // TODO: investigate disabling this
             thread::sleep(Duration::from_micros(100));
         }
@@ -153,7 +150,15 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
  */
 fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -> JoinHandle<()> {
     let mut client = MqttClient::new(pub_path, "calypso-encoder");
-    client.connect().expect("Could not connect to Siren!");
+
+    let _ = client.connect();
+    while !client.is_connected() {
+        println!("[read_siren] Unable to connect to Siren, going into reconnection mode.");
+        if client.reconnect().is_ok() {
+            println!("[read_siren] Reconnected to Siren!");
+        }
+    }
+
     let reciever = client.start_consumer().expect("Could not begin consuming");
     client
         .subscribe(ENCODER_MAP_SUB)
@@ -193,18 +198,17 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
                     .expect("Could not modify send messages!")
                     .insert(ret.id, ret);
             } else {
-                // the code doesnt work without this else statement
-                // idk why but never remove this else statement
-                let is_conn = client.is_connected();
-                println!("Client is {}", is_conn);
-                if !is_conn {
-                    println!("Trying to reconnect");
-                    match client.reconnect() {
-                        Ok(_) => println!("Reconnected!"),
-                        Err(_) => println!("Could not reconnect!"),
+                while !client.is_connected() {
+                    println!(
+                        "[read_siren] Unable to connect to Siren, going into reconnection mode."
+                    );
+                    if client.reconnect().is_ok() {
+                        println!("[read_siren] Reconnected to Siren!");
                     }
-                    continue;
                 }
+                client
+                    .subscribe(ENCODER_MAP_SUB)
+                    .expect("Could not subscribe!");
             }
         }
     })
