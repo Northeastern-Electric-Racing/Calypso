@@ -10,6 +10,7 @@ pub struct SimulatedComponent {
     topic: String,        // DecodeData.topic
     unit: String,         // DecodeData.unit
     last_update: Instant, // when the data was last updated
+    #[allow(dead_code)]
     n_canpoints: u32,     // number of can points
     sim_min: f32,         // min value
     sim_max: f32,         // max value
@@ -46,7 +47,7 @@ impl SimulatedComponent {
         unit: String,
         attr: SimulatedComponentAttr
     ) -> Self {
-        println!("[SimulatedComponents.initialize] Initializing simulated components");
+        // println!("[SimulatedComponents.initialize] Initializing simulated components");
             
         let sim_min: f32 = attr.sim_min;
         let sim_max: f32 = attr.sim_max;
@@ -57,17 +58,16 @@ impl SimulatedComponent {
         let id: String = attr.id;
 
         let mut value = vec![0.0; n_canpoints as usize];
-
+        
         // initialize value with random values between sim_min and sim_max
-
         let mut rng = rand::thread_rng();
         for item in value.iter_mut().take(n_canpoints as usize) {
             // handle boolean cases
-            if (sim_max - sim_min) == sim_inc_min || (sim_max - sim_min) == sim_inc_max {
-                *item = sim_min;
-                continue;
-            }
-            *item = rng.gen_range(sim_min..sim_max);
+            // if (sim_max - sim_min) == sim_inc_min || (sim_max - sim_min) == sim_inc_max {
+            //     *item = sim_min;
+            //     continue;
+            // }
+            *item = (rng.gen_range(sim_min..sim_max) / sim_inc_min).round() * sim_inc_min;
         }
 
         Self {
@@ -98,6 +98,7 @@ impl SimulatedComponent {
                     rand_offset = self.sim_inc_min;
                 } else {
                     rand_offset = rng.gen_range(self.sim_inc_min..self.sim_inc_max);
+                    rand_offset = (rand_offset / self.sim_inc_min).round() * self.sim_inc_min;
                 }
                 let sign = if rng.gen_bool(0.5) { 1.0 } else { -1.0 };
                 
@@ -108,17 +109,17 @@ impl SimulatedComponent {
                         rand_offset = self.sim_inc_min;
                     } else {
                         rand_offset = rng.gen_range(self.sim_inc_min..self.sim_inc_max);
+                        rand_offset = (rand_offset / self.sim_inc_min).round() * self.sim_inc_min;
                     }
                     let sign = if rng.gen_bool(0.5) { 1.0 } else { -1.0 };
                     new_value = self.value[i] + sign * rand_offset;
                 }
-                self.value[i] = new_value;
+                self.value[i] = (new_value / self.sim_inc_min).round() * self.sim_inc_min;
             }
     }
 
 
     pub fn get_data(&self) -> DecodeData {
-        println!("[SimulatedComponents.get_data] Retrieving simulated data");
         DecodeData::new(self.value.clone(), &self.topic, &self.unit)
     }
 }
