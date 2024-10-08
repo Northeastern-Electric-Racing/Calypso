@@ -4,7 +4,7 @@ use std::{
 };
 
 use calypso::{
-    mqtt::MqttClient, serverdata, simulatable_message::SimulatedComponents, simulate_data::create_simulated_components
+    mqtt::MqttClient, serverdata, simulatable_message::SimulatedComponent, simulate_data::create_simulated_components
 };
 use clap::Parser;
 
@@ -30,7 +30,7 @@ fn simulate_out(pub_path: &str) {
     let sleep_time = Duration::from_millis(10);
 
     // todo: a way to turn individual components on and off
-    let mut simulated_components: Vec<SimulatedComponents> = create_simulated_components();
+    let mut simulated_components: Vec<SimulatedComponent> = create_simulated_components();
 
     // loop through the simulated components, if they should update, update them and publish the data
     loop {
@@ -61,19 +61,9 @@ fn simulate_out(pub_path: &str) {
 
 /**
  * Main Function
- * Configures the can network, retrieves the client based on the command line arguments,
- * connects the client and then reads the can socket from specified interface.
+ * Calls the `simulate_out` function with the siren host URL from the command line arguments.
  */
 fn main() {
     let cli = CalypsoArgs::parse();
-    
-    // if cli.simulate {
-    //     println!("> Starting simulation mode");
     simulate_out(&cli.siren_host_url);
-
-        // simulator_handle.join().expect("Simulator failed with ");
-        // return;
-    // }
-
-
 }
