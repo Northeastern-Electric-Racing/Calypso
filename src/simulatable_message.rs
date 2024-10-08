@@ -62,11 +62,6 @@ impl SimulatedComponent {
         // initialize value with random values between sim_min and sim_max
         let mut rng = rand::thread_rng();
         for item in value.iter_mut().take(n_canpoints as usize) {
-            // handle boolean cases
-            // if (sim_max - sim_min) == sim_inc_min || (sim_max - sim_min) == sim_inc_max {
-            //     *item = sim_min;
-            //     continue;
-            // }
             *item = (rng.gen_range(sim_min..sim_max) / sim_inc_min).round() * sim_inc_min;
         }
 
@@ -86,8 +81,8 @@ impl SimulatedComponent {
     }
 
     pub fn update(&mut self) {
-        println!("[SimulatedComponents.update] Updating simulated components");
-        println!("[SimulatedComponents.update] id: {}, sim_min: {}, sim_max: {}, sim_inc_min: {}, sim_inc_max: {}, sim_freq: {}", self.id, self.sim_min, self.sim_max, self.sim_inc_min, self.sim_inc_max, self.sim_freq);
+        // println!("[SimulatedComponents.update] Updating simulated components");
+        // println!("[SimulatedComponents.update] id: {}, sim_min: {}, sim_max: {}, sim_inc_min: {}, sim_inc_max: {}, sim_freq: {}", self.id, self.sim_min, self.sim_max, self.sim_inc_min, self.sim_inc_max, self.sim_freq);
             self.last_update = Instant::now();
             let mut rng = rand::thread_rng();
             for i in 0..self.value.len() {
