@@ -7,23 +7,12 @@ use calypso::{
     mqtt::MqttClient, serverdata, simulatable_message::SimulatedComponents, simulate_data::create_simulated_components
 };
 use clap::Parser;
-// use protobuf::Message;
-// use socketcan::{CanError, CanFrame, CanSocket, EmbeddedFrame, Frame, Id, Socket, SocketOptions};
 
-// const ENCODER_MAP_SUB: &str = "Calypso/Bidir/Command/#";
 
 /// Calypso command line arguments
 #[derive(Parser, Debug)]
 #[command(version)]
 struct CalypsoArgs {
-    /// Whether to enable CAN message encoding
-    #[arg(short = 'e', long, env = "CALYPSO_CAN_ENCODE")]
-    encode: bool,
-
-    /// Whether to enable SIMULATION mode
-    #[arg(short = 's', long, env = "CALYPSO_CAN_SIMULATE")]
-    simulate: bool,
-
     /// The host url of the siren, including port and excluding protocol prefix
     #[arg(
         short = 'u',
@@ -32,15 +21,6 @@ struct CalypsoArgs {
         default_value = "localhost:1883"
     )]
     siren_host_url: String,
-
-    /// The SocketCAN interface port
-    #[arg(
-        short = 'c',
-        long,
-        env = "CALYPSO_SOCKETCAN_IFACE",
-        default_value = "vcan0"
-    )]
-    socketcan_iface: String,
 }
 
 
@@ -52,6 +32,7 @@ fn simulate_out(pub_path: &str) {
     // todo: a way to turn individual components on and off
     let mut simulated_components: Vec<SimulatedComponents> = create_simulated_components();
 
+    // loop through the simulated components, if they should update, update them and publish the data
     loop {
         for component in simulated_components.iter_mut() {
             if component.should_update() {
@@ -70,9 +51,9 @@ fn simulate_out(pub_path: &str) {
                     )
                     .expect("Could not publish!");
             }
-            // sleep for a bit
-            thread::sleep(sleep_time);
         }
+        // sleep for a bit
+        thread::sleep(sleep_time);
     }
 }
 
@@ -82,7 +63,6 @@ fn simulate_out(pub_path: &str) {
  * Main Function
  * Configures the can network, retrieves the client based on the command line arguments,
  * connects the client and then reads the can socket from specified interface.
- *
  */
 fn main() {
     let cli = CalypsoArgs::parse();

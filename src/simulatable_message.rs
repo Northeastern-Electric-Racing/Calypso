@@ -72,7 +72,6 @@ impl SimulatedComponents {
     pub fn update(&mut self) {
         println!("[SimulatedComponents.update] Updating simulated components");
         println!("[SimulatedComponents.update] id: {}, format: {}, sim_min: {}, sim_max: {}, sim_inc_min: {}, sim_inc_max: {}, sim_freq: {}", self.id, self.format, self.sim_min, self.sim_max, self.sim_inc_min, self.sim_inc_max, self.sim_freq);
-        if self.should_update() {
             self.last_update = Instant::now();
             let mut rng = rand::thread_rng();
             for i in 0..self.value.len() {
@@ -99,7 +98,6 @@ impl SimulatedComponents {
                 }
                 self.value[i] = new_value;
             }
-        }
     }
 
     pub fn get_data(&self) -> DecodeData {
