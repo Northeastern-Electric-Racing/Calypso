@@ -60,9 +60,13 @@ impl SimulatedComponent {
 
         // initialize value with random values between sim_min and sim_max
 
-        // TODO: if size = 1, initialize with 0 or 1
         let mut rng = rand::thread_rng();
         for item in value.iter_mut().take(n_canpoints as usize) {
+            // handle boolean cases
+            if (sim_max - sim_min) == sim_inc_min || (sim_max - sim_min) == sim_inc_max {
+                *item = sim_min;
+                continue;
+            }
             *item = rng.gen_range(sim_min..sim_max);
         }
 
@@ -111,6 +115,7 @@ impl SimulatedComponent {
                 self.value[i] = new_value;
             }
     }
+
 
     pub fn get_data(&self) -> DecodeData {
         println!("[SimulatedComponents.get_data] Retrieving simulated data");
