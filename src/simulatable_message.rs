@@ -18,6 +18,7 @@ pub struct SimulatedComponent {
     sim_inc_max: f32,     // max increment step
     sim_freq: f32,        // Frequency in ms
     // format: String,       // e.g. "divide10"
+    #[allow(dead_code)]
     id: String,           // e.g. "0x80" (or should this be a uint32?)
     // signed: bool,         // is the value signed?
     // size: u8,            // size of the value in bits
