@@ -48,7 +48,6 @@ impl SimulatedComponent {
         unit: String,
         attr: SimulatedComponentAttr
     ) -> Self {
-        // println!("[SimulatedComponents.initialize] Initializing simulated components");
             
         let sim_min: f32 = attr.sim_min;
         let sim_max: f32 = attr.sim_max;
@@ -63,7 +62,11 @@ impl SimulatedComponent {
         // initialize value with random values between sim_min and sim_max
         let mut rng = rand::thread_rng();
         for item in value.iter_mut().take(n_canpoints as usize) {
-            *item = (rng.gen_range(sim_min..sim_max) / sim_inc_min).round() * sim_inc_min;
+            if sim_inc_min != 0.0 {
+                *item = (rng.gen_range(sim_min..sim_max) / sim_inc_min).round() * sim_inc_min;
+            } else  {
+                *item = rng.gen_range(sim_min..sim_max);
+            }
         }
 
         Self {
@@ -81,39 +84,44 @@ impl SimulatedComponent {
         }
     }
 
+
+    fn get_rand_offset(&self) -> f32 {
+        let mut rng = rand::thread_rng();
+        let offset: f32 = if self.sim_inc_min == self.sim_inc_max {
+            self.sim_inc_min
+        } else {
+            let rand_offset = rng.gen_range(self.sim_inc_min..self.sim_inc_max);
+            if self.sim_inc_min != 0.0 {
+                return (rand_offset / self.sim_inc_min).round() * self.sim_inc_min;
+            }
+            rand_offset
+        };
+        offset
+    }
+
     pub fn update(&mut self) {
-        // println!("[SimulatedComponents.update] Updating simulated components");
-        // println!("[SimulatedComponents.update] id: {}, sim_min: {}, sim_max: {}, sim_inc_min: {}, sim_inc_max: {}, sim_freq: {}", self.id, self.sim_min, self.sim_max, self.sim_inc_min, self.sim_inc_max, self.sim_freq);
+            // println!("[SimulatedComponents.update] Updating simulated components");
+            // println!("[SimulatedComponents.update] id: {}, sim_min: {}, sim_max: {}, sim_inc_min: {}, sim_inc_max: {}, sim_freq: {}", self.id, self.sim_min, self.sim_max, self.sim_inc_min, self.sim_inc_max, self.sim_freq);
+
             self.last_update = Instant::now();
             let mut rng = rand::thread_rng();
             for i in 0..self.value.len() {
-                let mut rand_offset: f32;
-
-                // handle the case where sim_inc_min == sim_inc_max
-                if self.sim_inc_min == self.sim_inc_max {
-                    rand_offset = self.sim_inc_min;
-                } else {
-                    rand_offset = rng.gen_range(self.sim_inc_min..self.sim_inc_max);
-                    rand_offset = (rand_offset / self.sim_inc_min).round() * self.sim_inc_min;
-                }
+                let mut rand_offset: f32 = self.get_rand_offset();
                 let sign = if rng.gen_bool(0.5) { 1.0 } else { -1.0 };
                 
-                // getting a in-range new value
+                // getting a new value
                 let mut new_value = self.value[i] + sign * rand_offset;
+
+                // ensuring value is within range
                 while new_value < self.sim_min || new_value > self.sim_max {
-                    if self.sim_inc_min == self.sim_inc_max {
-                        rand_offset = self.sim_inc_min;
-                    } else {
-                        rand_offset = rng.gen_range(self.sim_inc_min..self.sim_inc_max);
-                        rand_offset = (rand_offset / self.sim_inc_min).round() * self.sim_inc_min;
-                    }
+                    rand_offset = self.get_rand_offset();
                     let sign = if rng.gen_bool(0.5) { 1.0 } else { -1.0 };
                     new_value = self.value[i] + sign * rand_offset;
                 }
-                self.value[i] = (new_value / self.sim_inc_min).round() * self.sim_inc_min;
+
+                self.value[i] = new_value;
             }
     }
-
 
     pub fn get_data(&self) -> DecodeData {
         DecodeData::new(self.value.clone(), &self.topic, &self.unit)
