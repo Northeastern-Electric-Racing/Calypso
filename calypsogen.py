@@ -23,6 +23,8 @@ decode_master_mapping = open("./src/decode_master_mapping.rs", "w")
 encode_data = open("./src/encode_data.rs", "w")
 encode_master_mapping = open("./src/encode_master_mapping.rs", "w")
 
+simulate_data = open("./src/simulate_data.rs", "w")
+
 format_data = open("./src/format_data.rs", "w")
 
 
@@ -55,6 +57,9 @@ encode_data.close()
 
 encode_master_mapping.write(result.encode_master_mapping)
 encode_master_mapping.close()
+
+simulate_data.write(result.simulate_data)
+simulate_data.close()
 
 format_data.write(result.format_data)
 format_data.close()

@@ -39,6 +39,12 @@ Ex. `cansend vcan0 702#01010101FFFFFFFF`
 Now view calypso interpret the can message and broadcast it on `mqttui`
 
 
+### Simulation Mode
+- Same setup as above, then use the entry point `simulate` instead of `main`
+- ```cargo run --bin simulate```
+- ```cargo run --bin simulate  -- -u localhost:1883```
+
+
 
 ### Generate Proto
 
