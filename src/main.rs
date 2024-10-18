@@ -82,7 +82,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
             let mut payload = serverdata::ServerData::new();
             payload.unit = data.unit.to_string();
             payload.values = data.value.clone();
-            payload.time = timestamp;
+            payload.time_us = timestamp;
 
             client
                 .publish(
