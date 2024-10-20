@@ -3,7 +3,7 @@ name: Create and publish Calypso docker image
 
 on:
   push:
-    branches: ['Develop']
+    branches: ['Develop', '49-cangen-sim']
 
 
 
