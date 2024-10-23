@@ -6,6 +6,8 @@ rust-version = "1.79"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+
 [dependencies]
 socketcan = "3.3.0"
 paho-mqtt = "0.12.5"
