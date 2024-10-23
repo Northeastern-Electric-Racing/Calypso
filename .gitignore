@@ -18,17 +18,11 @@ build/
 dist/
 logs/
 
+# Added by cargo in libs 
+/libs/cangen/target
+/libs/daedalus/target
+
 # protobuf
 mod.rs
 command_data.rs
 serverdata.rs
-
-# cangen files generaed by calypsogen.py
-decode_master_mapping.rs
-decode_data.rs
-encode_data.rs
-encode_master_mapping.rs
-format_data.rs
-
-# my dumb script
-./format

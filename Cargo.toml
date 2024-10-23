@@ -13,6 +13,9 @@ protobuf-codegen = "3.5.1"
 protobuf = "3.5.1"
 bitstream-io = "2.5.3"
 clap = { version = "4.5.18", features = ["derive", "env"] }
+phf = { version = "0.11.2", features = ["macros"] }
+cangen = { path = "./libs/cangen" }
+daedalus = { path = "./libs/daedalus" }
 
 
 [build-dependencies]
