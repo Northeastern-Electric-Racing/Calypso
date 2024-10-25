@@ -3,6 +3,7 @@ name = "calypso"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.79"
+default-run = "calypso"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,7 +13,8 @@ paho-mqtt = "0.12.5"
 protobuf-codegen = "3.5.1"
 protobuf = "3.5.1"
 bitstream-io = "2.5.3"
-clap = { version = "4.5.17", features = ["derive", "env"] }
+clap = { version = "4.5.20", features = ["derive", "env"] }
+rand = "0.8"
 
 
 [build-dependencies]

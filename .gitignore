@@ -29,3 +29,8 @@ decode_data.rs
 encode_data.rs
 encode_master_mapping.rs
 format_data.rs
+simulate_data.rs
+
+# my dumb script
+./format
+/privatetest/

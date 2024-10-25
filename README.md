@@ -39,6 +39,18 @@ Ex. `cansend vcan0 702#01010101FFFFFFFF`
 Now view calypso interpret the can message and broadcast it on `mqttui`
 
 
+### Simulation Mode
+#### Run from build
+- Same setup as above, then use the entry point `simulate` instead of `main`
+- ```cargo run --bin simulate```
+- ```cargo run --bin simulate  -- -u localhost:1883```
+
+#### Run from Docker
+- ```docker pull ghcr.io/northeastern-electric-racing/calypso:Develop```
+- ```docker run -d --rm --network host ghcr.io/northeastern-electric-racing/calypso:Develop```
+- ```docker run -d --rm -e CALYPSO_SIREN_HOST_URL=127.0.0.1:1883 --network host ghcr.io/northeastern-electric-racing/calypso:Develop```
+
+
 
 ### Generate Proto
 
