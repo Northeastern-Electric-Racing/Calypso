@@ -17,7 +17,7 @@ spec = importlib.util.spec_from_file_location(module_name, module_path)
 cangen = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cangen)
 
-decode_data = open("./src/decode_data.rs", "w") or field["send"]
+decode_data = open("./src/decode_data.rs", "w")
 decode_master_mapping = open("./src/decode_master_mapping.rs", "w")
 
 encode_data = open("./src/encode_data.rs", "w")

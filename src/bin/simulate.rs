@@ -1,6 +1,6 @@
 use std::{
     thread::{self},
-    time::Duration,
+    time::{Duration, UNIX_EPOCH},
 };
 
 use calypso::{
@@ -37,10 +37,12 @@ fn simulate_out(pub_path: &str) {
         for component in simulated_components.iter_mut() {
             if component.should_update() {
                 component.update();
+                let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
                 let data: calypso::data::DecodeData = component.get_data();
                 let mut payload = serverdata::ServerData::new();
                 payload.unit = data.unit.to_string();
-                payload.value = data.value.iter().map(|x| x.to_string()).collect();
+                payload.values = data.value;
+                payload.time_us = timestamp;
 
                 client
                     .publish(
