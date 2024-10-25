@@ -3,6 +3,9 @@ name: Create and publish Calypso docker image
 
 on:
   push:
+    branches: ['Develop']
+    path:
+        - "Dockerfile"
   workflow_dispatch:
 
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
