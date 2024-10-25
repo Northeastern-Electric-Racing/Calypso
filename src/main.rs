@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
     thread::{self, JoinHandle},
-    time::Duration,
+    time::{Duration, UNIX_EPOCH},
 };
 
 use calypso::{
@@ -120,12 +120,14 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
                 continue;
             }
         };
+        let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
 
         // Convert decoded CAN to Protobuf and publish over MQTT
         for data in decoded_data.iter() {
             let mut payload = serverdata::ServerData::new();
             payload.unit = data.unit.to_string();
-            payload.value = data.value.iter().map(|x| x.to_string()).collect();
+            payload.values = data.value.clone();
+            payload.time_us = timestamp;
 
             if client
                 .publish(
