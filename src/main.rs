@@ -6,8 +6,8 @@ use std::{
 };
 
 use calypso::{
-    command_data, data::DecodeData, data::EncodeData, decodable_message::DecodableMessage,
-    encodable_message::EncodableMessage, encode_master_mapping::ENCODABLE_KEY_LIST,
+    command_data, data::DecodeData, data::EncodeData, 
+    decode_data::*, encode_data::*,
     mqtt::MqttClient, serverdata,
 };
 use clap::Parser;
@@ -71,14 +71,15 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
             // CanDataFrame
             Ok(CanFrame::Data(data_frame)) => {
                 let data = data_frame.data();
-                let message = DecodableMessage::new(
-                    match data_frame.id() {
-                        socketcan::Id::Standard(std) => std.as_raw().into(),
-                        socketcan::Id::Extended(ext) => ext.as_raw(),
-                    },
-                    data.to_vec(),
-                );
-                message.decode()
+                let id: u32 = match data_frame.id() {
+                    socketcan::Id::Standard(std) => std.as_raw().into(),
+                    socketcan::Id::Extended(ext) => ext.as_raw()
+                };
+                let decoder_func = match DECODE_FUNCTION_MAP.get(&id) {
+                   Some(func) => *func,
+                   None => decode_mock 
+                };
+                decoder_func(data)
             }
             // CanRemoteFrame
             Ok(CanFrame::Remote(remote_frame)) => {
@@ -92,9 +93,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
             // CanErrorFrame
             Ok(CanFrame::Error(error_frame)) => {
                 // Publish enum index of error onto CAN
-                // TODO: Look into string representation with Display
-                // TODO: Ask `const` impl for Display or enum?
-                // Impl from ErrorFrame -> f32
+                // TODO: maybe look into better representation?
                 let error_index: f32 = match CanError::from(error_frame) {
                     CanError::TransmitTimeout => 0.0,
                     CanError::LostArbitration(_) => 1.0,
@@ -169,8 +168,12 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
     // do the default initialization for all, do outside of the thread to save time negotiating when send_can comes up
     let mut writable_send_map = send_map.write().expect("Could not modify send messages!");
     for key in ENCODABLE_KEY_LIST {
-        let packet = EncodableMessage::new(String::clone(&key.to_owned()), Vec::new());
-        let ret = packet.encode();
+        let key_owned = key.to_owned();
+        let encoder_func = match ENCODE_FUNCTION_MAP.get(&key_owned) {
+            Some(func) => *func,
+            None => encode_mock
+        }
+        let ret = encoder_func(Vec::new());
         writable_send_map.insert(ret.id, ret);
     }
     drop(writable_send_map);
@@ -193,8 +196,12 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
                     }
                 };
 
-                let packet = EncodableMessage::new(String::clone(&key), buf.data);
-                let ret = packet.encode();
+                let encoder_func = match ENCODE_FUNCTION_MAP.get(&key) {
+                    Some(func) => *func,
+                    None => encode_mock
+                };
+                let ret = encoder_func(buf.data);
+
                 send_map
                     .write()
                     .expect("Could not modify send messages!")
