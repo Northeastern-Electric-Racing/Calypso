@@ -1,0 +1,9 @@
+[package]
+name = "cangen"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+proc-macro2 = "1.0.89"
+quote = "1.0.37"
+serde = { version = "1.0.214", features = ["derive"] }
