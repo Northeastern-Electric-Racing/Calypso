@@ -172,7 +172,7 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
         let encoder_func = match ENCODE_FUNCTION_MAP.get(&key_owned) {
             Some(func) => *func,
             None => encode_mock
-        }
+        };
         let ret = encoder_func(Vec::new());
         writable_send_map.insert(ret.id, ret);
     }

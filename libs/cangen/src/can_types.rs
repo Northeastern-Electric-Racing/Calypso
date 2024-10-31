@@ -16,7 +16,7 @@ pub struct CANMsg {
     pub fields: Vec<NetField>,
     pub key: Option<String>,
     pub is_ext: Option<bool>,
-    pub sim_freq: Option<i32>,
+    pub sim_freq: Option<f32>,
 }
 
 /**

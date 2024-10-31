@@ -240,6 +240,7 @@ dependencies = [
 name = "daedalus"
 version = "0.1.0"
 dependencies = [
+ "cangen",
  "proc-macro2",
  "quote",
  "serde_json",

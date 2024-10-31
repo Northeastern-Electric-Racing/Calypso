@@ -6,7 +6,7 @@ use cangen::can_gen_encode::*;
 use cangen::can_types::*;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
-use quote::quote;
+use quote::{quote, format_ident};
 use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
@@ -364,7 +364,7 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
             simulatable_messages
         }
     };
-    TokenStream::from(__encode_expanded)
+    TokenStream::from(__simulate_expanded)
 }
 
 /**
@@ -380,7 +380,7 @@ fn gen_simulate_function_body(_path: PathBuf) -> ProcMacro2TokenStream {
             
             for mut _msg in _msgs {
                 let mut _extend = ProcMacro2TokenStream::new(); 
-                match self.sim_freq {
+                match _msg.sim_freq {
                     Some(_freq) => {
                         for mut _field in _msg.fields {
                             let _simulatable: bool = 
@@ -391,13 +391,13 @@ fn gen_simulate_function_body(_path: PathBuf) -> ProcMacro2TokenStream {
                             if _simulatable {
                                 let _attr_name = format_ident!(
                                     "{}_attr",
-                                    _field.name.clone().to_lowercase().replace(' ', "_")
+                                    _field.name.clone().to_lowercase().replace(&['/', ' ', '-'], "_")
                                 );
                                 let _sim_min: f32 = match _field.sim_min {
                                     Some(min) => min,
                                     None => -1.0
                                 };
-                                let _sim_max: f32 = match _field.sim_min {
+                                let _sim_max: f32 = match _field.sim_max {
                                     Some(max) => max,
                                     None => -1.0
                                 };
@@ -409,11 +409,11 @@ fn gen_simulate_function_body(_path: PathBuf) -> ProcMacro2TokenStream {
                                     Some(inc) => inc,
                                     None => -1.0
                                 };
-                                let _n_canpoints: usize = len(_field.points);
-                                let _id = _field.id.clone();
+                                let _n_canpoints: u32 = _field.points.len().try_into().unwrap();
+                                let _id = _msg.id.clone();
                                 let _component_name = format_ident!(
                                     "{}",
-                                    _field.name.clone().to_lowercase().replace(' ', "_")
+                                    _field.name.clone().to_lowercase().replace(&['/', ' ', '-'], "_")
                                 );
                                 let _name = _field.name.clone();
                                 let _unit = _field.unit.clone();
