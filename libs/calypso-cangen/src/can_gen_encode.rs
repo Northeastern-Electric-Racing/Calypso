@@ -8,8 +8,6 @@ use quote::{format_ident, quote};
  */
 pub trait CANGenEncode {
     fn gen_encoder_fn(&mut self) -> ProcMacro2TokenStream;
-    fn gen_encoder_map_entry(&mut self) -> ProcMacro2TokenStream;
-    fn gen_encoder_key_list_entry(&mut self, _nk: &mut usize) -> ProcMacro2TokenStream;
 }
 
 /**
@@ -58,37 +56,6 @@ impl CANGenEncode for CANMsg {
             }
         }
     }
-
-    fn gen_encoder_map_entry(&mut self) -> ProcMacro2TokenStream {
-        match &self.key {
-            Some(key) => {
-                let fn_name = format_ident!(
-                    "encode_{}",
-                    self.desc.clone().to_lowercase().replace(' ', "_")
-                );
-                quote! {
-                    #key => #fn_name,
-                }
-            },
-            None => {
-                quote! { }
-            }
-        }
-    }
-
-    fn gen_encoder_key_list_entry(&mut self, _nk: &mut usize) -> ProcMacro2TokenStream {
-        match &self.key {
-            Some(key) => {
-                *_nk += 1;
-                quote! { 
-                    #key,
-                }
-            },
-            None => {
-                quote! { }
-            }
-        }
-    }
 }
 
 /**
@@ -109,14 +76,6 @@ impl CANGenEncode for NetField {
         quote! {
             #point_encoders
         }
-    }
-
-    fn gen_encoder_map_entry(&mut self) -> ProcMacro2TokenStream {
-        quote! { }
-    }
-
-    fn gen_encoder_key_list_entry(&mut self, _nk: &mut usize) -> ProcMacro2TokenStream {
-        quote! { }
     }
 }
 
@@ -149,12 +108,12 @@ impl CANGenEncode for CANPoint {
             }
             _ => quote! { },
         };
-        let default: f32 = match self.default {
-            Some(default) => default,
+        let default_value: f32 = match self.default_value {
+            Some(default_value) => default_value,
             _ => 0f32,
         };
         let float_final = quote! {
-            #format_prefix ( *data.get(pt_index).unwrap_or(&(#default)) )
+            #format_prefix ( *data.get(pt_index).unwrap_or(&(#default_value)) )
         };
 
         let write_line = match self.endianness {
@@ -186,13 +145,5 @@ impl CANGenEncode for CANPoint {
             #write_line
             pt_index += 1;
         }
-    }
-
-    fn gen_encoder_map_entry(&mut self) -> ProcMacro2TokenStream {
-        quote! { }
-    }
-
-    fn gen_encoder_key_list_entry(&mut self, _nk: &mut usize) -> ProcMacro2TokenStream {
-        quote! { }
     }
 }

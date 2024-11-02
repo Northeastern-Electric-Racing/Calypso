@@ -17,8 +17,6 @@ __pycache__/
 build/
 dist/
 logs/
-/libs/cangen/target 
-/libs/daedalus/target 
 
 # protobuf
 mod.rs

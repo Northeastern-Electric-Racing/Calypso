@@ -4,12 +4,11 @@ use proc_macro2::TokenStream as ProcMacro2TokenStream;
 use quote::{format_ident, quote};
 
 /**
- *  Trait to generate ProcMacro2TokenStreams for decode function macro
+ *  Trait to generate individual decode function for a CANMsg
+ *  For NetField and CANPoint, generates parts of the function 
  */
 pub trait CANGenDecode {
     fn gen_decoder_fn(&mut self) -> ProcMacro2TokenStream;
-    fn gen_decoder_skip(&mut self) -> ProcMacro2TokenStream;
-    fn gen_decoder_map_entry(&mut self) -> ProcMacro2TokenStream;
 }
 
 /**
@@ -50,19 +49,6 @@ impl CANGenDecode for CANMsg {
             }
         }
     }
-
-    fn gen_decoder_skip(&mut self) -> ProcMacro2TokenStream {
-        quote! { }
-    }
-
-    fn gen_decoder_map_entry(&mut self) -> ProcMacro2TokenStream {
-        let id_int = u32::from_str_radix(self.id.clone().trim_start_matches("0x"), 16).unwrap();
-        let fn_name = format_ident!(
-            "decode_{}",
-            self.desc.clone().to_lowercase().replace(' ', "_")
-        );
-        quote! { #id_int => #fn_name, }
-    }
 }
 
 /**
@@ -73,16 +59,14 @@ impl CANGenDecode for NetField {
         match self.send {
             // If send exists and is false, then skip this field (i.e. skip all its points)
             Some(false) => {
-                let point_skips = self
-                    .points
-                    .iter_mut()
-                    .map(|point| point.gen_decoder_skip())
-                    .collect::<Vec<ProcMacro2TokenStream>>()
-                    .into_iter()
-                    .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
-                        acc.extend(ts);
-                        acc
-                    });
+                let mut point_skips = ProcMacro2TokenStream::new();
+                for point in &self.points {
+                    let size_literal = Literal::usize_unsuffixed(point.size);
+                    let skip_line = quote! { 
+                        reader.skip(#size_literal).unwrap(); 
+                    };
+                    point_skips.extend(skip_line);
+                } 
                 quote! {
                     #point_skips
                 }
@@ -150,14 +134,6 @@ impl CANGenDecode for NetField {
             }
         }
     }
-
-    fn gen_decoder_skip(&mut self) -> ProcMacro2TokenStream {
-        quote! { }
-    }
-
-    fn gen_decoder_map_entry(&mut self) -> ProcMacro2TokenStream {
-        quote! { }
-    }
 }
 
 /**
@@ -198,16 +174,5 @@ impl CANGenDecode for CANPoint {
                 }
             }
         }
-    }
-
-    fn gen_decoder_skip(&mut self) -> ProcMacro2TokenStream {
-        let size_literal = Literal::usize_unsuffixed(self.size);
-        quote! {
-            reader.skip(#size_literal).unwrap();
-        }
-    }
-
-    fn gen_decoder_map_entry(&mut self) -> ProcMacro2TokenStream {
-        quote! { }
     }
 }

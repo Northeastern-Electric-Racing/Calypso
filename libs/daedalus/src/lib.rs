@@ -1,9 +1,9 @@
-extern crate cangen;
+extern crate calypso_cangen;
 extern crate proc_macro;
 extern crate serde_json;
-use cangen::can_gen_decode::*;
-use cangen::can_gen_encode::*;
-use cangen::can_types::*;
+use calypso_cangen::can_gen_decode::*;
+use calypso_cangen::can_gen_encode::*;
+use calypso_cangen::can_types::*;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
 use quote::{quote, format_ident};
@@ -13,25 +13,23 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 /**
+ *  Path to CAN spec JSON files
+ *  Used by all daedalus macros 
+ *  Filepath is relative to project root (i.e. /Calypso)
+ */
+const DAEDALUS_CANGEN_SPEC_PATH: &'static str = "./Embedded-Base/cangen/can-messages";
+
+/**
  *  Macro to generate all the code for decode_data.rs
  *  - Generates prelude, phf map, and all decode functions
- *  - Input is interpreted as String containing
- *    filepath to can-messages directory, i.e. directory
- *    containing all CAN json specs
  */
 #[proc_macro]
 pub fn gen_decode_data(_item: TokenStream) -> TokenStream {
-    // First, sanitize _item by removing quotes
-    let mut __dir_path = _item.to_string();
-    if __dir_path.starts_with('"') && __dir_path.ends_with('"') {
-        __dir_path = __dir_path[1..__dir_path.len() - 1].to_string();
-    }
-
     let __decode_prelude = quote! {
         use std::io::Cursor;
         use bitstream_io::{BigEndian, LittleEndian, BitReader, BitRead};
         use phf::phf_map;
-        use cangen::can_types::*;
+        use calypso_cangen::can_types::*;
         use crate::data::{DecodeData, FormatData};
     };
     let mut __decode_functions = quote! {
@@ -44,7 +42,7 @@ pub fn gen_decode_data(_item: TokenStream) -> TokenStream {
     };
     let mut __decode_map_entries = ProcMacro2TokenStream::new();
 
-    match fs::read_dir(__dir_path) {
+    match fs::read_dir(DAEDALUS_CANGEN_SPEC_PATH) {
         Ok(__entries) => {
             for __entry in __entries {
                 match __entry {
@@ -88,15 +86,16 @@ fn gen_decode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
             let mut _contents = String::new();
             let _ = _file.read_to_string(&mut _contents);
             let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
-            let _entries = _msgs
-                .iter_mut()
-                .map(|_m| _m.gen_decoder_map_entry())
-                .collect::<Vec<ProcMacro2TokenStream>>()
-                .into_iter()
-                .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
-                    acc.extend(ts);
-                    acc
-                });
+            let mut _entries = ProcMacro2TokenStream::new();
+            for mut _msg in _msgs {
+                let id_int = u32::from_str_radix(_msg.id.clone().trim_start_matches("0x"), 16).unwrap();
+                let fn_name = format_ident!(
+                    "decode_{}",
+                    _msg.desc.clone().to_lowercase().replace(' ', "_")
+                );
+                let _entry = quote! { #id_int => #fn_name, };
+                _entries.extend(_entry);
+            }
 
             quote! {
                 #_entries
@@ -145,22 +144,13 @@ fn gen_decode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
 /**
  *  Macro to generate all the code for encode_data.rs
  *  - Generates prelude, phf map, and all encode functions
- *  - Input is interpreted as String containing
- *    filepath to can-messages directory, i.e. directory
- *    containing all CAN json specs
  */
 #[proc_macro]
 pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
-    // First, sanitize _item by removing quotes
-    let mut __dir_path = _item.to_string();
-    if __dir_path.starts_with('"') && __dir_path.ends_with('"') {
-        __dir_path = __dir_path[1..__dir_path.len() - 1].to_string();
-    }
-
     let __encode_prelude = quote! {
         use bitstream_io::{BigEndian, LittleEndian, BitWriter, BitWrite};
         use phf::phf_map;
-        use cangen::can_types::*;
+        use calypso_cangen::can_types::*;
         use crate::data::{EncodeData, FormatData};
     };
     let mut __encode_functions = quote! {
@@ -178,7 +168,7 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
     let mut __encode_key_list_entries = ProcMacro2TokenStream::new();
     let mut __encode_key_list_size: usize = 0;
 
-    match fs::read_dir(__dir_path) {
+    match fs::read_dir(DAEDALUS_CANGEN_SPEC_PATH) {
         Ok(__entries) => {
             for __entry in __entries {
                 match __entry {
@@ -257,16 +247,27 @@ fn gen_encode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
             let mut _contents = String::new();
             let _ = _file.read_to_string(&mut _contents);
             let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
-            let _entries = _msgs
-                .iter_mut()
-                .map(|_m| _m.gen_encoder_map_entry())
-                .collect::<Vec<ProcMacro2TokenStream>>()
-                .into_iter()
-                .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
-                    acc.extend(ts);
-                    acc
-                });
+            let mut _entries = ProcMacro2TokenStream::new();
 
+            // Only create encode mappings for CANMsgs with key field 
+            for mut _msg in _msgs {
+                let _entry = match &_msg.key {
+                    Some(key) => {
+                        let fn_name = format_ident!(
+                            "encode_{}",
+                            _msg.desc.clone().to_lowercase().replace(' ', "_")
+                        );
+                        quote! {
+                            #key => #fn_name,
+                        }
+                    },
+                    None => {
+                        quote! { }
+                    }
+                };
+                _entries.extend(_entry);
+            }
+            
             quote! {
                 #_entries
             }
@@ -287,15 +288,21 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
             let mut _contents = String::new();
             let _ = _file.read_to_string(&mut _contents);
             let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
-            let _entries = _msgs
-                .iter_mut()
-                .map(|_m| _m.gen_encoder_key_list_entry(_key_list_size))
-                .collect::<Vec<ProcMacro2TokenStream>>()
-                .into_iter()
-                .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
-                    acc.extend(ts);
-                    acc
-                });
+            let mut _entries = ProcMacro2TokenStream::new();
+            for mut _msg in _msgs {
+                let _entry = match &_msg.key {
+                    Some(key) => {
+                        *_key_list_size += 1;
+                        quote! {
+                            #key,
+                        }
+                    },
+                    None => {
+                        quote! { }
+                    }
+                };
+                _entries.extend(_entry);
+            }
 
             quote! {
                 #_entries
@@ -314,24 +321,15 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
  *  Macro to generate all the code for simulate_data.rs
  *  - Generates prelude, all SimulatedComponentAttrs, and all 
  *    SimulatedComponents 
- *  - Input is interpreted as String containing
- *    filepath to can-messages directory, i.e. directory
- *    containing all CAN json specs
  */
 #[proc_macro]
 pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
-    // First, sanitize _item by removing quotes
-    let mut __dir_path = _item.to_string();
-    if __dir_path.starts_with('"') && __dir_path.ends_with('"') {
-        __dir_path = __dir_path[1..__dir_path.len() - 1].to_string();
-    }
-
     let __simulate_prelude = quote! {
         use crate::simulatable_message::{SimulatedComponent, SimulatedComponentAttr};
     };
     let mut __simulate_function_body = quote! { };
 
-    match fs::read_dir(__dir_path) {
+    match fs::read_dir(DAEDALUS_CANGEN_SPEC_PATH) {
         Ok(__entries) => {
             for __entry in __entries {
                 match __entry {

@@ -1,10 +1,6 @@
 use serde::Deserialize;
 
-// enum MsgType {
-//     encode,
-//     decode,
-//     raw
-// }
+// TODO: Implement MsgType
 
 /**
  *  Class representing a CAN message
@@ -44,5 +40,5 @@ pub struct CANPoint {
     pub signed: Option<bool>,
     pub endianness: Option<String>,
     pub format: Option<String>,
-    pub default: Option<f32>,
+    pub default_value: Option<f32>,
 }

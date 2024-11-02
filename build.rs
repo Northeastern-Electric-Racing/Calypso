@@ -1,5 +1,3 @@
-use std::process::Command;
-
 /* Prebuild script */
 fn main() {
     println!("cargo:rerun-if-changed=Embedded-Base");

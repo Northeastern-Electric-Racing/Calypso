@@ -61,7 +61,6 @@ impl SimulatedComponent {
         
         // initialize value with random values between sim_min and sim_max
         let mut rng = rand::thread_rng();
-        eprintln!("{}: {} {} {} {}", id, sim_min, sim_max, sim_inc_min, sim_inc_max);
         for item in value.iter_mut().take(n_canpoints as usize) {
             *item = rng.gen_range(sim_min..sim_max);
             if sim_inc_min != 0.0 {
