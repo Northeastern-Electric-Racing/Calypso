@@ -34,10 +34,7 @@ impl CANGenEncode for CANMsg {
                 );
                 let id_int =
                     u32::from_str_radix(self.id.clone().trim_start_matches("0x"), 16).unwrap();
-                let ext_ident = match self.is_ext {
-                    Some(ext) => ext,
-                    None => false,
-                };
+                let ext_ident = self.is_ext.unwrap_or(false);
                 quote! {
                     pub fn #fn_name(data: Vec<f32>) -> EncodeData {
                         let mut writer = BitWriter::endian(Vec::new(), BigEndian);
