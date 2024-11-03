@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 extern crate calypso_cangen;
 extern crate proc_macro;
 extern crate serde_json;
