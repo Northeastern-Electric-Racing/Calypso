@@ -1,4 +1,4 @@
-#![allow(clippy::all)]
+// #![allow(clippy::all)]
 extern crate calypso_cangen;
 extern crate proc_macro;
 extern crate serde_json;
@@ -18,7 +18,7 @@ use std::str::FromStr;
  *  Used by all daedalus macros 
  *  Filepath is relative to project root (i.e. /Calypso)
  */
-const DAEDALUS_CANGEN_SPEC_PATH: &'static str = "./Embedded-Base/cangen/can-messages";
+const DAEDALUS_CANGEN_SPEC_PATH: &str = "./Embedded-Base/cangen/can-messages";
 
 /**
  *  Macro to generate all the code for decode_data.rs
@@ -379,68 +379,53 @@ fn gen_simulate_function_body(_path: PathBuf) -> ProcMacro2TokenStream {
             
             for mut _msg in _msgs {
                 let mut _extend = ProcMacro2TokenStream::new(); 
-                match _msg.sim_freq {
-                    Some(_freq) => {
-                        for mut _field in _msg.fields {
-                            let _simulatable: bool = 
-                                _field.sim_min.is_some() &&
-                                _field.sim_max.is_some() &&
-                                _field.sim_inc_min.is_some() &&
-                                _field.sim_inc_max.is_some();
-                            if _simulatable {
-                                let _attr_name = format_ident!(
-                                    "{}_attr",
-                                    _field.name.clone().to_lowercase().replace(&['/', ' ', '-'], "_")
-                                );
-                                let _sim_min: f32 = match _field.sim_min {
-                                    Some(min) => min,
-                                    None => -1.0
+                if let Some(_freq) = _msg.sim_freq {
+                    for mut _field in _msg.fields {
+                        let _simulatable: bool = 
+                            _field.sim_min.is_some() &&
+                            _field.sim_max.is_some() &&
+                            _field.sim_inc_min.is_some() &&
+                            _field.sim_inc_max.is_some();
+                        if _simulatable {
+                            let _attr_name = format_ident!(
+                                "{}_attr",
+                                _field.name.clone().to_lowercase().replace(['/', ' ', '-'], "_")
+                            );
+                            let _sim_min: f32 = _field.sim_min.unwrap_or(-1.0);
+                            let _sim_max: f32 = _field.sim_max.unwrap_or(-1.0);
+                            let _sim_inc_min: f32 = _field.sim_inc_min.unwrap_or(-1.0);
+                            let _sim_inc_max: f32 = _field.sim_inc_max.unwrap_or(-1.0);
+                            let _n_canpoints: u32 = _field.points.len().try_into().unwrap();
+                            let _id = _msg.id.clone();
+                            let _component_name = format_ident!(
+                                "{}",
+                                _field.name.clone().to_lowercase().replace(['/', ' ', '-'], "_")
+                            );
+                            let _name = _field.name.clone();
+                            let _unit = _field.unit.clone();
+                            let _component = quote! {
+                                let #_attr_name: SimulatedComponentAttr = SimulatedComponentAttr {
+                                    sim_min: #_sim_min,
+                                    sim_max: #_sim_max,
+                                    sim_inc_min: #_sim_inc_min,
+                                    sim_inc_max: #_sim_inc_max,
+                                    sim_freq: #_freq,
+                                    n_canpoints: #_n_canpoints,
+                                    id: #_id.to_string(),
                                 };
-                                let _sim_max: f32 = match _field.sim_max {
-                                    Some(max) => max,
-                                    None => -1.0
-                                };
-                                let _sim_inc_min: f32 = match _field.sim_inc_min {
-                                    Some(inc) => inc,
-                                    None => -1.0
-                                };
-                                let _sim_inc_max: f32 = match _field.sim_inc_max {
-                                    Some(inc) => inc,
-                                    None => -1.0
-                                };
-                                let _n_canpoints: u32 = _field.points.len().try_into().unwrap();
-                                let _id = _msg.id.clone();
-                                let _component_name = format_ident!(
-                                    "{}",
-                                    _field.name.clone().to_lowercase().replace(&['/', ' ', '-'], "_")
-                                );
-                                let _name = _field.name.clone();
-                                let _unit = _field.unit.clone();
-                                let _component = quote! {
-                                    let #_attr_name: SimulatedComponentAttr = SimulatedComponentAttr {
-                                        sim_min: #_sim_min,
-                                        sim_max: #_sim_max,
-                                        sim_inc_min: #_sim_inc_min,
-                                        sim_inc_max: #_sim_inc_max,
-                                        sim_freq: #_freq,
-                                        n_canpoints: #_n_canpoints,
-                                        id: #_id.to_string(),
-                                    };
 
-                                    let #_component_name = SimulatedComponent::new(
-                                        #_name.to_string(),
-                                        #_unit.to_string(),
-                                        #_attr_name
-                                    );
+                                let #_component_name = SimulatedComponent::new(
+                                    #_name.to_string(),
+                                    #_unit.to_string(),
+                                    #_attr_name
+                                );
 
-                                    simulatable_messages.push(#_component_name);
-                                };
-                                _extend.extend(_component);
-                            }
+                                simulatable_messages.push(#_component_name);
+                            };
+                            _extend.extend(_component);
                         }
-                    },
-                    None => { }
-                };
+                    }
+                }
 
                 _body.extend(_extend);
             }
