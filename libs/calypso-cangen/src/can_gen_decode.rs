@@ -80,7 +80,7 @@ impl CANGenDecode for NetField {
                     Some(true) => {
                         let mut topic_suffix_point = self.points.remove(0);
                         let topic_suffix_read = topic_suffix_point.gen_decoder_fn();
-                        let topic = format!("{}/", self.name);
+                        let topic = format_ident!("{}/", self.name);
                         let point_decoders = self
                             .points
                             .iter_mut()
@@ -148,8 +148,20 @@ impl CANGenDecode for CANPoint {
             _ => quote! { reader.read_in::<#size_literal, u32>().unwrap() },
         };
         let read_type = match self.signed {
-            Some(true) => quote! { i32 },
-            _ => quote! { u32 },
+            Some(true) => { 
+                match self.size {
+                    0..=8  => quote! { i8 },
+                    9..=16 => quote! { i16 },
+                    _ => quote! { i32 }
+                }
+            },
+            _ => {
+                match self.size {
+                    0..=8  => quote! { u8 },
+                    9..=16 => quote! { u16 },
+                    _ => quote! { u32 }
+                }
+            }
         };
 
         // prefix to call potential format function
