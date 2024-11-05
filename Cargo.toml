@@ -7,6 +7,16 @@ default-run = "calypso"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+members = ["libs/daedalus", "libs/calypso-cangen"]
+
+[workspace.dependencies]
+proc-macro2 = "1.0.89"
+quote = "1.0.37"
+serde = { version = "1.0.214", features = ["derive"] }
+serde_json = "1.0.132"
+
+
 [dependencies]
 socketcan = "3.3.0"
 paho-mqtt = "0.12.5"
@@ -15,6 +25,9 @@ protobuf = "3.5.1"
 bitstream-io = "2.5.3"
 clap = { version = "4.5.20", features = ["derive", "env"] }
 rand = "0.8"
+phf = { version = "0.11.2", features = ["macros"] }
+calypso-cangen = { path = "./libs/calypso-cangen" }
+daedalus = { path = "./libs/daedalus" }
 
 
 [build-dependencies]
