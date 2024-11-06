@@ -6,8 +6,7 @@ use std::{
 };
 
 use calypso::{
-    command_data, data::DecodeData, data::EncodeData, 
-    decode_data::*, encode_data::*,
+    command_data, data::DecodeData, data::EncodeData, decode_data::*, encode_data::*,
     mqtt::MqttClient, serverdata,
 };
 use clap::Parser;
@@ -57,7 +56,9 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
     }
 
     let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
-    socket.set_error_filter_accept_all().expect("Failed to set error mask on CAN socket!");
+    socket
+        .set_error_filter_accept_all()
+        .expect("Failed to set error mask on CAN socket!");
 
     thread::spawn(move || loop {
         if !client.is_connected() {
@@ -73,11 +74,11 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
                 let data = data_frame.data();
                 let id: u32 = match data_frame.id() {
                     socketcan::Id::Standard(std) => std.as_raw().into(),
-                    socketcan::Id::Extended(ext) => ext.as_raw()
+                    socketcan::Id::Extended(ext) => ext.as_raw(),
                 };
                 let decoder_func = match DECODE_FUNCTION_MAP.get(&id) {
-                   Some(func) => *func,
-                   None => decode_mock 
+                    Some(func) => *func,
+                    None => decode_mock,
                 };
                 decoder_func(data)
             }
@@ -171,7 +172,7 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
         let key_owned = key.to_owned();
         let encoder_func = match ENCODE_FUNCTION_MAP.get(&key_owned) {
             Some(func) => *func,
-            None => encode_mock
+            None => encode_mock,
         };
         let ret = encoder_func(Vec::new());
         writable_send_map.insert(ret.id, ret);
@@ -198,7 +199,7 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
 
                 let encoder_func = match ENCODE_FUNCTION_MAP.get(&key) {
                     Some(func) => *func,
-                    None => encode_mock
+                    None => encode_mock,
                 };
                 let ret = encoder_func(buf.data);
 

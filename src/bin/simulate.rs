@@ -4,10 +4,12 @@ use std::{
 };
 
 use calypso::{
-    mqtt::MqttClient, serverdata, simulatable_message::SimulatedComponent, simulate_data::create_simulated_components
+    mqtt::MqttClient,
+    serverdata,
+    simulatable_message::SimShared,
+    simulate_data::create_simulated_components,
 };
 use clap::Parser;
-
 
 /// Calypso command line arguments
 #[derive(Parser, Debug)]
@@ -23,22 +25,21 @@ struct CalypsoArgs {
     siren_host_url: String,
 }
 
-
 fn simulate_out(pub_path: &str) {
     let mut client = MqttClient::new(pub_path, "calypso-simulator");
     let _ = client.connect(); // todo: add error handling
     let sleep_time = Duration::from_millis(10);
 
     // todo: a way to turn individual components on and off
-    let mut simulated_components: Vec<SimulatedComponent> = create_simulated_components();
+    let mut simulated_components: Vec<Box<dyn SimShared>> = create_simulated_components();
 
     // loop through the simulated components, if they should update, update them and publish the data
     loop {
         for component in simulated_components.iter_mut() {
-            if component.should_update() {
+            if component.fetch_data().should_update() {
                 component.update();
                 let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
-                let data: calypso::data::DecodeData = component.get_data();
+                let data: calypso::data::DecodeData = component.fetch_data().get_data();
                 let mut payload = serverdata::ServerData::new();
                 payload.unit = data.unit.to_string();
                 payload.values = data.value;
@@ -58,8 +59,6 @@ fn simulate_out(pub_path: &str) {
         thread::sleep(sleep_time);
     }
 }
-
-
 
 /**
  * Main Function

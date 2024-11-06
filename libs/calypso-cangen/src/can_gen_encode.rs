@@ -47,9 +47,9 @@ impl CANGenEncode for CANMsg {
                         }
                     }
                 }
-            },
+            }
             None => {
-                quote! { }
+                quote! {}
             }
         }
     }
@@ -83,27 +83,23 @@ impl CANGenEncode for CANPoint {
     fn gen_encoder_fn(&mut self) -> ProcMacro2TokenStream {
         let size_literal = Literal::usize_unsuffixed(self.size);
         let write_type = match self.signed {
-            Some(true) => { 
-                match self.size {
-                    0..=8  => quote! { i8 },
-                    9..=16 => quote! { i16 },
-                    _      => quote! { i32 }
-                }
+            Some(true) => match self.size {
+                0..=8 => quote! { i8 },
+                9..=16 => quote! { i16 },
+                _ => quote! { i32 },
             },
-            _ => { 
-                match self.size {
-                    0..=8  => quote! { u8 },
-                    9..=16 => quote! { u16 },
-                    _      => quote! { u32 }
-                }
-            }
+            _ => match self.size {
+                0..=8 => quote! { u8 },
+                9..=16 => quote! { u16 },
+                _ => quote! { u32 },
+            },
         };
         let format_prefix = match &self.format {
             Some(format) => {
                 let id = format_ident!("{}_e", format);
                 quote! {  FormatData::#id }
             }
-            _ => quote! { },
+            _ => quote! {},
         };
         let default_value: f32 = match self.default_value {
             Some(default_value) => default_value,
@@ -119,7 +115,7 @@ impl CANGenEncode for CANPoint {
                 quote! {
                     writer.write_as_from::<LittleEndian, #write_type>(#float_final as #write_type).unwrap();
                 }
-            },
+            }
             // Big endian (default)
             _ => {
                 match self.signed {
@@ -128,7 +124,7 @@ impl CANGenEncode for CANPoint {
                         quote! {
                             writer.write_signed_out::<#size_literal, #write_type>(#float_final as #write_type).unwrap();
                         }
-                    },
+                    }
                     // Unsigned (default)
                     _ => {
                         quote! {

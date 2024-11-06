@@ -5,7 +5,7 @@ use quote::{format_ident, quote};
 
 /**
  *  Trait to generate individual decode function for a CANMsg
- *  For NetField and CANPoint, generates parts of the function 
+ *  For NetField and CANPoint, generates parts of the function
  */
 pub trait CANGenDecode {
     fn gen_decoder_fn(&mut self) -> ProcMacro2TokenStream;
@@ -62,11 +62,11 @@ impl CANGenDecode for NetField {
                 let mut point_skips = ProcMacro2TokenStream::new();
                 for point in &self.points {
                     let size_literal = Literal::usize_unsuffixed(point.size);
-                    let skip_line = quote! { 
-                        reader.skip(#size_literal).unwrap(); 
+                    let skip_line = quote! {
+                        reader.skip(#size_literal).unwrap();
                     };
                     point_skips.extend(skip_line);
-                } 
+                }
                 quote! {
                     #point_skips
                 }
@@ -148,20 +148,16 @@ impl CANGenDecode for CANPoint {
             _ => quote! { reader.read_in::<#size_literal, u32>().unwrap() },
         };
         let read_type = match self.signed {
-            Some(true) => { 
-                match self.size {
-                    0..=8  => quote! { i8 },
-                    9..=16 => quote! { i16 },
-                    _ => quote! { i32 }
-                }
+            Some(true) => match self.size {
+                0..=8 => quote! { i8 },
+                9..=16 => quote! { i16 },
+                _ => quote! { i32 },
             },
-            _ => {
-                match self.size {
-                    0..=8  => quote! { u8 },
-                    9..=16 => quote! { u16 },
-                    _ => quote! { u32 }
-                }
-            }
+            _ => match self.size {
+                0..=8 => quote! { u8 },
+                9..=16 => quote! { u16 },
+                _ => quote! { u32 },
+            },
         };
 
         // prefix to call potential format function

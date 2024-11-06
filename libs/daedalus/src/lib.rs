@@ -7,7 +7,7 @@ use calypso_cangen::can_gen_encode::*;
 use calypso_cangen::can_types::*;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
-use quote::{quote, format_ident};
+use quote::{format_ident, quote};
 use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
@@ -15,7 +15,7 @@ use std::str::FromStr;
 
 /**
  *  Path to CAN spec JSON files
- *  Used by all daedalus macros 
+ *  Used by all daedalus macros
  *  Filepath is relative to project root (i.e. /Calypso)
  */
 const DAEDALUS_CANGEN_SPEC_PATH: &str = "./Embedded-Base/cangen/can-messages";
@@ -89,7 +89,8 @@ fn gen_decode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
             let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
             let mut _entries = ProcMacro2TokenStream::new();
             for mut _msg in _msgs {
-                let id_int = u32::from_str_radix(_msg.id.clone().trim_start_matches("0x"), 16).unwrap();
+                let id_int =
+                    u32::from_str_radix(_msg.id.clone().trim_start_matches("0x"), 16).unwrap();
                 let fn_name = format_ident!(
                     "decode_{}",
                     _msg.desc.clone().to_lowercase().replace(' ', "_")
@@ -104,7 +105,7 @@ fn gen_decode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
         }
         Err(_) => {
             eprintln!("Error opening file");
-            quote! { }
+            quote! {}
         }
     }
 }
@@ -135,12 +136,10 @@ fn gen_decode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
         }
         Err(_) => {
             eprintln!("Error opening file");
-            quote! { }
+            quote! {}
         }
     }
 }
-
-
 
 /**
  *  Macro to generate all the code for encode_data.rs
@@ -179,7 +178,10 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
                         {
                             __encode_functions.extend(gen_encode_fns(__path.clone()));
                             __encode_map_entries.extend(gen_encode_mappings(__path.clone()));
-                            __encode_key_list_entries.extend(gen_encode_keys(__path.clone(), &mut __encode_key_list_size));
+                            __encode_key_list_entries.extend(gen_encode_keys(
+                                __path.clone(),
+                                &mut __encode_key_list_size,
+                            ));
                         }
                     }
                     Err(_) => {
@@ -234,7 +236,7 @@ fn gen_encode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
         }
         Err(_) => {
             eprintln!("Error opening file");
-            quote! { }
+            quote! {}
         }
     }
 }
@@ -250,7 +252,7 @@ fn gen_encode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
             let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
             let mut _entries = ProcMacro2TokenStream::new();
 
-            // Only create encode mappings for CANMsgs with key field 
+            // Only create encode mappings for CANMsgs with key field
             for mut _msg in _msgs {
                 let _entry = match &_msg.key {
                     Some(key) => {
@@ -261,21 +263,21 @@ fn gen_encode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
                         quote! {
                             #key => #fn_name,
                         }
-                    },
+                    }
                     None => {
-                        quote! { }
+                        quote! {}
                     }
                 };
                 _entries.extend(_entry);
             }
-            
+
             quote! {
                 #_entries
             }
         }
         Err(_) => {
             eprintln!("Error opening file");
-            quote! { }
+            quote! {}
         }
     }
 }
@@ -297,9 +299,9 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
                         quote! {
                             #key,
                         }
-                    },
+                    }
                     None => {
-                        quote! { }
+                        quote! {}
                     }
                 };
                 _entries.extend(_entry);
@@ -311,24 +313,22 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
         }
         Err(_) => {
             eprintln!("Error opening file");
-            quote! { }
+            quote! {}
         }
     }
 }
 
-
-
 /**
  *  Macro to generate all the code for simulate_data.rs
- *  - Generates prelude, all SimulatedComponentAttrs, and all 
- *    SimulatedComponents 
+ *  - Generates prelude, all SimulatedComponentAttrs, and all
+ *    SimulatedComponents
  */
 #[proc_macro]
 pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
     let __simulate_prelude = quote! {
-        use crate::simulatable_message::{SimulatedComponent, SimulatedComponentAttr};
+        use crate::simulatable_message::{SimulatedComponent, SimulatedComponentAttr, SimSweep, SimEnum, SimShared};
     };
-    let mut __simulate_function_body = quote! { };
+    let mut __simulate_function_body = quote! {};
 
     match fs::read_dir(DAEDALUS_CANGEN_SPEC_PATH) {
         Ok(__entries) => {
@@ -338,7 +338,8 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
                         let __path = __entry.path();
                         if __path.is_file() && __path.extension().map_or(false, |ext| ext == "json")
                         {
-                            __simulate_function_body.extend(gen_simulate_function_body(__path.clone()));
+                            __simulate_function_body
+                                .extend(gen_simulate_function_body(__path.clone()));
                         }
                     }
                     Err(_) => {
@@ -355,9 +356,9 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
     let __simulate_expanded = quote! {
         #__simulate_prelude
 
-        pub fn create_simulated_components() -> Vec<SimulatedComponent> {
-            let mut simulatable_messages: Vec<SimulatedComponent> = Vec::new();
-            
+        pub fn create_simulated_components() -> Vec<Box<dyn SimShared>> {
+            let mut simulatable_messages: Vec<Box<dyn SimShared>> = Vec::new();
+
             #__simulate_function_body
 
             simulatable_messages
@@ -376,53 +377,121 @@ fn gen_simulate_function_body(_path: PathBuf) -> ProcMacro2TokenStream {
             let _ = _file.read_to_string(&mut _contents);
             let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
             let mut _body = ProcMacro2TokenStream::new();
-            
+
             for mut _msg in _msgs {
-                let mut _extend = ProcMacro2TokenStream::new(); 
+                let mut _extend = ProcMacro2TokenStream::new();
                 if let Some(_freq) = _msg.sim_freq {
                     for mut _field in _msg.fields {
-                        let _simulatable: bool = 
-                            _field.sim_min.is_some() &&
-                            _field.sim_max.is_some() &&
-                            _field.sim_inc_min.is_some() &&
-                            _field.sim_inc_max.is_some();
-                        if _simulatable {
-                            let _attr_name = format_ident!(
-                                "{}_attr",
-                                _field.name.clone().to_lowercase().replace(['/', ' ', '-'], "_")
-                            );
-                            let _sim_min: f32 = _field.sim_min.unwrap_or(-1.0);
-                            let _sim_max: f32 = _field.sim_max.unwrap_or(-1.0);
-                            let _sim_inc_min: f32 = _field.sim_inc_min.unwrap_or(-1.0);
-                            let _sim_inc_max: f32 = _field.sim_inc_max.unwrap_or(-1.0);
-                            let _n_canpoints: u32 = _field.points.len().try_into().unwrap();
-                            let _id = _msg.id.clone();
-                            let _component_name = format_ident!(
-                                "{}",
-                                _field.name.clone().to_lowercase().replace(['/', ' ', '-'], "_")
-                            );
-                            let _name = _field.name.clone();
-                            let _unit = _field.unit.clone();
-                            let _component = quote! {
-                                let #_attr_name: SimulatedComponentAttr = SimulatedComponentAttr {
-                                    sim_min: #_sim_min,
-                                    sim_max: #_sim_max,
-                                    sim_inc_min: #_sim_inc_min,
-                                    sim_inc_max: #_sim_inc_max,
-                                    sim_freq: #_freq,
-                                    n_canpoints: #_n_canpoints,
-                                    id: #_id.to_string(),
-                                };
+                        match _field.sim {
+                            Some(_sim) => match _sim {
+                                Sim::SimSweep {
+                                    min: _sim_min,
+                                    max: _sim_max,
+                                    inc_min: _sim_inc_min,
+                                    inc_max: _sim_inc_max,
+                                    round: _round,
+                                } => {
+                                    let _attr_name = format_ident!(
+                                        "{}_attr",
+                                        _field
+                                            .name
+                                            .clone()
+                                            .to_lowercase()
+                                            .replace(['/', ' ', '-'], "_")
+                                    );
+                                    let _n_canpoints: u32 = _field.points.len().try_into().unwrap();
+                                    let _id = _msg.id.clone();
+                                    let _component_name = format_ident!(
+                                        "{}",
+                                        _field
+                                            .name
+                                            .clone()
+                                            .to_lowercase()
+                                            .replace(['/', ' ', '-'], "_")
+                                    );
+                                    let _name = _field.name.clone();
+                                    let _unit = _field.unit.clone();
+                                    let _round = _round.unwrap_or(false);
+                                    let _component = quote! {
+                                        let #_attr_name: SimulatedComponentAttr = SimulatedComponentAttr {
+                                            sim_freq: #_freq,
+                                            n_canpoints: #_n_canpoints,
+                                            id: #_id.to_string(),
+                                        };
 
-                                let #_component_name = SimulatedComponent::new(
-                                    #_name.to_string(),
-                                    #_unit.to_string(),
-                                    #_attr_name
-                                );
+                                        let #_component_name = Box::new(SimSweep::new(
+                                            #_name.to_string(),
+                                            #_unit.to_string(),
+                                            #_attr_name,
+                                            (#_sim_min, #_sim_max, #_sim_inc_min, #_sim_inc_max),
+                                            #_round
+                                        ));
 
-                                simulatable_messages.push(#_component_name);
-                            };
-                            _extend.extend(_component);
+                                        simulatable_messages.push(#_component_name);
+                                    };
+                                    _extend.extend(_component);
+                                }
+                                Sim::SimEnum { options: _options } => {
+                                    let _attr_name = format_ident!(
+                                        "{}_attr",
+                                        _field
+                                            .name
+                                            .clone()
+                                            .to_lowercase()
+                                            .replace(['/', ' ', '-'], "_")
+                                    );
+                                    let _n_canpoints: u32 = _field.points.len().try_into().unwrap();
+                                    let _id = _msg.id.clone();
+                                    let _component_name = format_ident!(
+                                        "{}",
+                                        _field
+                                            .name
+                                            .clone()
+                                            .to_lowercase()
+                                            .replace(['/', ' ', '-'], "_")
+                                    );
+                                    let _name = _field.name.clone();
+                                    let _unit = _field.unit.clone();
+
+                                    // convert frequencies to running total
+                                    let mut options_corrected: Vec<[f32; 2]> = Vec::new();
+                                    for i in 0.._options.len() {
+                                        let prev_opt_add = if i == 0 {
+                                            0f32
+                                        } else {
+                                            options_corrected[i - 1][1]
+                                        };
+                                        let new_opt = [_options[i][0], _options[i][1] + prev_opt_add];
+                                        options_corrected.push(new_opt);
+                                    }
+
+                                    // turn it into a vec of proc tokens as they do not implement ToToken
+                                    let _options_ts: Vec<ProcMacro2TokenStream> = options_corrected
+                                        .iter()
+                                        .map(|item| {
+                                            quote! { [#(#item),*]}
+                                        })
+                                        .collect();
+                                    let _component = quote! {
+                                            let #_attr_name: SimulatedComponentAttr = SimulatedComponentAttr {
+                                                sim_freq: #_freq,
+                                                n_canpoints: #_n_canpoints,
+                                                id: #_id.to_string(),
+                                            };
+
+                                            let #_component_name = Box::new(SimEnum::new(
+                                                #_name.to_string(),
+                                                #_unit.to_string(),
+                                                #_attr_name,
+                                                vec![#(#_options_ts),*]
+                                            ));
+
+                                            simulatable_messages.push(#_component_name);
+                                    };
+                                    _extend.extend(_component);
+                                }
+                            },
+                            None => continue,
                         }
                     }
                 }
@@ -436,7 +505,7 @@ fn gen_simulate_function_body(_path: PathBuf) -> ProcMacro2TokenStream {
         }
         Err(_) => {
             eprintln!("Error opening file");
-            quote! { }
+            quote! {}
         }
     }
 }
