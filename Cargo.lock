@@ -848,9 +848,9 @@ dependencies = [
 
 [[package]]
 name = "socketcan"
-version = "3.3.0"
+version = "3.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "175eef9db7dedf6c5d3f5926fed7471633a9b9929a6ee086bdf436ee954532b6"
+checksum = "d763e285beeb053e7fcd785d747ab1f8f669966991f33586e0f1d5d2340bce7e"
 dependencies = [
  "bitflags 1.3.2",
  "byte_conv",
