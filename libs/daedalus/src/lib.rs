@@ -461,7 +461,8 @@ fn gen_simulate_function_body(_path: PathBuf) -> ProcMacro2TokenStream {
                                         } else {
                                             options_corrected[i - 1][1]
                                         };
-                                        let new_opt = [_options[i][0], _options[i][1] + prev_opt_add];
+                                        let new_opt =
+                                            [_options[i][0], _options[i][1] + prev_opt_add];
                                         options_corrected.push(new_opt);
                                     }
 

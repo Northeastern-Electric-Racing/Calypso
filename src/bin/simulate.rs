@@ -4,9 +4,7 @@ use std::{
 };
 
 use calypso::{
-    mqtt::MqttClient,
-    serverdata,
-    simulatable_message::SimShared,
+    mqtt::MqttClient, serverdata, simulatable_message::SimShared,
     simulate_data::create_simulated_components,
 };
 use clap::Parser;
