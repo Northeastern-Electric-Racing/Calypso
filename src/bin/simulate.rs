@@ -34,10 +34,10 @@ fn simulate_out(pub_path: &str) {
     // loop through the simulated components, if they should update, update them and publish the data
     loop {
         for component in simulated_components.iter_mut() {
-            if component.fetch_data().should_update() {
+            if component.should_update() {
                 component.update();
                 let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
-                let data: calypso::data::DecodeData = component.fetch_data().get_data();
+                let data: calypso::data::DecodeData = component.get_value();
                 let mut payload = serverdata::ServerData::new();
                 payload.unit = data.unit.to_string();
                 payload.values = data.value;

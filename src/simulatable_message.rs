@@ -3,23 +3,24 @@ use rand::prelude::*;
 use std::time::Instant;
 
 /// Base properties of every simulated message
-pub struct SimulatedComponent {
-    value: Vec<f32>,      // DecodeData.value
-    topic: String,        // DecodeData.topic
-    unit: String,         // DecodeData.unit
-    last_update: Instant, // when the data was last updated
+pub struct SimComponent {
+    value: Vec<f32>,        // DecodeData.value
+    topic: String,          // DecodeData.topic
+    unit: String,           // DecodeData.unit
+    last_update: Instant,   // when the data was last updated
     #[allow(dead_code)]
-    n_canpoints: u32, // number of can points
-    sim_freq: f32,        // Frequency in ms
-    // format: String,       // e.g. "divide10"
+    n_canpoints: u32,       // number of can points
+    sim_freq: f32,          // Frequency in ms
     #[allow(dead_code)]
-    id: String, // e.g. "0x80" (or should this be a uint32?)
-                // signed: bool,         // is the value signed?
-                // size: u8,            // size of the value in bits
+    id: String,             // e.g. "0x80"
+
+    // signed: bool,        // is the value signed?
+    // size: u8,            // size of the value in bits
+    // format: String,      // e.g. "divide10"
 }
 
 /// A wrapper struct for giving properties of a message from the macros to simulator
-pub struct SimulatedComponentAttr {
+pub struct SimComponentAttr {
     pub sim_freq: f32,
     pub n_canpoints: u32,
     pub id: String,
@@ -27,14 +28,14 @@ pub struct SimulatedComponentAttr {
 
 /// A simulation mode where a value is selected from a list at a given frequency
 pub struct SimEnum {
-    data: SimulatedComponent,
+    component: SimComponent,
     /// note the frequency here is not an individual pecentage but a running total of the probability
-    options: Vec<[f32; 2]>,
+    enum_ls: Vec<[f32; 2]>,
 }
 
 /// A simulation mode where a value is choosen within a range with a range of possible increments
 pub struct SimSweep {
-    data: SimulatedComponent,
+    component: SimComponent,
     min: f32,
     max: f32,
     inc_min: f32,
@@ -45,17 +46,22 @@ pub struct SimSweep {
 /// Shared functions of a simulator
 pub trait SimShared {
     fn update(&mut self);
-
-    fn fetch_data(&self) -> &SimulatedComponent;
+    fn should_update(&self) -> bool {
+        self.get_component().should_update()
+    }
+    fn get_value(&self) -> DecodeData {
+        self.get_component().get_value()
+    }
+    fn get_component(&self) -> &SimComponent;
 }
 
 /// Base implementations of a simulator
-impl SimulatedComponent {
+impl SimComponent {
     pub fn should_update(&self) -> bool {
         self.last_update.elapsed().as_millis() > self.sim_freq as u128
     }
 
-    pub fn get_data(&self) -> DecodeData {
+    pub fn get_value(&self) -> DecodeData {
         DecodeData::new(self.value.clone(), &self.topic, &self.unit)
     }
 }
@@ -65,7 +71,7 @@ impl SimSweep {
     pub fn new(
         topic: String,
         unit: String,
-        attr: SimulatedComponentAttr,
+        attr: SimComponentAttr,
         sweep_settings: (f32, f32, f32, f32), // min, max, inc_min, inc_max
         round: bool,
     ) -> Self {
@@ -85,7 +91,7 @@ impl SimSweep {
         }
 
         Self {
-            data: SimulatedComponent {
+            component: SimComponent {
                 value,
                 topic,
                 unit,
@@ -132,14 +138,14 @@ impl SimShared for SimSweep {
      */
     fn update(&mut self) {
         const MAX_ATTEMPTS: u8 = 10;
-        self.data.last_update = Instant::now();
-        for i in 0..self.data.value.len() {
-            let mut new_value = self.data.value[i] + self.get_rand_offset();
+        self.component.last_update = Instant::now();
+        for i in 0..self.component.value.len() {
+            let mut new_value = self.component.value[i] + self.get_rand_offset();
 
-            // ensuring value is within range AND limit to 5 attempts
+            // ensuring value is within range AND limit to 10 attempts
             let mut attempts = 0;
             while (new_value < self.min || new_value > self.max) && attempts < MAX_ATTEMPTS {
-                new_value = self.data.value[i] + self.get_rand_offset();
+                new_value = self.component.value[i] + self.get_rand_offset();
                 attempts += 1;
             }
 
@@ -158,12 +164,12 @@ impl SimShared for SimSweep {
                 new_value = new_value.round();
             }
 
-            self.data.value[i] = new_value;
+            self.component.value[i] = new_value;
         }
     }
 
-    fn fetch_data(&self) -> &SimulatedComponent {
-        &self.data
+    fn get_component(&self) -> &SimComponent {
+        &self.component
     }
 }
 
@@ -172,8 +178,8 @@ impl SimEnum {
     pub fn new(
         topic: String,
         unit: String,
-        attr: SimulatedComponentAttr,
-        enum_ls: Vec<[f32; 2]>, // value, probability (summed to 1)
+        attr: SimComponentAttr,
+        enum_ls: Vec<[f32; 2]>, // <value, probability> (summed to 1)
     ) -> Self {
         let sim_freq: f32 = attr.sim_freq;
         let n_canpoints: u32 = attr.n_canpoints;
@@ -183,7 +189,7 @@ impl SimEnum {
         let value = vec![0.0; n_canpoints as usize];
 
         Self {
-            data: SimulatedComponent {
+            component: SimComponent {
                 value,
                 topic,
                 unit,
@@ -192,7 +198,7 @@ impl SimEnum {
                 sim_freq,
                 id,
             },
-            options: enum_ls,
+            enum_ls,
         }
     }
 }
@@ -200,20 +206,23 @@ impl SimEnum {
 /// Base logic for enum sim
 impl SimShared for SimEnum {
     fn update(&mut self) {
-        for i in 0..self.data.value.len() {
-            let prob = rand::thread_rng().gen_range(0f32..1f32);
+        let mut rng = rand::thread_rng();
+        for i in 0..self.component.value.len() {
+            let prob = rng.gen_range(0f32..1f32);
             let mut new_value: Option<f32> = None;
-            for i in 0..self.options.len() {
-                let prev_opts_add = if i == 0 { 0f32 } else { self.options[i - 1][1] };
-                if prob <= self.options[i][1] && prev_opts_add <= prob {
-                    new_value = Some(self.options[i][0]);
+            for i in 0..self.enum_ls.len() {
+                let prob_floor = if i == 0 { 0f32 } else { self.enum_ls[i - 1][1] };
+                let prob_ceiling = self.enum_ls[i][1];
+                if prob >= prob_floor && prob <= prob_ceiling {
+                    new_value = Some(self.enum_ls[i][0]);
+                    break;
                 }
             }
-            self.data.value[i] = new_value.unwrap_or(-1f32);
+            self.component.value[i] = new_value.unwrap_or(-1f32);
         }
     }
 
-    fn fetch_data(&self) -> &SimulatedComponent {
-        &self.data
+    fn get_component(&self) -> &SimComponent {
+        &self.component
     }
 }

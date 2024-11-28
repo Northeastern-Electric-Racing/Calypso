@@ -320,13 +320,13 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
 
 /**
  *  Macro to generate all the code for simulate_data.rs
- *  - Generates prelude, all SimulatedComponentAttrs, and all
- *    SimulatedComponents
+ *  - Generates prelude, all SimComponentAttrs, and all
+ *    SimComponents
  */
 #[proc_macro]
 pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
     let __simulate_prelude = quote! {
-        use crate::simulatable_message::{SimulatedComponent, SimulatedComponentAttr, SimSweep, SimEnum, SimShared};
+        use crate::simulatable_message::{SimComponent, SimComponentAttr, SimSweep, SimEnum, SimShared};
     };
     let mut __simulate_function_body = quote! {};
 
@@ -413,7 +413,7 @@ fn gen_simulate_function_body(_path: PathBuf) -> ProcMacro2TokenStream {
                                     let _unit = _field.unit.clone();
                                     let _round = _round.unwrap_or(false);
                                     let _component = quote! {
-                                        let #_attr_name: SimulatedComponentAttr = SimulatedComponentAttr {
+                                        let #_attr_name: SimComponentAttr = SimComponentAttr {
                                             sim_freq: #_freq,
                                             n_canpoints: #_n_canpoints,
                                             id: #_id.to_string(),
@@ -474,7 +474,7 @@ fn gen_simulate_function_body(_path: PathBuf) -> ProcMacro2TokenStream {
                                         })
                                         .collect();
                                     let _component = quote! {
-                                            let #_attr_name: SimulatedComponentAttr = SimulatedComponentAttr {
+                                            let #_attr_name: SimComponentAttr = SimComponentAttr {
                                                 sim_freq: #_freq,
                                                 n_canpoints: #_n_canpoints,
                                                 id: #_id.to_string(),
