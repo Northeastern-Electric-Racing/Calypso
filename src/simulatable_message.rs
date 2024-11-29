@@ -4,19 +4,19 @@ use std::time::Instant;
 
 /// Base properties of every simulated message
 pub struct SimComponent {
-    value: Vec<f32>,        // DecodeData.value
-    topic: String,          // DecodeData.topic
-    unit: String,           // DecodeData.unit
-    last_update: Instant,   // when the data was last updated
+    value: Vec<f32>,      // DecodeData.value
+    topic: String,        // DecodeData.topic
+    unit: String,         // DecodeData.unit
+    last_update: Instant, // when the data was last updated
     #[allow(dead_code)]
-    n_canpoints: u32,       // number of can points
-    sim_freq: f32,          // Frequency in ms
+    n_canpoints: u32, // number of can points
+    sim_freq: f32,        // Frequency in ms
     #[allow(dead_code)]
-    id: String,             // e.g. "0x80"
+    id: String, // e.g. "0x80"
 
-    // signed: bool,        // is the value signed?
-    // size: u8,            // size of the value in bits
-    // format: String,      // e.g. "divide10"
+                          // signed: bool,        // is the value signed?
+                          // size: u8,            // size of the value in bits
+                          // format: String,      // e.g. "divide10"
 }
 
 /// A wrapper struct for giving properties of a message from the macros to simulator
