@@ -104,6 +104,13 @@ impl FormatData {
         value * 100.0
     }
 
+    pub fn divide1000_d(value: f32) -> f32 {
+        value / 1000.0
+    }
+    pub fn divide1000_e(value: f32) -> f32 {
+        value * 1000.0
+    }
+
     pub fn divide10000_d(value: f32) -> f32 {
         value / 10000.0
     }
