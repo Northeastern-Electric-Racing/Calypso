@@ -25,10 +25,7 @@ pub struct NetField {
     pub points: Vec<CANPoint>,
     pub send: Option<bool>,
     pub topic_append: Option<bool>,
-    pub sim_min: Option<f32>,
-    pub sim_max: Option<f32>,
-    pub sim_inc_min: Option<f32>,
-    pub sim_inc_max: Option<f32>,
+    pub sim: Option<Sim>,
 }
 
 /**
@@ -41,4 +38,19 @@ pub struct CANPoint {
     pub endianness: Option<String>,
     pub format: Option<String>,
     pub default_value: Option<f32>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum Sim {
+    SimSweep {
+        min: f32,
+        max: f32,
+        inc_min: f32,
+        inc_max: f32,
+        round: Option<bool>,
+    },
+    SimEnum {
+        options: Vec<[f32; 2]>,
+    },
 }

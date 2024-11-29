@@ -90,32 +90,32 @@ impl EncodeData {
 pub struct FormatData {}
 
 impl FormatData {
-	pub fn divide10_d(value: f32) -> f32 {
-		value / 10.0
-	}
-	pub fn divide10_e(value: f32) -> f32 {
-		value * 10.0
-	}
+    pub fn divide10_d(value: f32) -> f32 {
+        value / 10.0
+    }
+    pub fn divide10_e(value: f32) -> f32 {
+        value * 10.0
+    }
 
-	pub fn divide100_d(value: f32) -> f32 {
-		value / 100.0
-	}
-	pub fn divide100_e(value: f32) -> f32 {
-		value * 100.0
-	}
+    pub fn divide100_d(value: f32) -> f32 {
+        value / 100.0
+    }
+    pub fn divide100_e(value: f32) -> f32 {
+        value * 100.0
+    }
 
-	pub fn divide10000_d(value: f32) -> f32 {
-		value / 10000.0
-	}
-	pub fn divide10000_e(value: f32) -> f32 {
-		value * 10000.0
-	}
+    pub fn divide10000_d(value: f32) -> f32 {
+        value / 10000.0
+    }
+    pub fn divide10000_e(value: f32) -> f32 {
+        value * 10000.0
+    }
 
-	/* Acceleration values must be offset by 0.0029 according to datasheet */
-	pub fn acceleration_d(value: f32) -> f32 {
-		value * 0.0029
-	}
-	pub fn acceleration_e(value: f32) -> f32 {
-		value / 0.0029
-	}
+    /* Acceleration values must be offset by 0.0029 according to datasheet */
+    pub fn acceleration_d(value: f32) -> f32 {
+        value * 0.0029
+    }
+    pub fn acceleration_e(value: f32) -> f32 {
+        value / 0.0029
+    }
 }
