@@ -3,6 +3,12 @@ use serde::Deserialize;
 // TODO: Implement MsgType
 
 /**
+ *  Classes to represent levels of the CAN hierarchy
+ *  For more specific descriptions, refer to the README
+ *  in Embedded-Base/cangen
+ */
+
+/**
  *  Class representing a CAN message
  */
 #[derive(Deserialize, Debug)]
@@ -38,6 +44,7 @@ pub struct CANPoint {
     pub endianness: Option<String>,
     pub format: Option<String>,
     pub default_value: Option<f32>,
+    pub ieee754_f32: Option<bool>, 
 }
 
 #[derive(Deserialize, Debug)]
