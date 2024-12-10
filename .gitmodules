@@ -1,4 +1,3 @@
 [submodule "Embedded-Base"]
 	path = Embedded-Base
 	url = ../Embedded-Base
-	branch = feature/can-spec-ieee754-f32
