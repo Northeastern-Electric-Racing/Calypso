@@ -177,7 +177,7 @@ impl CANGenDecode for CANPoint {
                 }
             }
             _ => match self.signed {
-                Some(true) if self.ieee754_f32 == None => {
+                Some(true) if self.ieee754_f32.is_none() => {
                     quote! { reader.read_signed_in::<#size_literal, i32>().unwrap() }
                 }
                 _ => quote! { reader.read_in::<#size_literal, u32>().unwrap() },

@@ -2,11 +2,9 @@ use serde::Deserialize;
 
 // TODO: Implement MsgType
 
-/**
- *  Classes to represent levels of the CAN hierarchy
- *  For more specific descriptions, refer to the README
- *  in Embedded-Base/cangen
- */
+// Classes to represent levels of the CAN hierarchy
+// For more specific descriptions, refer to the README
+// in Embedded-Base/cangen
 
 /**
  *  Class representing a CAN message
