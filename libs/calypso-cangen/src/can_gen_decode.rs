@@ -151,14 +151,14 @@ impl CANGenDecode for CANPoint {
                     0..=8 => quote! { i8 },
                     9..=16 => quote! { i16 },
                     _ => quote! { i32 },
-                }
+                },
                 _ => match self.size {
                     0..=8 => quote! { u8 },
                     9..=16 => quote! { u16 },
                     _ => quote! { u32 },
-                }
-            }
-        }; 
+                },
+            },
+        };
 
         // Prefix to call potential format function
         let format_prefix = match &self.format {
@@ -166,7 +166,7 @@ impl CANGenDecode for CANPoint {
                 let id = format_ident!("{}_d", format);
                 quote! { FormatData::#id }
             }
-            _ => quote! {}
+            _ => quote! {},
         };
 
         // Endianness and signedness affect which read to use
@@ -177,15 +177,17 @@ impl CANGenDecode for CANPoint {
                 }
             }
             _ => match self.signed {
-                Some(true) if self.ieee754_f32 == None => quote! { reader.read_signed_in::<#size_literal, i32>().unwrap() },
+                Some(true) if self.ieee754_f32 == None => {
+                    quote! { reader.read_signed_in::<#size_literal, i32>().unwrap() }
+                }
                 _ => quote! { reader.read_in::<#size_literal, u32>().unwrap() },
-            } 
+            },
         };
 
         // Transmute if point is IEEE754 f32, else convert
         match self.ieee754_f32 {
             Some(true) => quote! { #format_prefix (f32::from_bits(#read_func)) },
-            _ =>  quote! { #format_prefix (#read_func as f32) },
+            _ => quote! { #format_prefix (#read_func as f32) },
         }
     }
 }

@@ -44,7 +44,7 @@ pub struct CANPoint {
     pub endianness: Option<String>,
     pub format: Option<String>,
     pub default_value: Option<f32>,
-    pub ieee754_f32: Option<bool>, 
+    pub ieee754_f32: Option<bool>,
 }
 
 #[derive(Deserialize, Debug)]
