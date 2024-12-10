@@ -141,26 +141,26 @@ impl CANGenDecode for NetField {
  */
 impl CANGenDecode for CANPoint {
     fn gen_decoder_fn(&mut self) -> ProcMacro2TokenStream {
-        // read_func and read_type to map signedness (read_func for big endian, read_type for little endian)
         let size_literal = Literal::usize_unsuffixed(self.size);
-        let read_func = match self.signed {
-            Some(true) => quote! { reader.read_signed_in::<#size_literal, i32>().unwrap() },
-            _ => quote! { reader.read_in::<#size_literal, u32>().unwrap() },
-        };
-        let read_type = match self.signed {
-            Some(true) => match self.size {
-                0..=8 => quote! { i8 },
-                9..=16 => quote! { i16 },
-                _ => quote! { i32 },
-            },
-            _ => match self.size {
-                0..=8 => quote! { u8 },
-                9..=16 => quote! { u16 },
-                _ => quote! { u32 },
+
+        // If this point is an IEEE754 f32, always read it as a u32, and transmute to f32 later
+        let read_type = match self.ieee754_f32 {
+            Some(true) => quote! { u32 },
+            _ => match self.signed {
+                Some(true) => match self.size {
+                    0..=8 => quote! { i8 },
+                    9..=16 => quote! { i16 },
+                    _ => quote! { i32 },
+                },
+                _ => match self.size {
+                    0..=8 => quote! { u8 },
+                    9..=16 => quote! { u16 },
+                    _ => quote! { u32 },
+                },
             },
         };
 
-        // prefix to call potential format function
+        // Prefix to call potential format function
         let format_prefix = match &self.format {
             Some(format) => {
                 let id = format_ident!("{}_d", format);
@@ -169,18 +169,25 @@ impl CANGenDecode for CANPoint {
             _ => quote! {},
         };
 
-        // Endianness affects which read to use
-        match self.endianness {
+        // Endianness and signedness affect which read to use
+        let read_func = match self.endianness {
             Some(ref s) if s == "little" => {
                 quote! {
-                    #format_prefix (reader.read_as_to::<LittleEndian, #read_type>().unwrap() as f32)
+                    reader.read_as_to::<LittleEndian, #read_type>().unwrap()
                 }
             }
-            _ => {
-                quote! {
-                    #format_prefix (#read_func as f32)
+            _ => match self.signed {
+                Some(true) if self.ieee754_f32.is_none() => {
+                    quote! { reader.read_signed_in::<#size_literal, i32>().unwrap() }
                 }
-            }
+                _ => quote! { reader.read_in::<#size_literal, u32>().unwrap() },
+            },
+        };
+
+        // Transmute if point is IEEE754 f32, else convert
+        match self.ieee754_f32 {
+            Some(true) => quote! { #format_prefix (f32::from_bits(#read_func)) },
+            _ => quote! { #format_prefix (#read_func as f32) },
         }
     }
 }
