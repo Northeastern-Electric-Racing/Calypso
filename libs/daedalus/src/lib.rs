@@ -14,13 +14,6 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 /**
- *  Path to CAN spec JSON files
- *  Used by all daedalus macros
- *  Filepath is relative to project root (i.e. /Calypso)
- */
-const DAEDALUS_CANGEN_SPEC_PATH: &str = "./Embedded-Base/cangen/can-messages";
-
-/**
  *  Macro to generate all the code for decode_data.rs
  *  - Generates prelude, phf map, and all decode functions
  */
@@ -43,7 +36,7 @@ pub fn gen_decode_data(_item: TokenStream) -> TokenStream {
     };
     let mut __decode_map_entries = ProcMacro2TokenStream::new();
 
-    match fs::read_dir(DAEDALUS_CANGEN_SPEC_PATH) {
+    match fs::read_dir(CANGEN_SPEC_PATH) {
         Ok(__entries) => {
             for __entry in __entries {
                 match __entry {
@@ -168,7 +161,7 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
     let mut __encode_key_list_entries = ProcMacro2TokenStream::new();
     let mut __encode_key_list_size: usize = 0;
 
-    match fs::read_dir(DAEDALUS_CANGEN_SPEC_PATH) {
+    match fs::read_dir(CANGEN_SPEC_PATH) {
         Ok(__entries) => {
             for __entry in __entries {
                 match __entry {
@@ -330,7 +323,7 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
     };
     let mut __simulate_function_body = quote! {};
 
-    match fs::read_dir(DAEDALUS_CANGEN_SPEC_PATH) {
+    match fs::read_dir(CANGEN_SPEC_PATH) {
         Ok(__entries) => {
             for __entry in __entries {
                 match __entry {
