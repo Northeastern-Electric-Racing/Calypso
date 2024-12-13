@@ -1,4 +1,4 @@
-use calypso_cangen::validate::*
+use calypso_cangen::validate::*;
 use std::process;
 
 /* Prebuild script */
@@ -15,13 +15,15 @@ fn main() {
         // Specify output directory relative to Cargo output directory.
         .out_dir("src")
         .run_from_script();
-    
-    // Validate CAN spec 
-    let can_spec_errors: Result<(), Vec<CANSpecError>> = validate_all_spec(); 
-    if !can_spec_errors.is_empty() {
-        for error in can_spec_errors {
-            eprintln!("CAN spec error: {}", error);
+
+    // Validate CAN spec
+    match validate_all_spec() {
+        Ok(()) => {}
+        Err(errors) => {
+            for error in errors {
+                eprintln!("CAN spec error: {}", error);
+            }
+            process::exit(1);
         }
-        process::exit(1);
     }
 }

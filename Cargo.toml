@@ -32,6 +32,7 @@ daedalus = { path = "./libs/daedalus" }
 
 [build-dependencies]
 protobuf-codegen = "3.5.1"
+calypso-cangen = { path = "./libs/calypso-cangen" }
 
 [profile.release]
 lto = true

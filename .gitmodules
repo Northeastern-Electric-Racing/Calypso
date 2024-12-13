@@ -1,3 +1,4 @@
 [submodule "Embedded-Base"]
 	path = Embedded-Base
 	url = ../Embedded-Base
+	branch = main

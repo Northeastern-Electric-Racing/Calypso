@@ -44,7 +44,7 @@ pub struct CANPoint {
     pub signed: Option<bool>,
     pub endianness: Option<String>,
     pub format: Option<String>,
-    pub default_value: Option<f32>,
+    pub default: Option<f32>,
     pub ieee754_f32: Option<bool>,
 }
 

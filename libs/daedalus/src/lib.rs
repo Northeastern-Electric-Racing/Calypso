@@ -5,6 +5,7 @@ extern crate serde_json;
 use calypso_cangen::can_gen_decode::*;
 use calypso_cangen::can_gen_encode::*;
 use calypso_cangen::can_types::*;
+use calypso_cangen::CANGEN_SPEC_PATH;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
 use quote::{format_ident, quote};
