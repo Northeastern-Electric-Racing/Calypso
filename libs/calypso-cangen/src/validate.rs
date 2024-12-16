@@ -10,7 +10,7 @@ use thiserror::Error;
  */
 #[derive(Error, Debug)]
 pub enum CANSpecError {
-    #[error("Message {0} description ({1}) contains illegal characters. Message descriptions may only contain letters and spaces.")]
+    #[error("Message {0} description ({1}) contains illegal characters. Message descriptions may only contain letters and whitespace (_ included).")]
     MessageDescIllegalChars(String, String),
 
     #[error("Message {0} totals to {1} bits. Message totals should be byte-aligned (bit size should be a power of 2).")]
