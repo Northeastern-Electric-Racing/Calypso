@@ -130,11 +130,11 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
     for _field in _msg.fields {
         let _name = _field.name.clone();
 
-        // Check Sim enum frequencies add to 1
+        // Check Sim enum frequencies add to 1 (roughly, f32s are approximate)
         if let Some(Sim::SimEnum { options }) = _field.sim {
             let mut _sim_total: f32 = 0.0;
             options.iter().for_each(|opt| { _sim_total += opt[1]; });
-            if _sim_total != 1.0 {
+            if (_sim_total - 1.0).abs() > 0.00001 {
                 _errors.push(CANSpecError::FieldSimEnumFrequencySum(
                     _name.clone(),
                     _sim_total,
