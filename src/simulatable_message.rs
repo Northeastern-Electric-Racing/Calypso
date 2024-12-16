@@ -206,6 +206,7 @@ impl SimEnum {
 /// Base logic for enum sim
 impl SimShared for SimEnum {
     fn update(&mut self) {
+        self.component.last_update = Instant::now();
         let mut rng = rand::thread_rng();
         for i in 0..self.component.value.len() {
             let prob = rng.gen_range(0f32..1f32);
