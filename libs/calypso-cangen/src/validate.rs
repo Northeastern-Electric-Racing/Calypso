@@ -13,11 +13,14 @@ pub enum CANSpecError {
     #[error("Message {0} description ({1}) contains illegal characters. Message descriptions may only contain letters and spaces.")]
     MessageDescIllegalChars(String, String),
 
-    #[error("{0} totals to {1} bits. NetField totals should be byte-aligned (bit size should be a power of 2).")]
-    FieldTotalByteMisalignment(String, usize),
+    #[error("Message {0} totals to {1} bits. Message totals should be byte-aligned (bit size should be a power of 2).")]
+    MessageTotalByteMisalignment(String, usize),
 
-    #[error("Sim frequencies ({1}, {2}) for NetField {0} do not add to 1. Sim enum frequencies must add up to 1.")]
-    FieldSimEnumFrequencySum(String, f32, f32),
+    #[error("Sim frequencies for NetField {0} add to {1}. Sim enum frequencies must add up to 1.")]
+    FieldSimEnumFrequencySum(String, f32),
+
+    #[error("Point {0} of NetField {1} is {2} bits. The maximum size for a point is 32 bits.")]
+    PointSizeOverMax(usize, String, usize),
 
     #[error(
         "Signed point {0} of NetField {1} is {2} bits. Signed messages must be 8, 16, or 32 bits."
@@ -27,17 +30,23 @@ pub enum CANSpecError {
     #[error("Little-endian point {0} of NetField {1} is {2} bits. Little-endian messages must be 8, 16, or 32 bits.")]
     PointLittleEndianBitCount(usize, String, usize),
 
+    #[error("Point {0} of NetField {1} specifies endianness and is {2} bits. Points with <=8 bits should not specify endianness.")]
+    PointSmallSizeEndianness(usize, String, usize),
+
     #[error("IEEE754 float point {0} of NetField {1} is {2} bits, instead of 32 bits.")]
     PointFloatBitCount(usize, String, usize),
+
+    #[error(transparent)] // Pass-through for IO error
+    IOError(#[from] std::io::Error),
 }
 
 /**
  *  Validate all CAN spec files in CANGEN_SPEC_PATH
  */
 pub fn validate_all_spec() -> Result<(), Vec<CANSpecError>> {
+    let mut __all_errors = Vec::new();
     match fs::read_dir(CANGEN_SPEC_PATH) {
         Ok(__entries) => {
-            let mut __all_errors = Vec::new();
             for __entry in __entries {
                 match __entry {
                     Ok(__entry) => {
@@ -50,7 +59,7 @@ pub fn validate_all_spec() -> Result<(), Vec<CANSpecError>> {
                             };
                         }
                     }
-                    Err(_) => eprintln!("Error opening file"),
+                    Err(__err) => __all_errors.push(__err.into()),
                 }
             }
 
@@ -60,9 +69,9 @@ pub fn validate_all_spec() -> Result<(), Vec<CANSpecError>> {
                 Err(__all_errors)
             }
         }
-        Err(_) => {
-            eprintln!("Could not read from directory");
-            Ok(())
+        Err(__err) => {
+            __all_errors.push(__err.into());
+            Err(__all_errors)
         }
     }
 }
@@ -71,11 +80,11 @@ pub fn validate_all_spec() -> Result<(), Vec<CANSpecError>> {
  *  Validate a CAN spec file
  */
 fn validate_spec_file(_path: PathBuf) -> Result<(), Vec<CANSpecError>> {
+    let mut _errors = Vec::new();
     match fs::File::open(_path) {
         Ok(mut _file) => {
             let mut _contents = String::new();
             let _ = _file.read_to_string(&mut _contents);
-            let mut _errors = Vec::new();
             let _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
             for _msg in _msgs {
                 match validate_msg(_msg) {
@@ -90,9 +99,9 @@ fn validate_spec_file(_path: PathBuf) -> Result<(), Vec<CANSpecError>> {
                 Err(_errors)
             }
         }
-        Err(_) => {
-            eprintln!("Error opening file");
-            Ok(())
+        Err(_err) => {
+            _errors.push(_err.into());
+            Err(_errors)
         }
     }
 }
@@ -103,11 +112,14 @@ fn validate_spec_file(_path: PathBuf) -> Result<(), Vec<CANSpecError>> {
 fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
     let mut _errors = Vec::new();
 
+    // Sum bit count of points for checks
+    let mut _bit_count: usize = 0;
+
     // Check description contains legal chars
     let _desc = _msg.desc.clone();
     if !_desc
         .chars()
-        .all(|c| c.is_alphabetic() || c.is_whitespace())
+        .all(|c| c.is_alphabetic() || c.is_whitespace() || c == '_')
     {
         _errors.push(CANSpecError::MessageDescIllegalChars(
             _msg.id.clone(),
@@ -120,22 +132,33 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
 
         // Check Sim enum frequencies add to 1
         if let Some(Sim::SimEnum { options }) = _field.sim {
-            options.iter().for_each(|opt| {
-                if opt[0] + opt[1] != 1.0 {
-                    _errors.push(CANSpecError::FieldSimEnumFrequencySum(
-                        _name.clone(),
-                        opt[0],
-                        opt[1],
-                    ));
-                }
-            })
+            let mut _sim_total: f32 = 0.0;
+            options.iter().for_each(|opt| { _sim_total += opt[1]; });
+            if _sim_total != 1.0 {
+                _errors.push(CANSpecError::FieldSimEnumFrequencySum(
+                    _name.clone(),
+                    _sim_total,
+                ));
+            }
         }
 
-        // Sum bit count of points for checks
-        let mut _bit_count: usize = 0;
+        let _send = match _field.send {
+            Some(false) => false,
+            _ => true
+        };
 
         for (_i, _point) in _field.points.iter().enumerate() {
             _bit_count += _point.size;
+
+            // Check that point size is at most 32 bits
+            if _point.size > 32 && _send {
+                _errors.push(CANSpecError::PointSizeOverMax(
+                    _i,
+                    _name.clone(),
+                    _point.size,
+                ));
+                continue;
+            }
 
             // Check signed point bit count
             if let Some(true) = _point.signed {
@@ -148,10 +171,17 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
                 }
             }
 
-            // Check little endian point bit count
-            // TODO fix
             if let Some(ref s) = _point.endianness {
-                if s == "little" && _point.size != 8 && _point.size != 16 && _point.size != 32 {
+                // Check that small points don't specify endianness
+                if _point.size <= 8 {
+                    _errors.push(CANSpecError::PointSmallSizeEndianness(
+                        _i,
+                        _name.clone(),
+                        _point.size,
+                    ));
+                }
+                // Check little endian point bit count
+                else if s == "little" && _point.size != 8 && _point.size != 16 && _point.size != 32 {
                     _errors.push(CANSpecError::PointLittleEndianBitCount(
                         _i,
                         _name.clone(),
@@ -171,14 +201,14 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
                 }
             }
         }
+    }
 
-        // Check field total alignment
-        if _bit_count % 2 != 0 {
-            _errors.push(CANSpecError::FieldTotalByteMisalignment(
-                _name.clone(),
-                _bit_count,
-            ));
-        }
+    // Check message total alignment
+    if _bit_count % 8 != 0 {
+        _errors.push(CANSpecError::MessageTotalByteMisalignment(
+            _msg.id.clone(),
+            _bit_count,
+        ));
     }
 
     if _errors.is_empty() {
