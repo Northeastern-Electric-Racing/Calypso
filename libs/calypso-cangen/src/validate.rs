@@ -13,8 +13,8 @@ pub enum CANSpecError {
     #[error("Message {0} description ({1}) contains illegal characters. Message descriptions may only contain letters and whitespace (_ included).")]
     MessageDescIllegalChars(String, String),
 
-    #[error("Message {0} totals to {1} bits. Message totals should be byte-aligned (bit size should be a power of 2).")]
-    MessageTotalByteMisalignment(String, usize),
+    #[error("Message {0} ({1}) totals to {2} bits. Message totals should be byte-aligned (bit size should be a power of 2).")]
+    MessageTotalByteMisalignment(String, String, usize),
 
     #[error("Sim frequencies for NetField {0} add to {1}. Sim enum frequencies must add up to 1.")]
     FieldSimEnumFrequencySum(String, f32),
@@ -23,11 +23,11 @@ pub enum CANSpecError {
     PointSizeOverMax(usize, String, usize),
 
     #[error(
-        "Signed point {0} of NetField {1} is {2} bits. Signed messages must be 8, 16, or 32 bits."
+        "Signed point {0} of NetField {1} is {2} bits. Signed points must be 8, 16, or 32 bits."
     )]
     PointSignedBitCount(usize, String, usize),
 
-    #[error("Little-endian point {0} of NetField {1} is {2} bits. Little-endian messages must be 8, 16, or 32 bits.")]
+    #[error("Little-endian point {0} of NetField {1} is {2} bits. Little-endian points must be 8, 16, or 32 bits.")]
     PointLittleEndianBitCount(usize, String, usize),
 
     #[error("Point {0} of NetField {1} specifies endianness and is {2} bits. Points with <=8 bits should not specify endianness.")]
@@ -207,6 +207,7 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
     if _bit_count % 8 != 0 {
         _errors.push(CANSpecError::MessageTotalByteMisalignment(
             _msg.id.clone(),
+            _msg.desc.clone(),
             _bit_count,
         ));
     }
