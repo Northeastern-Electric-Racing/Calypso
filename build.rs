@@ -1,3 +1,6 @@
+use calypso_cangen::validate::*;
+use std::process;
+
 /* Prebuild script */
 fn main() {
     println!("cargo:rerun-if-changed=Embedded-Base");
@@ -12,4 +15,16 @@ fn main() {
         // Specify output directory relative to Cargo output directory.
         .out_dir("src")
         .run_from_script();
+
+    // Validate CAN spec
+    match validate_all_spec() {
+        Ok(()) => {}
+        Err(errors) => {
+            for error in errors {
+                // The \x1b[...m is an ANSI escape sequence for colored terminal output 
+                println!("\x1b[31;1mCAN spec error:\x1b[0m {}", error);
+            }
+            process::exit(1);
+        }
+    }
 }

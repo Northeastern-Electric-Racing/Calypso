@@ -10,6 +10,7 @@ use serde::Deserialize;
  *  Class representing a CAN message
  */
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct CANMsg {
     pub id: String,
     pub desc: String,
@@ -23,6 +24,7 @@ pub struct CANMsg {
  *  Class representing a NetField of a CAN message
  */
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct NetField {
     pub name: String,
     pub unit: String,
@@ -36,17 +38,18 @@ pub struct NetField {
  *  Class representing a CAN point of a NetField
  */
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct CANPoint {
     pub size: usize,
     pub signed: Option<bool>,
     pub endianness: Option<String>,
     pub format: Option<String>,
-    pub default_value: Option<f32>,
+    pub default: Option<f32>,
     pub ieee754_f32: Option<bool>,
 }
 
 #[derive(Deserialize, Debug)]
-#[serde(untagged)]
+#[serde(untagged, deny_unknown_fields)]
 pub enum Sim {
     SimSweep {
         min: f32,

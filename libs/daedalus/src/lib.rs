@@ -5,6 +5,7 @@ extern crate serde_json;
 use calypso_cangen::can_gen_decode::*;
 use calypso_cangen::can_gen_encode::*;
 use calypso_cangen::can_types::*;
+use calypso_cangen::CANGEN_SPEC_PATH;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
 use quote::{format_ident, quote};
@@ -12,13 +13,6 @@ use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
 use std::str::FromStr;
-
-/**
- *  Path to CAN spec JSON files
- *  Used by all daedalus macros
- *  Filepath is relative to project root (i.e. /Calypso)
- */
-const DAEDALUS_CANGEN_SPEC_PATH: &str = "./Embedded-Base/cangen/can-messages";
 
 /**
  *  Macro to generate all the code for decode_data.rs
@@ -43,7 +37,7 @@ pub fn gen_decode_data(_item: TokenStream) -> TokenStream {
     };
     let mut __decode_map_entries = ProcMacro2TokenStream::new();
 
-    match fs::read_dir(DAEDALUS_CANGEN_SPEC_PATH) {
+    match fs::read_dir(CANGEN_SPEC_PATH) {
         Ok(__entries) => {
             for __entry in __entries {
                 match __entry {
@@ -168,7 +162,7 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
     let mut __encode_key_list_entries = ProcMacro2TokenStream::new();
     let mut __encode_key_list_size: usize = 0;
 
-    match fs::read_dir(DAEDALUS_CANGEN_SPEC_PATH) {
+    match fs::read_dir(CANGEN_SPEC_PATH) {
         Ok(__entries) => {
             for __entry in __entries {
                 match __entry {
@@ -330,7 +324,7 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
     };
     let mut __simulate_function_body = quote! {};
 
-    match fs::read_dir(DAEDALUS_CANGEN_SPEC_PATH) {
+    match fs::read_dir(CANGEN_SPEC_PATH) {
         Ok(__entries) => {
             for __entry in __entries {
                 match __entry {

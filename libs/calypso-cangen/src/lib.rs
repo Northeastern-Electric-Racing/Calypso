@@ -1,3 +1,10 @@
 pub mod can_gen_decode;
 pub mod can_gen_encode;
 pub mod can_types;
+pub mod validate;
+/**
+ *  Path to CAN spec JSON files
+ *  Used by all daedalus macros
+ *  Filepath is relative to project root (i.e. /Calypso)
+ */
+pub const CANGEN_SPEC_PATH: &str = "./Embedded-Base/cangen/can-messages";

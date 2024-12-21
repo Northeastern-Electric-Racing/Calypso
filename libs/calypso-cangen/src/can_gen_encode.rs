@@ -101,8 +101,8 @@ impl CANGenEncode for CANPoint {
             }
             _ => quote! {},
         };
-        let default_value: f32 = match self.default_value {
-            Some(default_value) => default_value,
+        let default_value: f32 = match self.default {
+            Some(default) => default,
             _ => 0f32,
         };
         let float_final = quote! {
