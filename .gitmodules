@@ -1,4 +1,4 @@
 [submodule "Embedded-Base"]
 	path = Embedded-Base
-	url = ../Embedded-Base
+	url = github.com/Northeastern-Electric-Racing/Embedded-Base.git 
 	branch = main
