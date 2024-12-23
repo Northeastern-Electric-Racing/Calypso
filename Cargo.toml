@@ -14,7 +14,7 @@ members = ["libs/daedalus", "libs/calypso-cangen"]
 proc-macro2 = "1.0.92"
 quote = "1.0.37"
 serde = { version = "1.0.216", features = ["derive"] }
-serde_json = "1.0.133"
+serde_json = "1.0.134"
 
 
 [dependencies]
