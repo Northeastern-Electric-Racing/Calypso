@@ -133,7 +133,9 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
         // Check Sim enum frequencies add to 1 (roughly, f32s are approximate)
         if let Some(Sim::SimEnum { options }) = _field.sim {
             let mut _sim_total: f32 = 0.0;
-            options.iter().for_each(|opt| { _sim_total += opt[1]; });
+            options.iter().for_each(|opt| {
+                _sim_total += opt[1];
+            });
             if (_sim_total - 1.0).abs() > 0.00001 {
                 _errors.push(CANSpecError::FieldSimEnumFrequencySum(
                     _name.clone(),
@@ -142,10 +144,7 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
             }
         }
 
-        let _send = match _field.send {
-            Some(false) => false,
-            _ => true
-        };
+        let _send = !matches!(_field.send, Some(false));
 
         for (_i, _point) in _field.points.iter().enumerate() {
             _bit_count += _point.size;
@@ -181,7 +180,11 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
                     ));
                 }
                 // Check little endian point bit count
-                else if s == "little" && _point.size != 8 && _point.size != 16 && _point.size != 32 {
+                else if s == "little"
+                    && _point.size != 8
+                    && _point.size != 16
+                    && _point.size != 32
+                {
                     _errors.push(CANSpecError::PointLittleEndianBitCount(
                         _i,
                         _name.clone(),
