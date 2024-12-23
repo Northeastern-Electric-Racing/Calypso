@@ -8,4 +8,4 @@ proc-macro2.workspace = true
 quote.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-thiserror = "2.0.6"
+thiserror = "2.0.9"
