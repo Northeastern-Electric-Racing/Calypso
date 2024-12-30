@@ -144,9 +144,11 @@ name = "calypso-simulate"
 version = "0.1.0"
 dependencies = [
  "calypso",
+ "calypso-cangen",
  "clap",
  "daedalus",
  "protobuf",
+ "protobuf-codegen",
  "rand",
 ]
 

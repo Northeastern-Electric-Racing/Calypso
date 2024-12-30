@@ -3,17 +3,17 @@ use std::process;
 
 /* Prebuild script */
 fn main() {
-    println!("cargo:rerun-if-changed=Embedded-Base");
+    println!("cargo:rerun-if-changed=src/proto");
 
     protobuf_codegen::Codegen::new()
         .pure()
         // All inputs and imports from the inputs must reside in `includes` directories.
-        .includes(["src/proto"])
+        .includes(["../calypso/src/proto"])
         // Inputs must reside in some of include paths.
-        .input("src/proto/command_data.proto")
-        .input("src/proto/serverdata.proto")
+        .input("../calypso/src/proto/command_data.proto")
+        .input("../calypso/src/proto/serverdata.proto")
         // Specify output directory relative to Cargo output directory.
-        .out_dir("src/proto")
+        .out_dir("../calypso/src/proto")
         .run_from_script();
 
     // Validate CAN spec

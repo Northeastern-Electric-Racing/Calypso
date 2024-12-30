@@ -6,6 +6,10 @@ edition = "2021"
 [dependencies]
 clap.workspace = true
 rand = "0.8"
-calypso = { path = "../" }
-daedalus = { path = "../libs/daedalus" }
+calypso = { path = "../calypso" }
+daedalus = { path = "../daedalus" }
 protobuf.workspace = true
+
+[build-dependencies]
+protobuf-codegen.workspace = true
+calypso-cangen = { path = "../calypso-cangen" }
