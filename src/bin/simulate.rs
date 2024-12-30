@@ -3,9 +3,9 @@ use std::{
     time::{Duration, UNIX_EPOCH},
 };
 
+use calypso::proto::serverdata;
 use calypso::{
-    mqtt::MqttClient, serverdata, simulatable_message::SimShared,
-    simulate_data::create_simulated_components,
+    mqtt::MqttClient, simulatable_message::SimShared, simulate_data::create_simulated_components,
 };
 use clap::Parser;
 
