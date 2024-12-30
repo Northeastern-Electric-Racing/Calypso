@@ -6,8 +6,11 @@ use std::{
 };
 
 use calypso::{
-    command_data, data::DecodeData, data::EncodeData, decode_data::*, encode_data::*,
-    mqtt::MqttClient, serverdata,
+    data::{DecodeData, EncodeData},
+    decode_data::*,
+    encode_data::*,
+    mqtt::MqttClient,
+    proto::{command_data, serverdata},
 };
 use clap::Parser;
 use protobuf::Message;

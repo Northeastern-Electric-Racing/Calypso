@@ -13,7 +13,7 @@ fn main() {
         .input("src/proto/command_data.proto")
         .input("src/proto/serverdata.proto")
         // Specify output directory relative to Cargo output directory.
-        .out_dir("src")
+        .out_dir("src/proto")
         .run_from_script();
 
     // Validate CAN spec

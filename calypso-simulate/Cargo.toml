@@ -1,0 +1,11 @@
+[package]
+name = "calypso-simulate"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap.workspace = true
+rand = "0.8"
+calypso = { path = "../" }
+daedalus = { path = "../libs/daedalus" }
+protobuf.workspace = true

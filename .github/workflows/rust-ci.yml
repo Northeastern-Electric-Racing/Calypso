@@ -22,11 +22,11 @@ jobs:
          - name: Install cargo-audit
            run: cargo install cargo-audit
          - name: Build
-           run: cargo build --verbose
+           run: cargo build --all --verbose
          - name: Test
            run: cargo test --verbose
          - name: Fmt
-           run: cargo fmt --check
+           run: cargo fmt --all --check
          - name: Clippy
            run: cargo clippy --verbose --all -- -D warnings
          - name: Audit

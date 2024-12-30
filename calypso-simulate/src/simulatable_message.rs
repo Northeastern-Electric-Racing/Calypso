@@ -1,4 +1,4 @@
-use super::data::DecodeData;
+use calypso::data::DecodeData;
 use rand::prelude::*;
 use std::time::Instant;
 
