@@ -1,0 +1,766 @@
+[
+  {
+    "id": "0x602",
+    "desc": "Front Left MSB Env",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/FL/Temp",
+        "unit": "C",
+        "sim": {
+          "min": 0,
+          "max": 80,
+          "inc_min": 0.01,
+          "inc_max": 25
+        },
+        "points": [
+          {
+            "size": 16
+          }
+        ]
+      },
+      {
+        "name": "MSB/FL/Humidity",
+        "unit": "",
+        "sim": {
+          "min": 20,
+          "max": 80,
+          "inc_min": 1,
+          "inc_max": 2.5
+        },
+        "points": [
+          {
+            "size": 16
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x603",
+    "desc": "Front Left MSB Accel",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/FL/Accel",
+        "unit": "mg",
+        "sim": {
+          "min": -2000,
+          "max": 2000,
+          "inc_min": 0.1,
+          "inc_max": 2.5
+        },
+        "points": [
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x604",
+    "desc": "Front Left MSB Gyro",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/FL/Gyro",
+        "unit": "mdps",
+        "sim": {
+          "min": -500000,
+          "max": 500000,
+          "inc_min": 10,
+          "inc_max": 1000
+        },
+        "points": [
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x605",
+    "desc": "Front Left MSB Strain",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/FL/Strain",
+        "unit": "",
+        "sim": {
+          "min": 0,
+          "max": 10,
+          "inc_min": 0.001,
+          "inc_max": 0.020
+        },
+        "points": [
+          {
+            "size": 32
+          },
+          {
+            "size": 32
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x606",
+    "desc": "Front Left Shockpot",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/FL/Shock",
+        "unit": "",
+        "sim": {
+          "min": 0,
+          "max": 10,
+          "inc_min": 0.001,
+          "inc_max": 0.020
+        },
+        "points": [
+          {
+            "size": 32
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x607",
+    "desc": "Front Left Ride Height",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/FL/RideHeight",
+        "unit": "",
+        "sim": {
+          "min": 0,
+          "max": 10,
+          "inc_min": 0.001,
+          "inc_max": 0.020
+        },
+        "points": [
+          {
+            "size": 16,
+            "signed": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x608",
+    "desc": "Front Left Wheel Temp",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/FL/WheelTemp",
+        "unit": "C",
+        "sim": {
+          "min": 0,
+          "max": 110,
+          "inc_min": 0.5,
+          "inc_max": 1.5
+        },
+        "points": [
+          {
+            "size": 16
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x622",
+    "desc": "Front Right MSB Env",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/FR/Temp",
+        "unit": "C",
+        "sim": {
+          "min": 0,
+          "max": 80,
+          "inc_min": 0.01,
+          "inc_max": 25
+        },
+        "points": [
+          {
+            "size": 16
+          }
+        ]
+      },
+      {
+        "name": "MSB/FR/Humidity",
+        "unit": "",
+        "sim": {
+          "min": 0,
+          "max": 80,
+          "inc_min": 0.01,
+          "inc_max": 25
+        },
+        "points": [
+          {
+            "size": 16
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x623",
+    "desc": "Front Right MSB Accel",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/FR/Accel",
+        "unit": "mg",
+        "sim": {
+          "min": -2000,
+          "max": 2000,
+          "inc_min": 0.1,
+          "inc_max": 2.5
+        },
+        "points": [
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x624",
+    "desc": "Front Right MSB Gyro",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/FR/Gyro",
+        "unit": "mdps",
+        "sim": {
+          "min": -500000,
+          "max": 500000,
+          "inc_min": 10,
+          "inc_max": 1000
+        },
+        "points": [
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x625",
+    "desc": "Front Right MSB Strain",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/FR/Strain",
+        "unit": "",
+        "sim": {
+          "min": 0,
+          "max": 10,
+          "inc_min": 0.001,
+          "inc_max": 0.020
+        },
+        "points": [
+          {
+            "size": 32
+          },
+          {
+            "size": 32
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x626",
+    "desc": "Front Right Shockpot",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/FR/Shock",
+        "unit": "",
+        "sim": {
+          "min": 0,
+          "max": 10,
+          "inc_min": 0.001,
+          "inc_max": 0.020
+        },
+        "points": [
+          {
+            "size": 32
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x627",
+    "desc": "Front Right Ride Height",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/FR/RideHeight",
+        "unit": "",
+        "sim": {
+          "min": 0,
+          "max": 10,
+          "inc_min": 0.001,
+          "inc_max": 0.020
+        },
+        "points": [
+          {
+            "size": 16,
+            "signed": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x628",
+    "desc": "Front Right Wheel Temp",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/FR/WheelTemp",
+        "unit": "C",
+        "sim": {
+          "min": 0,
+          "max": 110,
+          "inc_min": 0.5,
+          "inc_max": 1.5
+        },
+        "points": [
+          {
+            "size": 16
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x642",
+    "desc": "Back Left MSB Env",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/BL/Temp",
+        "unit": "C",
+        "sim": {
+          "min": 0,
+          "max": 80,
+          "inc_min": 0.01,
+          "inc_max": 25
+        },
+        "points": [
+          {
+            "size": 16
+          }
+        ]
+      },
+      {
+        "name": "MSB/BL/Humidity",
+        "unit": "",
+        "sim": {
+          "min": 0,
+          "max": 80,
+          "inc_min": 0.01,
+          "inc_max": 25
+        },
+        "points": [
+          {
+            "size": 16
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x643",
+    "desc": "Back Left MSB Accel",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/BL/Accel",
+        "unit": "mg",
+        "sim": {
+          "min": -2000,
+          "max": 2000,
+          "inc_min": 0.1,
+          "inc_max": 2.5
+        },
+        "points": [
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x644",
+    "desc": "Back Left MSB Gyro",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/BL/Gyro",
+        "unit": "mdps",
+        "sim": {
+          "min": -500000,
+          "max": 500000,
+          "inc_min": 10,
+          "inc_max": 1000
+        },
+        "points": [
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x645",
+    "desc": "Back Left MSB Strain",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/BL/Strain",
+        "unit": "",
+        "sim": {
+          "min": 0,
+          "max": 10,
+          "inc_min": 0.001,
+          "inc_max": 0.020
+        },
+        "points": [
+          {
+            "size": 32
+          },
+          {
+            "size": 32
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x646",
+    "desc": "Back Left Shockpot",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/BL/Shock",
+        "unit": "",
+        "sim": {
+          "min": 0,
+          "max": 10,
+          "inc_min": 0.001,
+          "inc_max": 0.020
+        },
+        "points": [
+          {
+            "size": 32
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x647",
+    "desc": "Front Back Ride Height",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/BL/RideHeight",
+        "unit": "",
+        "sim": {
+          "min": 0,
+          "max": 10,
+          "inc_min": 0.001,
+          "inc_max": 0.020
+        },
+        "points": [
+          {
+            "size": 16,
+            "signed": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x648",
+    "desc": "Back Left Wheel Temp",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/BL/WheelTemp",
+        "unit": "C",
+        "sim": {
+          "min": 0,
+          "max": 110,
+          "inc_min": 0.5,
+          "inc_max": 1.5
+        },
+        "points": [
+          {
+            "size": 16
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x662",
+    "desc": "Back Right MSB Env",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/BR/Temp",
+        "unit": "C",
+        "sim": {
+          "min": 0,
+          "max": 80,
+          "inc_min": 0.01,
+          "inc_max": 25
+        },
+        "points": [
+          {
+            "size": 16
+          }
+        ]
+      },
+      {
+        "name": "MSB/BR/Humidity",
+        "unit": "",
+        "sim": {
+          "min": 0,
+          "max": 80,
+          "inc_min": 0.01,
+          "inc_max": 25
+        },
+        "points": [
+          {
+            "size": 16
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x663",
+    "desc": "Back Right MSB Accel",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/BR/Accel",
+        "unit": "mg",
+        "sim": {
+          "min": -2000,
+          "max": 2000,
+          "inc_min": 0.1,
+          "inc_max": 2.5
+        },
+        "points": [
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x664",
+    "desc": "Back Right MSB Gyro",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/BR/Gyro",
+        "unit": "mdps",
+        "sim": {
+          "min": -500000,
+          "max": 500000,
+          "inc_min": 10,
+          "inc_max": 1000
+        },
+        "points": [
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          },
+          {
+            "size": 16,
+            "signed": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x665",
+    "desc": "Back Right MSB Strain",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/BR/Strain",
+        "unit": "",
+        "sim": {
+          "min": 0,
+          "max": 10,
+          "inc_min": 0.001,
+          "inc_max": 0.020
+        },
+        "points": [
+          {
+            "size": 32
+          },
+          {
+            "size": 32
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x666",
+    "desc": "Back Right Shockpot",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/BR/Shock",
+        "unit": "",
+        "sim": {
+          "min": 0,
+          "max": 10,
+          "inc_min": 0.001,
+          "inc_max": 0.020
+        },
+        "points": [
+          {
+            "size": 32
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x667",
+    "desc": "Back Right Ride Height",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/BR/RideHeight",
+        "unit": "",
+        "sim": {
+          "min": 0,
+          "max": 10,
+          "inc_min": 0.001,
+          "inc_max": 0.020
+        },
+        "points": [
+          {
+            "size": 16,
+            "signed": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x668",
+    "desc": "Back Right Wheel Temp",
+    "sim_freq": 500,
+    "fields": [
+      {
+        "name": "MSB/BR/WheelTemp",
+        "unit": "C",
+        "sim": {
+          "min": 0,
+          "max": 110,
+          "inc_min": 0.5,
+          "inc_max": 1.5
+        },
+        "points": [
+          {
+            "size": 16
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,227 @@
+[
+  {
+    "id": "0x1806E5F4",
+    "desc": "BMS Message Send",
+    "sim_freq": 700,
+    "fields": [
+      {
+        "name": "BMS/Charging/Voltage",
+        "unit": "V",
+        "sim": {
+          "min": 400,
+          "max": 505,
+          "inc_min": 0.01,
+          "inc_max": 0.3
+        },
+        "points": [
+          {
+            "size": 16,
+            "format": "divide10"
+          }
+        ]
+      },
+      {
+        "name": "BMS/Charging/Current",
+        "unit": "A",
+        "sim": {
+          "min": 0,
+          "max": 12,
+          "inc_min": 1,
+          "inc_max": 1
+        },
+        "points": [
+          {
+            "size": 16,
+            "format": "divide10"
+          }
+        ]
+      },
+      {
+        "name": "BMS/Charging/Control",
+        "unit": "",
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              255,
+              0.1
+            ]
+          ]
+        },
+        "points": [
+          {
+            "size": 8
+          }
+        ]
+      },
+      {
+        "name": "BMS/Charging/UnimplementedData",
+        "unit": "",
+        "send": false,
+        "points": [
+          {
+            "size": 24
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0x18FF50E5",
+    "desc": "Charger Box Status",
+    "sim_freq": 1000,
+    "fields": [
+      {
+        "name": "Charger/Box/Voltage",
+        "unit": "V",
+        "sim": {
+          "min": 400,
+          "max": 505,
+          "inc_min": 0.01,
+          "inc_max": 0.3
+        },
+        "points": [
+          {
+            "size": 16,
+            "format": "divide10"
+          }
+        ]
+      },
+      {
+        "name": "Charger/Box/Current",
+        "unit": "A",
+        "sim": {
+          "min": 0,
+          "max": 12,
+          "inc_min": 0.1,
+          "inc_max": 1
+        },
+        "points": [
+          {
+            "size": 16,
+            "signed": true,
+            "format": "divide10"
+          }
+        ]
+      },
+      {
+        "name": "Charger/Box/F_CommTimeout",
+        "unit": "bool",
+        "sim": {
+          "options": [
+            [
+              0,
+              0.95
+            ],
+            [
+              1,
+              0.05
+            ]
+          ]
+        },
+        "points": [
+          {
+            "size": 1
+          }
+        ]
+      },
+      {
+        "name": "Charger/Box/F_WrongBatConnection",
+        "unit": "bool",
+        "sim": {
+          "options": [
+            [
+              0,
+              0.95
+            ],
+            [
+              1,
+              0.05
+            ]
+          ]
+        },
+        "points": [
+          {
+            "size": 1
+          }
+        ]
+      },
+      {
+        "name": "Charger/Box/F_VoltageWrong",
+        "unit": "bool",
+        "sim": {
+          "options": [
+            [
+              0,
+              0.95
+            ],
+            [
+              1,
+              0.05
+            ]
+          ]
+        },
+        "points": [
+          {
+            "size": 1
+          }
+        ]
+      },
+      {
+        "name": "Charger/Box/F_OverTemp",
+        "unit": "bool",
+        "sim": {
+          "options": [
+            [
+              0,
+              0.95
+            ],
+            [
+              1,
+              0.05
+            ]
+          ]
+        },
+        "points": [
+          {
+            "size": 1
+          }
+        ]
+      },
+      {
+        "name": "Charger/Box/F_HardwareFailure",
+        "unit": "bool",
+        "sim": {
+          "options": [
+            [
+              0,
+              0.95
+            ],
+            [
+              1,
+              0.05
+            ]
+          ]
+        },
+        "points": [
+          {
+            "size": 1
+          }
+        ]
+      },
+      {
+        "name": "Charger/Box/UnimplementedData",
+        "unit": "",
+        "send": false,
+        "points": [
+          {
+            "size": 27
+          }
+        ]
+      }
+    ]
+  }
+]
