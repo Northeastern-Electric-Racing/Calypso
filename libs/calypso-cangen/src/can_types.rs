@@ -14,6 +14,7 @@ use serde::Deserialize;
 pub struct CANMsg {
     pub id: String,
     pub desc: String,
+    pub points: Vec<CANPoint>,
     pub fields: Vec<NetField>,
     pub key: Option<String>,
     pub is_ext: Option<bool>,
@@ -28,10 +29,7 @@ pub struct CANMsg {
 pub struct NetField {
     pub name: String,
     pub unit: String,
-    pub points: Vec<CANPoint>,
-    pub send: Option<bool>,
-    pub topic_append: Option<bool>,
-    pub sim: Option<Sim>,
+    pub value: u8;
 }
 
 /**
@@ -41,11 +39,13 @@ pub struct NetField {
 #[serde(deny_unknown_fields)]
 pub struct CANPoint {
     pub size: usize,
+    pub parse: Option<bool>,
     pub signed: Option<bool>,
     pub endianness: Option<String>,
     pub format: Option<String>,
     pub default: Option<f32>,
     pub ieee754_f32: Option<bool>,
+    pub sim: Option<Sim>,
 }
 
 #[derive(Deserialize, Debug)]
