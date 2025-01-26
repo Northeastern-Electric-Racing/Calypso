@@ -130,80 +130,83 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
     for _field in _msg.fields {
         let _name = _field.name.clone();
 
+        // TODO: Field/point changes
         // Check Sim enum frequencies add to 1 (roughly, f32s are approximate)
-        if let Some(Sim::SimEnum { options }) = _field.sim {
-            let mut _sim_total: f32 = 0.0;
-            options.iter().for_each(|opt| {
-                _sim_total += opt[1];
-            });
-            if (_sim_total - 1.0).abs() > 0.00001 {
-                _errors.push(CANSpecError::FieldSimEnumFrequencySum(
-                    _name.clone(),
-                    _sim_total,
-                ));
-            }
-        }
+        // if let Some(Sim::SimEnum { options }) = _field.sim {
+        //     let mut _sim_total: f32 = 0.0;
+        //     options.iter().for_each(|opt| {
+        //         _sim_total += opt[1];
+        //     });
+        //     if (_sim_total - 1.0).abs() > 0.00001 {
+        //         _errors.push(CANSpecError::FieldSimEnumFrequencySum(
+        //             _name.clone(),
+        //             _sim_total,
+        //         ));
+        //     }
+        // }
 
-        let _send = !matches!(_field.send, Some(false));
+        // TODO: Field/point changes
+        // let _send = !matches!(_field.send, Some(false));
 
-        for (_i, _point) in _field.points.iter().enumerate() {
-            _bit_count += _point.size;
-
-            // Check that point size is at most 32 bits
-            if _point.size > 32 && _send {
-                _errors.push(CANSpecError::PointSizeOverMax(
-                    _i,
-                    _name.clone(),
-                    _point.size,
-                ));
-                continue;
-            }
-
-            // Check signed point bit count
-            if let Some(true) = _point.signed {
-                if _point.size != 8 && _point.size != 16 && _point.size != 32 {
-                    _errors.push(CANSpecError::PointSignedBitCount(
-                        _i,
-                        _name.clone(),
-                        _point.size,
-                    ));
-                }
-            }
-
-            if let Some(ref s) = _point.endianness {
-                // Check that small points don't specify endianness
-                if _point.size <= 8 {
-                    _errors.push(CANSpecError::PointSmallSizeEndianness(
-                        _i,
-                        _name.clone(),
-                        _point.size,
-                    ));
-                }
-                // Check little endian point bit count
-                else if s == "little"
-                    && _point.size != 8
-                    && _point.size != 16
-                    && _point.size != 32
-                {
-                    _errors.push(CANSpecError::PointLittleEndianBitCount(
-                        _i,
-                        _name.clone(),
-                        _point.size,
-                    ));
-                }
-            }
-
-            // Check IEEE754 f32 point bit count
-            if let Some(true) = _point.ieee754_f32 {
-                if _point.size != 32 {
-                    _errors.push(CANSpecError::PointFloatBitCount(
-                        _i,
-                        _name.clone(),
-                        _point.size,
-                    ));
-                }
-            }
-        }
+        // TODO: Field/point changes
+        // for (_i, _point) in _field.points.iter().enumerate() {
+        //     _bit_count += _point.size;
+        //
+        //     // Check that point size is at most 32 bits
+        //     if _point.size > 32 && _send {
+        //         _errors.push(CANSpecError::PointSizeOverMax(
+        //             _i,
+        //             _name.clone(),
+        //             _point.size,
+        //         ));
+        //         continue;
+        //     }
+        //
+        //     // Check signed point bit count
+        //     if let Some(true) = _point.signed {
+        //         if _point.size != 8 && _point.size != 16 && _point.size != 32 {
+        //             _errors.push(CANSpecError::PointSignedBitCount(
+        //                 _i,
+        //                 _name.clone(),
+        //                 _point.size,
+        //             ));
+        //         }
+        //     }
+        //
+        //     if let Some(ref s) = _point.endianness {
+        //         // Check that small points don't specify endianness
+        //         if _point.size <= 8 {
+        //             _errors.push(CANSpecError::PointSmallSizeEndianness(
+        //                 _i,
+        //                 _name.clone(),
+        //                 _point.size,
+        //             ));
+        //         }
+        //         // Check little endian point bit count
+        //         else if s == "little"
+        //             && _point.size != 8
+        //             && _point.size != 16
+        //             && _point.size != 32
+        //         {
+        //             _errors.push(CANSpecError::PointLittleEndianBitCount(
+        //                 _i,
+        //                 _name.clone(),
+        //                 _point.size,
+        //             ));
+        //         }
+        //     }
+        //
+        //     // Check IEEE754 f32 point bit count
+        //     if let Some(true) = _point.ieee754_f32 {
+        //         if _point.size != 32 {
+        //             _errors.push(CANSpecError::PointFloatBitCount(
+        //                 _i,
+        //                 _name.clone(),
+        //                 _point.size,
+        //             ));
+        //         }
+        //     }
+        // }
     }
 
     // Check message total alignment

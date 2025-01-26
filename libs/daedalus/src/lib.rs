@@ -115,7 +115,7 @@ fn gen_decode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
             let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
             let _fns = _msgs
                 .iter_mut()
-                .map(|_m| _m.gen_decoder_fn())
+                .map(|_m| gen_decoder_fn(_m))
                 .collect::<Vec<ProcMacro2TokenStream>>()
                 .into_iter()
                 .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
@@ -216,7 +216,7 @@ fn gen_encode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
             let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
             let _fns = _msgs
                 .iter_mut()
-                .map(|_m| _m.gen_encoder_fn())
+                .map(|_m| gen_encoder_fn(_m))
                 .collect::<Vec<ProcMacro2TokenStream>>()
                 .into_iter()
                 .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
@@ -312,195 +312,198 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
     }
 }
 
-/**
- *  Macro to generate all the code for simulate_data.rs
- *  - Generates prelude, all SimComponentAttrs, and all
- *    SimComponents
- */
-#[proc_macro]
-pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
-    let __simulate_prelude = quote! {
-        use crate::simulatable_message::{SimComponent, SimComponentAttr, SimSweep, SimEnum, SimShared};
-    };
-    let mut __simulate_function_body = quote! {};
+// /**
+//  *  Macro to generate all the code for simulate_data.rs
+//  *  - Generates prelude, all SimComponentAttrs, and all
+//  *    SimComponents
+//  */
+// #[proc_macro]
+// pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
+//     let __simulate_prelude = quote! {
+//         use crate::simulatable_message::{SimComponent, SimComponentAttr, SimSweep, SimEnum, SimShared};
+//     };
+//     let mut __simulate_function_body = quote! {};
+//
+//     match fs::read_dir(CANGEN_SPEC_PATH) {
+//         Ok(__entries) => {
+//             for __entry in __entries {
+//                 match __entry {
+//                     Ok(__entry) => {
+//                         let __path = __entry.path();
+//                         if __path.is_file() && __path.extension().map_or(false, |ext| ext == "json")
+//                         {
+//                             __simulate_function_body
+//                                 .extend(gen_simulate_function_body(__path.clone()));
+//                         }
+//                     }
+//                     Err(_) => {
+//                         eprintln!("Could not generate simulate function");
+//                     }
+//                 }
+//             }
+//         }
+//         Err(_) => {
+//             eprintln!("Could not read from directory");
+//         }
+//     }
+//
+//     let __simulate_expanded = quote! {
+//         #__simulate_prelude
+//
+//         pub fn create_simulated_components() -> Vec<Box<dyn SimShared>> {
+//             let mut simulatable_messages: Vec<Box<dyn SimShared>> = Vec::new();
+//
+//             #__simulate_function_body
+//
+//             simulatable_messages
+//         }
+//     };
+//     TokenStream::from(__simulate_expanded)
+// }
 
-    match fs::read_dir(CANGEN_SPEC_PATH) {
-        Ok(__entries) => {
-            for __entry in __entries {
-                match __entry {
-                    Ok(__entry) => {
-                        let __path = __entry.path();
-                        if __path.is_file() && __path.extension().map_or(false, |ext| ext == "json")
-                        {
-                            __simulate_function_body
-                                .extend(gen_simulate_function_body(__path.clone()));
-                        }
-                    }
-                    Err(_) => {
-                        eprintln!("Could not generate simulate function");
-                    }
-                }
-            }
-        }
-        Err(_) => {
-            eprintln!("Could not read from directory");
-        }
-    }
-
-    let __simulate_expanded = quote! {
-        #__simulate_prelude
-
-        pub fn create_simulated_components() -> Vec<Box<dyn SimShared>> {
-            let mut simulatable_messages: Vec<Box<dyn SimShared>> = Vec::new();
-
-            #__simulate_function_body
-
-            simulatable_messages
-        }
-    };
-    TokenStream::from(__simulate_expanded)
-}
-
-/**
- *  Helper function to generate simulate function body for a given JSON spec file
- */
-fn gen_simulate_function_body(_path: PathBuf) -> ProcMacro2TokenStream {
-    match fs::File::open(_path) {
-        Ok(mut _file) => {
-            let mut _contents = String::new();
-            let _ = _file.read_to_string(&mut _contents);
-            let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
-            let mut _body = ProcMacro2TokenStream::new();
-
-            for mut _msg in _msgs {
-                let mut _extend = ProcMacro2TokenStream::new();
-                if let Some(_freq) = _msg.sim_freq {
-                    for mut _field in _msg.fields {
-                        match _field.sim {
-                            Some(_sim) => match _sim {
-                                Sim::SimSweep {
-                                    min: _sim_min,
-                                    max: _sim_max,
-                                    inc_min: _sim_inc_min,
-                                    inc_max: _sim_inc_max,
-                                    round: _round,
-                                } => {
-                                    let _attr_name = format_ident!(
-                                        "{}_attr",
-                                        _field
-                                            .name
-                                            .clone()
-                                            .to_lowercase()
-                                            .replace(['/', ' ', '-'], "_")
-                                    );
-                                    let _n_canpoints: u32 = _field.points.len().try_into().unwrap();
-                                    let _id = _msg.id.clone();
-                                    let _component_name = format_ident!(
-                                        "{}",
-                                        _field
-                                            .name
-                                            .clone()
-                                            .to_lowercase()
-                                            .replace(['/', ' ', '-'], "_")
-                                    );
-                                    let _name = _field.name.clone();
-                                    let _unit = _field.unit.clone();
-                                    let _round = _round.unwrap_or(false);
-                                    let _component = quote! {
-                                        let #_attr_name: SimComponentAttr = SimComponentAttr {
-                                            sim_freq: #_freq,
-                                            n_canpoints: #_n_canpoints,
-                                            id: #_id.to_string(),
-                                        };
-
-                                        let #_component_name = Box::new(SimSweep::new(
-                                            #_name.to_string(),
-                                            #_unit.to_string(),
-                                            #_attr_name,
-                                            (#_sim_min, #_sim_max, #_sim_inc_min, #_sim_inc_max),
-                                            #_round
-                                        ));
-
-                                        simulatable_messages.push(#_component_name);
-                                    };
-                                    _extend.extend(_component);
-                                }
-                                Sim::SimEnum { options: _options } => {
-                                    let _attr_name = format_ident!(
-                                        "{}_attr",
-                                        _field
-                                            .name
-                                            .clone()
-                                            .to_lowercase()
-                                            .replace(['/', ' ', '-'], "_")
-                                    );
-                                    let _n_canpoints: u32 = _field.points.len().try_into().unwrap();
-                                    let _id = _msg.id.clone();
-                                    let _component_name = format_ident!(
-                                        "{}",
-                                        _field
-                                            .name
-                                            .clone()
-                                            .to_lowercase()
-                                            .replace(['/', ' ', '-'], "_")
-                                    );
-                                    let _name = _field.name.clone();
-                                    let _unit = _field.unit.clone();
-
-                                    // convert frequencies to running total
-                                    let mut options_corrected: Vec<[f32; 2]> = Vec::new();
-                                    for i in 0.._options.len() {
-                                        let prev_opt_add = if i == 0 {
-                                            0f32
-                                        } else {
-                                            options_corrected[i - 1][1]
-                                        };
-                                        let new_opt =
-                                            [_options[i][0], _options[i][1] + prev_opt_add];
-                                        options_corrected.push(new_opt);
-                                    }
-
-                                    // turn it into a vec of proc tokens as they do not implement ToToken
-                                    let _options_ts: Vec<ProcMacro2TokenStream> = options_corrected
-                                        .iter()
-                                        .map(|item| {
-                                            quote! { [#(#item),*]}
-                                        })
-                                        .collect();
-                                    let _component = quote! {
-                                            let #_attr_name: SimComponentAttr = SimComponentAttr {
-                                                sim_freq: #_freq,
-                                                n_canpoints: #_n_canpoints,
-                                                id: #_id.to_string(),
-                                            };
-
-                                            let #_component_name = Box::new(SimEnum::new(
-                                                #_name.to_string(),
-                                                #_unit.to_string(),
-                                                #_attr_name,
-                                                vec![#(#_options_ts),*]
-                                            ));
-
-                                            simulatable_messages.push(#_component_name);
-                                    };
-                                    _extend.extend(_component);
-                                }
-                            },
-                            None => continue,
-                        }
-                    }
-                }
-
-                _body.extend(_extend);
-            }
-
-            quote! {
-                #_body
-            }
-        }
-        Err(_) => {
-            eprintln!("Error opening file");
-            quote! {}
-        }
-    }
-}
+// /**
+// *  Helper function to generate simulate function body for a given JSON spec file
+// */
+// TODO
+// TODO: Implement point/field changes!!
+// TODO: Also refactor
+// fn gen_simulate_function_body(_path: PathBuf) -> ProcMacro2TokenStream {
+//     match fs::File::open(_path) {
+//         Ok(mut _file) => {
+//             let mut _contents = String::new();
+//             let _ = _file.read_to_string(&mut _contents);
+//             let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
+//             let mut _body = ProcMacro2TokenStream::new();
+//
+//             for mut _msg in _msgs {
+//                 let mut _extend = ProcMacro2TokenStream::new();
+//                 if let Some(_freq) = _msg.sim_freq {
+//                     for mut _field in _msg.fields {
+//                         match _field.sim {
+//                             Some(_sim) => match _sim {
+//                                 Sim::SimSweep {
+//                                     min: _sim_min,
+//                                     max: _sim_max,
+//                                     inc_min: _sim_inc_min,
+//                                     inc_max: _sim_inc_max,
+//                                     round: _round,
+//                                 } => {
+//                                     let _attr_name = format_ident!(
+//                                         "{}_attr",
+//                                         _field
+//                                             .name
+//                                             .clone()
+//                                             .to_lowercase()
+//                                             .replace(['/', ' ', '-'], "_")
+//                                     );
+//                                     let _n_canpoints: u32 = _field.points.len().try_into().unwrap();
+//                                     let _id = _msg.id.clone();
+//                                     let _component_name = format_ident!(
+//                                         "{}",
+//                                         _field
+//                                             .name
+//                                             .clone()
+//                                             .to_lowercase()
+//                                             .replace(['/', ' ', '-'], "_")
+//                                     );
+//                                     let _name = _field.name.clone();
+//                                     let _unit = _field.unit.clone();
+//                                     let _round = _round.unwrap_or(false);
+//                                     let _component = quote! {
+//                                         let #_attr_name: SimComponentAttr = SimComponentAttr {
+//                                             sim_freq: #_freq,
+//                                             n_canpoints: #_n_canpoints,
+//                                             id: #_id.to_string(),
+//                                         };
+//
+//                                         let #_component_name = Box::new(SimSweep::new(
+//                                             #_name.to_string(),
+//                                             #_unit.to_string(),
+//                                             #_attr_name,
+//                                             (#_sim_min, #_sim_max, #_sim_inc_min, #_sim_inc_max),
+//                                             #_round
+//                                         ));
+//
+//                                         simulatable_messages.push(#_component_name);
+//                                     };
+//                                     _extend.extend(_component);
+//                                 }
+//                                 Sim::SimEnum { options: _options } => {
+//                                     let _attr_name = format_ident!(
+//                                         "{}_attr",
+//                                         _field
+//                                             .name
+//                                             .clone()
+//                                             .to_lowercase()
+//                                             .replace(['/', ' ', '-'], "_")
+//                                     );
+//                                     let _n_canpoints: u32 = _field.points.len().try_into().unwrap();
+//                                     let _id = _msg.id.clone();
+//                                     let _component_name = format_ident!(
+//                                         "{}",
+//                                         _field
+//                                             .name
+//                                             .clone()
+//                                             .to_lowercase()
+//                                             .replace(['/', ' ', '-'], "_")
+//                                     );
+//                                     let _name = _field.name.clone();
+//                                     let _unit = _field.unit.clone();
+//
+//                                     // convert frequencies to running total
+//                                     let mut options_corrected: Vec<[f32; 2]> = Vec::new();
+//                                     for i in 0.._options.len() {
+//                                         let prev_opt_add = if i == 0 {
+//                                             0f32
+//                                         } else {
+//                                             options_corrected[i - 1][1]
+//                                         };
+//                                         let new_opt =
+//                                             [_options[i][0], _options[i][1] + prev_opt_add];
+//                                         options_corrected.push(new_opt);
+//                                     }
+//
+//                                     // turn it into a vec of proc tokens as they do not implement ToToken
+//                                     let _options_ts: Vec<ProcMacro2TokenStream> = options_corrected
+//                                         .iter()
+//                                         .map(|item| {
+//                                             quote! { [#(#item),*]}
+//                                         })
+//                                         .collect();
+//                                     let _component = quote! {
+//                                             let #_attr_name: SimComponentAttr = SimComponentAttr {
+//                                                 sim_freq: #_freq,
+//                                                 n_canpoints: #_n_canpoints,
+//                                                 id: #_id.to_string(),
+//                                             };
+//
+//                                             let #_component_name = Box::new(SimEnum::new(
+//                                                 #_name.to_string(),
+//                                                 #_unit.to_string(),
+//                                                 #_attr_name,
+//                                                 vec![#(#_options_ts),*]
+//                                             ));
+//
+//                                             simulatable_messages.push(#_component_name);
+//                                     };
+//                                     _extend.extend(_component);
+//                                 }
+//                             },
+//                             None => continue,
+//                         }
+//                     }
+//                 }
+//
+//                 _body.extend(_extend);
+//             }
+//
+//             quote! {
+//                 #_body
+//             }
+//         }
+//         Err(_) => {
+//             eprintln!("Error opening file");
+//             quote! {}
+//         }
+//     }
+// }

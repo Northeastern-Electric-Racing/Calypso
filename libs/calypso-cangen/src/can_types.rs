@@ -29,7 +29,7 @@ pub struct CANMsg {
 pub struct NetField {
     pub name: String,
     pub unit: String,
-    pub values: Vec<u8>;
+    pub values: Vec<usize>,
 }
 
 /**
