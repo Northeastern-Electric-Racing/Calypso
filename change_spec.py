@@ -13,9 +13,9 @@ def convert_dir(d):
             new_msgs = []
             with open(fpath, 'r') as f:
                 new_msgs = convert_file(f)
-            # new_fpath = fpath.with_name(f"{fpath.stem}.new{fpath.suffix}")
-            # with open(new_fpath, 'w') as f:
-            #     f.write(json.dumps(new_msgs, indent=2))
+            new_fpath = fpath.with_name(f"{fpath.stem}.new{fpath.suffix}")
+            with open(new_fpath, 'w') as f:
+                f.write(json.dumps(new_msgs, indent=2))
 
 
 # Convert a JSON spec file for all its messages
@@ -35,10 +35,39 @@ def convert_msg(old_msg):
     old_fields = old_msg["fields"] 
     new_fields = []
     new_points = []
+    points_idx = 1
 
-    for field in old_fields:
-        if len(field["points"]) > 1:
-            print(f'{old_msg["id"]}: {field["name"]} has >1 point')
+    # Convert old fields, points into new 
+    for old_field in old_fields:
+        new_field_values = []
+
+        for old_point in old_field["points"]:
+            # Mandatory members
+            new_point = {
+                "size": old_point["size"]
+            }
+            
+            # Optional members
+            optional_keys = ["signed", "endianness", "format", "default", "ieee754_f32"]
+            for key in optional_keys:
+                if key in old_point: 
+                    new_point[key] = old_point[key]
+            if "sim" in old_field:
+                new_point["sim"] = old_field["sim"]
+            if "send" in old_field:
+                new_point["parse"] = old_field["send"]
+
+            # Append new point, update new field values, increment index
+            new_points.append(new_point)
+            new_field_values.append(points_idx)
+            points_idx += 1
+
+        new_field = {
+            "name": old_field["name"],
+            "unit": old_field["unit"],
+            "values": new_field_values
+        }
+        new_fields.append(new_field)
 
     # Mandatory members
     new_msg = {

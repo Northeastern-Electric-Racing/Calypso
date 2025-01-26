@@ -185,9 +185,10 @@ impl CANGenDecode for CANPoint {
         };
 
         // Transmute if point is IEEE754 f32, else convert
-        match self.ieee754_f32 {
-            Some(true) => quote! { #format_prefix (f32::from_bits(#read_func)) },
-            _ => quote! { #format_prefix (#read_func as f32) },
+        if let Some(true) = self.ieee754_f32 {
+            quote! { #format_prefix (f32::from_bits(#read_func)) }
+        } else {
+            quote! { #format_prefix (#read_func as f32) }
         }
     }
 }
