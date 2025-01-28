@@ -37,13 +37,14 @@ pub fn gen_decode_data(_item: TokenStream) -> TokenStream {
     };
     let mut __decode_map_entries = ProcMacro2TokenStream::new();
 
+
     match fs::read_dir(CANGEN_SPEC_PATH) {
         Ok(__entries) => {
             for __entry in __entries {
                 match __entry {
                     Ok(__entry) => {
                         let __path = __entry.path();
-                        if __path.is_file() && __path.extension().map_or(false, |ext| ext == "json")
+                        if __path.is_file() && __path.extension().is_some_and(|ext| ext == "json")
                         {
                             __decode_functions.extend(gen_decode_fns(__path.clone()));
                             __decode_map_entries.extend(gen_decode_mappings(__path.clone()));

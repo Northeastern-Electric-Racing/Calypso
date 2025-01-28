@@ -43,19 +43,14 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
 /**
  *  Function to generate result.push() line for decoding a NetField
  */
-// TODO: Implement point/field changes!!
 fn gen_decoder_field(field: &mut NetField, points: &mut Vec<CANPoint>) -> ProcMacro2TokenStream {
     let unit = field.unit.clone();
 
     // In-topic name handling
-    let name_before_point = match field.name.find('{') {
-        Some(pos) => pos,
-        None => 0
-    };
-    let name_after_point = match field.name.find('}') {
-        Some(pos) => pos,
-        None => 0
-    };
+    // TODO: Make this extensible to multiple {}s
+    // Try counting {'s and }'s and replacing index with var name for format!()
+    let name_before_point = match field.name.find('{').unwrap_or(0);
+    let name_after_point = match field.name.find('}').unwrap_or(0);
     let topic_append: bool = name_after_point > name_before_point;
 
     let point_decoders = field
@@ -79,10 +74,7 @@ fn gen_decoder_field(field: &mut NetField, points: &mut Vec<CANPoint>) -> ProcMa
 
     let topic = match topic_append {
         true => {
-            let point_idx = match field.name[name_before_point+1..name_after_point].parse::<usize>() {
-                Ok(num) => num,
-                _ => 0
-            };
+            let point_idx = match field.name[name_before_point+1..name_after_point].parse::<usize>().unwrap_or(0);
             let point_decoder = match point_idx {
                 0 => quote! { "0" },
                 idx @ 1.. => {
