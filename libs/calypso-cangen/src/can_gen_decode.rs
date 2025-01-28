@@ -28,6 +28,9 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
         msg.desc.clone().to_lowercase().replace(' ', "_")
     );
 
+    // TODO: Refactor--instead of decoded_points, and decoding all points relative to each field,
+    //       decode points first into local values, and then reference those deterministically
+    //       within #field_decoders
     quote! {
         pub fn #fn_name(data: &[u8]) -> Vec<DecodeData> {
             if data.len() < #min_size { return vec![]; }
@@ -44,13 +47,26 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
  *  Function to generate result.push() line for decoding a NetField
  */
 fn gen_decoder_field(field: &mut NetField, points: &mut Vec<CANPoint>) -> ProcMacro2TokenStream {
+    // First, check that at least one of the correlated points is parsed
+    // If not, return a blank TokenStream
+    if let false = field
+        .values
+        .iter()
+        .map(|value| {
+            points[value-1].parse.unwrap_or(true)
+        })
+        .fold(false, |mut acc, p| { acc |= p; acc })
+    {
+       return quote! { };
+    }
+
     let unit = field.unit.clone();
 
     // In-topic name handling
     // TODO: Make this extensible to multiple {}s
-    // Try counting {'s and }'s and replacing index with var name for format!()
-    let name_before_point = match field.name.find('{').unwrap_or(0);
-    let name_after_point = match field.name.find('}').unwrap_or(0);
+    //       Try counting {'s and }'s and replacing index with var name for format!()
+    let name_before_point = field.name.find('{').unwrap_or(0);
+    let name_after_point = field.name.find('}').unwrap_or(0);
     let topic_append: bool = name_after_point > name_before_point;
 
     let point_decoders = field
@@ -74,7 +90,7 @@ fn gen_decoder_field(field: &mut NetField, points: &mut Vec<CANPoint>) -> ProcMa
 
     let topic = match topic_append {
         true => {
-            let point_idx = match field.name[name_before_point+1..name_after_point].parse::<usize>().unwrap_or(0);
+            let point_idx = field.name[name_before_point+1..name_after_point].parse::<usize>().unwrap_or(0);
             let point_decoder = match point_idx {
                 0 => quote! { "0" },
                 idx @ 1.. => {
