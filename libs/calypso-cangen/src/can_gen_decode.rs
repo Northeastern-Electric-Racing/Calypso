@@ -32,9 +32,9 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
             acc
         });
     let min_size: usize = msg
-        .fields
+        .points
         .iter()
-        .map(|field| field.values.iter().map(|value| msg.points[value-1].size).sum::<usize>())
+        .map(|point| point.size)
         .sum::<usize>()
         / 8;
     let fn_name = format_ident!(
