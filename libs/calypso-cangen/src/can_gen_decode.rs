@@ -125,7 +125,7 @@ fn gen_decoder_field(field: &mut NetField, points: &mut Vec<CANPoint>) -> ProcMa
         topic_format_string = topic_format_string.replace(&pattern, &replacement);
     }
     let topic = quote! { 
-        format!(stringify!(#topic_format_string), #topic_format_values)
+        &format!(#topic_format_string, #topic_format_values)
     };
 
     quote! {
