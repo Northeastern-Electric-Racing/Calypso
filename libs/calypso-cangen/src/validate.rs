@@ -16,24 +16,29 @@ pub enum CANSpecError {
     #[error("Message {0} ({1}) totals to {2} bits. Message totals should be byte-aligned (bit size should be a power of 2).")]
     MessageTotalByteMisalignment(String, String, usize),
 
-    #[error("Sim frequencies for NetField {0} add to {1}. Sim enum frequencies must add up to 1.")]
-    FieldSimEnumFrequencySum(String, f32),
+    #[error("NetField {0} references a value ({1}) that is out of bounds of the corresponding points list (max: {2})")]
+    FieldValueOutOfBounds(String, usize, usize),
 
-    #[error("Point {0} of NetField {1} is {2} bits. The maximum size for a point is 32 bits.")]
+    // TODO implement
+    #[error("NetField topic name {0} references a a value ({1}) that is out of bounds of the corresponding points list (max: {2})")]
+    FieldInTopicValueOutOfBounds(String, usize, usize),
+
+    #[error("Sim frequencies for Point {0} of Message {1} add to {2}. Sim enum frequencies must add up to 1.")]
+    PointSimEnumFrequencySum(usize, String, f32),
+
+    #[error("Point {0} of Message {1} is {2} bits. The maximum size for a point is 32 bits.")]
     PointSizeOverMax(usize, String, usize),
 
-    #[error(
-        "Signed point {0} of NetField {1} is {2} bits. Signed points must be 8, 16, or 32 bits."
-    )]
+    #[error("Signed point {0} of Message {1} is {2} bits. Signed points must be 8, 16, or 32 bits.")]
     PointSignedBitCount(usize, String, usize),
 
-    #[error("Little-endian point {0} of NetField {1} is {2} bits. Little-endian points must be 8, 16, or 32 bits.")]
+    #[error("Little-endian point {0} of Message {1} is {2} bits. Little-endian points must be 8, 16, or 32 bits.")]
     PointLittleEndianBitCount(usize, String, usize),
 
-    #[error("Point {0} of NetField {1} specifies endianness and is {2} bits. Points with <=8 bits should not specify endianness.")]
+    #[error("Point {0} of Message {1} specifies endianness and is {2} bits. Points with <=8 bits should not specify endianness.")]
     PointSmallSizeEndianness(usize, String, usize),
 
-    #[error("IEEE754 float point {0} of NetField {1} is {2} bits, instead of 32 bits.")]
+    #[error("IEEE754 float point {0} of Message {1} is {2} bits, instead of 32 bits.")]
     PointFloatBitCount(usize, String, usize),
 
     #[error(transparent)] // Pass-through for IO error
@@ -64,7 +69,7 @@ pub fn validate_all_spec() -> Result<(), Vec<CANSpecError>> {
             }
 
             if __all_errors.is_empty() {
-                Ok(())
+       Ok(())
             } else {
                 Err(__all_errors)
             }
@@ -127,86 +132,101 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
         ));
     }
 
-    for _field in _msg.fields {
-        let _name = _field.name.clone();
+    for (_i, _point) in _msg.points.iter().enumerate(){
+        _bit_count += _point.size;
+        let _parse = !matches!(_point.parse, Some(false));
 
-        // TODO: Field/point changes
         // Check Sim enum frequencies add to 1 (roughly, f32s are approximate)
-        // if let Some(Sim::SimEnum { options }) = _field.sim {
-        //     let mut _sim_total: f32 = 0.0;
-        //     options.iter().for_each(|opt| {
-        //         _sim_total += opt[1];
-        //     });
-        //     if (_sim_total - 1.0).abs() > 0.00001 {
-        //         _errors.push(CANSpecError::FieldSimEnumFrequencySum(
-        //             _name.clone(),
-        //             _sim_total,
-        //         ));
-        //     }
-        // }
+        if let Some(Sim::SimEnum { options }) = &_point.sim {
+            let mut _sim_total: f32 = 0.0;
+            options.iter().for_each(|opt| {
+                _sim_total += opt[1];
+            });
+            if (_sim_total - 1.0).abs() > 0.00001 {
+                _errors.push(CANSpecError::PointSimEnumFrequencySum(
+                    _i,
+                    _msg.id.clone(),
+                    _sim_total,
+                ));
+            }
+        }
 
-        // TODO: Field/point changes
-        // let _send = !matches!(_field.send, Some(false));
+        // Check signed point bit count
+        if let Some(true) = _point.signed {
+            if _point.size != 8 && _point.size != 16 && _point.size != 32 {
+                _errors.push(CANSpecError::PointSignedBitCount(
+                    _i,
+                    _msg.id.clone(),
+                    _point.size,
+                ));
+            }
+        }
 
-        // TODO: Field/point changes
-        // for (_i, _point) in _field.points.iter().enumerate() {
-        //     _bit_count += _point.size;
-        //
-        //     // Check that point size is at most 32 bits
-        //     if _point.size > 32 && _send {
-        //         _errors.push(CANSpecError::PointSizeOverMax(
-        //             _i,
-        //             _name.clone(),
-        //             _point.size,
-        //         ));
-        //         continue;
-        //     }
-        //
-        //     // Check signed point bit count
-        //     if let Some(true) = _point.signed {
-        //         if _point.size != 8 && _point.size != 16 && _point.size != 32 {
-        //             _errors.push(CANSpecError::PointSignedBitCount(
-        //                 _i,
-        //                 _name.clone(),
-        //                 _point.size,
-        //             ));
-        //         }
-        //     }
-        //
-        //     if let Some(ref s) = _point.endianness {
-        //         // Check that small points don't specify endianness
-        //         if _point.size <= 8 {
-        //             _errors.push(CANSpecError::PointSmallSizeEndianness(
-        //                 _i,
-        //                 _name.clone(),
-        //                 _point.size,
-        //             ));
-        //         }
-        //         // Check little endian point bit count
-        //         else if s == "little"
-        //             && _point.size != 8
-        //             && _point.size != 16
-        //             && _point.size != 32
-        //         {
-        //             _errors.push(CANSpecError::PointLittleEndianBitCount(
-        //                 _i,
-        //                 _name.clone(),
-        //                 _point.size,
-        //             ));
-        //         }
-        //     }
-        //
-        //     // Check IEEE754 f32 point bit count
-        //     if let Some(true) = _point.ieee754_f32 {
-        //         if _point.size != 32 {
-        //             _errors.push(CANSpecError::PointFloatBitCount(
-        //                 _i,
-        //                 _name.clone(),
-        //                 _point.size,
-        //             ));
-        //         }
-        //     }
-        // }
+        // Check that point size is at most 32 bits
+        if _point.size > 32 && _parse {
+            _errors.push(CANSpecError::PointSizeOverMax(
+                _i,
+                _msg.id.clone(),
+                _point.size,
+            ));
+            continue;
+        }
+
+        if let Some(ref s) = _point.endianness {
+            // Check that small points don't specify endianness
+            if _point.size <= 8 {
+                _errors.push(CANSpecError::PointSmallSizeEndianness(
+                    _i,
+                    _msg.id.clone(),
+                    _point.size,
+                ));
+            }
+            // Check little endian point bit count
+            else if s == "little"
+                && _point.size != 8
+                && _point.size != 16
+                && _point.size != 32
+            {
+                _errors.push(CANSpecError::PointLittleEndianBitCount(
+                    _i,
+                    _msg.id.clone(),
+                    _point.size,
+                ));
+            }
+        }
+
+        // Check IEEE754 f32 point bit count
+        if let Some(true) = _point.ieee754_f32 {
+            if _point.size != 32 {
+                _errors.push(CANSpecError::PointFloatBitCount(
+                    _i,
+                    _msg.id.clone(),
+                    _point.size,
+                ));
+            }
+        }
+    }
+
+    for _field in _msg.fields {
+        // Check that field doesn't reference any OoB points
+        for _value in _field.values {
+            if _value <= 0 || _value > _msg.points.len() {
+                _errors.push(CANSpecError::FieldValueOutOfBounds(
+                    _field.name.clone(),
+                    _value,
+                    _msg.points.len(),
+                ));
+            }
+        }
+
+        // TODO: Check that field name doesn't reference any OoB points
+        if false {
+            _errors.push(CANSpecError::FieldInTopicValueOutOfBounds(
+                _field.name.clone(),
+                0,
+                _msg.points.len(),
+            ));
+        }
     }
 
     // Check message total alignment
@@ -218,6 +238,7 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
         ));
     }
 
+    // Propagate
     if _errors.is_empty() {
         Ok(())
     } else {

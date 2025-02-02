@@ -313,6 +313,8 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
     }
 }
 
+// TODO: Convert Sim to new spec
+//
 // /**
 //  *  Macro to generate all the code for simulate_data.rs
 //  *  - Generates prelude, all SimComponentAttrs, and all
@@ -361,13 +363,13 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
 //     };
 //     TokenStream::from(__simulate_expanded)
 // }
-
-// /**
-// *  Helper function to generate simulate function body for a given JSON spec file
-// */
-// TODO
-// TODO: Implement point/field changes!!
-// TODO: Also refactor
+//
+// // /**
+// // *  Helper function to generate simulate function body for a given JSON spec file
+// // */
+// // TODO
+// // TODO: Implement point/field changes!!
+// // TODO: Also refactor
 // fn gen_simulate_function_body(_path: PathBuf) -> ProcMacro2TokenStream {
 //     match fs::File::open(_path) {
 //         Ok(mut _file) => {
@@ -377,7 +379,9 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
 //             let mut _body = ProcMacro2TokenStream::new();
 //
 //             for mut _msg in _msgs {
-//                 let mut _extend = ProcMacro2TokenStream::new();
+//                 _body.extend(gen_sim_msg(_msg));
+//
+//
 //                 if let Some(_freq) = _msg.sim_freq {
 //                     for mut _field in _msg.fields {
 //                         match _field.sim {
@@ -417,6 +421,7 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
 //                                             id: #_id.to_string(),
 //                                         };
 //
+//                                         // This is NOT a component! It's a Sim!
 //                                         let #_component_name = Box::new(SimSweep::new(
 //                                             #_name.to_string(),
 //                                             #_unit.to_string(),
@@ -494,8 +499,6 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
 //                         }
 //                     }
 //                 }
-//
-//                 _body.extend(_extend);
 //             }
 //
 //             quote! {

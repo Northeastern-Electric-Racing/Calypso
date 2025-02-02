@@ -1061,5 +1061,671 @@
       }
     ],
     "sim_freq": 700
+  },
+  {
+    "id": "0x6FA",
+    "desc": "Alpha Cell Data Debug",
+    "points": [
+      {
+        "size": 10
+      },
+      {
+        "size": 13
+      },
+      {
+        "size": 13
+      },
+      {
+        "size": 4
+      },
+      {
+        "size": 4
+      },
+      {
+        "size": 4
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 4
+      },
+      {
+        "size": 11,
+        "parse": false
+      }
+    ],
+    "fields": [
+      {
+        "name": "BMS/PerCell/Alpha/{4}/Therms/{5}",
+        "unit": "C",
+        "values": [
+          1
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{4}/Volts/{5}",
+        "unit": "V",
+        "values": [
+          2
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{4}/Volts/{6}",
+        "unit": "V",
+        "values": [
+          3
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{4}/Burning/{5}",
+        "unit": "",
+        "values": [
+          7
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{4}/Burning/{6}",
+        "unit": "",
+        "values": [
+          8
+        ]
+      }
+    ],
+    "sim_freq": 700
+  },
+  {
+    "id": "0x6FB",
+    "desc": "Beta Cell Data Debug",
+    "points": [
+      {
+        "size": 10
+      },
+      {
+        "size": 13
+      },
+      {
+        "size": 13
+      },
+      {
+        "size": 4
+      },
+      {
+        "size": 4
+      },
+      {
+        "size": 4
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 4
+      },
+      {
+        "size": 11,
+        "parse": false
+      }
+    ],
+    "fields": [
+      {
+        "name": "BMS/PerCell/Beta/{4}/Therms/{5}",
+        "unit": "C",
+        "values": [
+          1
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{4}/Volts/{5}",
+        "unit": "V",
+        "values": [
+          2
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{4}/Volts/{6}",
+        "unit": "V",
+        "values": [
+          3
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{4}/Burning/{5}",
+        "unit": "",
+        "values": [
+          7
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{4}/Burning/{6}",
+        "unit": "",
+        "values": [
+          8
+        ]
+      }
+    ],
+    "sim_freq": 700
+  },
+  {
+    "id": "0x6FD",
+    "desc": "Beta Chip A Debug",
+    "points": [
+      {
+        "size": 10
+      },
+      {
+        "size": 13
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 4
+      },
+      {
+        "size": 10
+      },
+      {
+        "size": 13
+      },
+      {
+        "size": 13
+      }
+    ],
+    "fields": [
+      {
+        "name": "BMS/PerCell/Beta/{4}/Therms/10",
+        "unit": "C",
+        "values": [
+          1
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{4}/Volts/10",
+        "unit": "V",
+        "values": [
+          2
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{4}/Burning/10",
+        "unit": "",
+        "values": [
+          3
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{4}/SegTemp",
+        "unit": "C",
+        "values": [
+          5
+        ]
+      },
+       {
+        "name": "BMS/PerCell/Alpha/{4}/DieTemp",
+        "unit": "C",
+        "values": [
+          6
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{4}/VPV",
+        "unit": "V",
+        "values": [
+          7
+        ]
+      }
+    ],
+    "sim_freq": 700
+  },
+  {
+    "id": "0x6FE",
+    "desc": "Beta Chip B Debug",
+    "points": [
+      {
+        "size": 13
+      },
+      {
+        "size": 10
+      },
+      {
+        "size": 10
+      },
+      {
+        "size": 4
+      },
+      {
+        "size": 13
+      },
+      {
+        "size": 13
+      },
+      {
+        "size": 1,
+        "parse": false
+      }
+    ],
+    "fields": [
+      {
+        "name": "BMS/PerCell/Beta/{4}/Vref2",
+        "unit": "V",
+        "values": [
+          1
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{4}/Vanalog",
+        "unit": "V",
+        "values": [
+          2
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{4}/Vdigital",
+        "unit": "V",
+        "values": [
+          3
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{4}/Vres",
+        "unit": "",
+        "values": [
+          5
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{4}/VMV",
+        "unit": "",
+        "values": [
+          6
+        ]
+      }
+    ],
+    "sim_freq": 700
+  },
+  {
+    "id": "0x6F0",
+    "desc": "Beta Chip C Debug",
+    "points": [
+      {
+        "size": 4
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 15,
+        "parse": false
+      }
+    ],
+    "fields": [
+      {
+        "name": "BMS/PerCell/Beta/{1}/Faults/VA_OV",
+        "unit": "",
+        "values": [
+          2
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{1}/Faults/VA_UV",
+        "unit": "",
+        "values": [
+          3
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{1}/Faults/VD_OV",
+        "unit": "",
+        "values": [
+          4
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{1}/Faults/VD_UV",
+        "unit": "",
+        "values": [
+          5
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{1}/Faults/VDE",
+        "unit": "",
+        "values": [
+          6
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{1}/Faults/VDEL",
+        "unit": "",
+        "values": [
+          7
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{1}/Faults/SPI",
+        "unit": "",
+        "values": [
+          8
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{1}/Faults/SLEEP",
+        "unit": "",
+        "values": [
+          9
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{1}/Faults/THSD",
+        "unit": "",
+        "values": [
+          10
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{1}/Faults/TMOD_CHCK",
+        "unit": "",
+        "values": [
+          11
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{1}/Faults/OSC_CHCK",
+        "unit": "",
+        "values": [
+          12
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{1}/Faults/OTP1",
+        "unit": "",
+        "values": [
+          13
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Beta/{1}/Faults/OTP2",
+        "unit": "",
+        "values": [
+          14
+        ]
+      }
+    ],
+    "sim_freq": 700
+  },
+  {
+    "id": "0x6FC",
+    "desc": "Alpha Chip A Debug",
+    "points": [
+      {
+        "size": 10
+      },
+      {
+        "size": 4
+      },
+      {
+        "size": 13
+      },
+      {
+        "size": 13
+      },
+      {
+        "size": 13
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      }
+    ],
+    "fields": [
+      {
+        "name": "BMS/PerCell/Alpha/{2}/SegTemp",
+        "unit": "C",
+        "values": [
+          1
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/DieTemp",
+        "unit": "C",
+        "values": [
+          3
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/VPV",
+        "unit": "C",
+        "values": [
+          4
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/VMV",
+        "unit": "C",
+        "values": [
+          5
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Faults/VA_OV",
+        "unit": "",
+        "values": [
+          6
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Faults/VA_UV",
+        "unit": "",
+        "values": [
+          7
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Faults/VD_OV",
+        "unit": "",
+        "values": [
+          8
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Faults/VD_UV",
+        "unit": "",
+        "values": [
+          9
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Faults/VDE",
+        "unit": "",
+        "values": [
+          10
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Faults/VDEL",
+        "unit": "",
+        "values": [
+          11
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Faults/SPI",
+        "unit": "",
+        "values": [
+          12
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Faults/SLEEP",
+        "unit": "",
+        "values": [
+          13
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Faults/THSD",
+        "unit": "",
+        "values": [
+          14
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Faults/TMOD_CHCK",
+        "unit": "",
+        "values": [
+          15
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Faults/OSC_CHCK",
+        "unit": "",
+        "values": [
+          16
+        ]
+      }
+    ],
+    "sim_freq": 700
+  },
+  {
+    "id": "0x6FF",
+    "desc": "Alpha Chip B Debug",
+    "points": [
+      {
+        "size": 13
+      },
+      {
+        "size": 4
+      },
+      {
+        "size": 13
+      },
+      {
+        "size": 13
+      },
+      {
+        "size": 13
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 1
+      },
+      {
+        "size": 6,
+        "parse": false
+      }
+    ],
+    "fields": [
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Vres",
+        "unit": "V",
+        "values": [
+          1
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Vref2",
+        "unit": "V",
+        "values": [
+          3
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Vanalog",
+        "unit": "V",
+        "values": [
+          4
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Vdigital",
+        "unit": "V",
+        "values": [
+          5
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Faults/OTP1",
+        "unit": "",
+        "values": [
+          6
+        ]
+      },
+      {
+        "name": "BMS/PerCell/Alpha/{2}/Faults/OTP2",
+        "unit": "",
+        "values": [
+          7
+        ]
+      }
+    ],
+    "sim_freq": 700
   }
 ]

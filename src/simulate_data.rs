@@ -1,5 +1,6 @@
-#![allow(clippy::all)]
-// TODO fix after impl
+// TODO: Convert Sim to new spec
+//
+// #![allow(clippy::all)]
 // use daedalus::gen_simulate_data;
-
+//
 // gen_simulate_data!();

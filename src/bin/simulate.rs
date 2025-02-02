@@ -1,4 +1,5 @@
-// TODO fix simulate
+// TODO: Convert Sim to new spec
+// 
 // use std::{
 //     thread::{self},
 //     time::{Duration, UNIX_EPOCH},
