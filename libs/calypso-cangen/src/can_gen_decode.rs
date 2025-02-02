@@ -8,6 +8,7 @@ use regex::Regex;
  *  Function to generate decoder function for a CANMsg
  */
 pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
+    // Generate local variables for each CANPoint in the Message
     let point_decoders = msg
         .points
         .iter_mut()
@@ -19,6 +20,7 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
             acc.extend(ts);
             acc
         });
+    // Push DecodeData structs to result for each NetField in the message
     let field_decoders = msg 
         .fields
         .iter_mut()
@@ -40,9 +42,6 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
         msg.desc.clone().to_lowercase().replace(' ', "_")
     );
 
-    // TODO: Refactor--instead of decoded_points, and decoding all points relative to each field,
-    //       decode points first into local values, and then reference those deterministically
-    //       within #field_decoders
     quote! {
         pub fn #fn_name(data: &[u8]) -> Vec<DecodeData> {
             if data.len() < #min_size { return vec![]; }
