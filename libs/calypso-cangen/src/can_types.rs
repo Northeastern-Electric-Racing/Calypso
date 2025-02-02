@@ -52,7 +52,6 @@ pub struct CANPoint {
 #[serde(untagged, deny_unknown_fields)]
 pub enum Sim {
     SimSweep {
-        // value: usize,
         min: f32,
         max: f32,
         inc_min: f32,
@@ -60,7 +59,6 @@ pub enum Sim {
         round: Option<bool>,
     },
     SimEnum {
-        // value: usize,
         options: Vec<[f32; 2]>,
     },
 }
