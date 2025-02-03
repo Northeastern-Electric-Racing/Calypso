@@ -1070,10 +1070,12 @@
         "size": 10
       },
       {
-        "size": 13
+        "size": 13,
+        "format": "divide10000"
       },
       {
-        "size": 13
+        "size": 13,
+        "format": "divide10000"
       },
       {
         "size": 4
@@ -1088,10 +1090,10 @@
         "size": 1
       },
       {
-        "size": 4
+        "size": 1
       },
       {
-        "size": 11,
+        "size":6,
         "parse": false
       }
     ],
@@ -1142,10 +1144,12 @@
         "size": 10
       },
       {
-        "size": 13
+        "size": 13,
+        "format": "divide10000"
       },
       {
-        "size": 13
+        "size": 13,
+        "format": "divide10000"
       },
       {
         "size": 4
@@ -1160,10 +1164,10 @@
         "size": 1
       },
       {
-        "size": 4
+        "size": 1
       },
       {
-        "size": 11,
+        "size": 6,
         "parse": false
       }
     ],
@@ -1214,7 +1218,8 @@
         "size": 10
       },
       {
-        "size": 13
+        "size": 13,
+        "format": "divide10000"
       },
       {
         "size": 1
@@ -1229,7 +1234,8 @@
         "size": 13
       },
       {
-        "size": 13
+        "size": 13,
+        "format": "divide10000"
       }
     ],
     "fields": [
@@ -1283,22 +1289,27 @@
     "desc": "Beta Chip B Debug",
     "points": [
       {
-        "size": 13
+        "size": 13,
+        "format": "divide10000"
       },
       {
-        "size": 10
+        "size": 10,
+        "format": "divide10000"
       },
       {
-        "size": 10
+        "size": 10,
+        "format": "divide10000"
       },
       {
         "size": 4
       },
       {
-        "size": 13
+        "size": 13,
+        "format": "divide10000"
       },
       {
-        "size": 13
+        "size": 13,
+        "format": "divide10000"
       },
       {
         "size": 1,
@@ -1391,7 +1402,7 @@
         "size": 1
       },
       {
-        "size": 15,
+        "size": 7,
         "parse": false
       }
     ],
@@ -1504,10 +1515,12 @@
         "size": 13
       },
       {
-        "size": 13
+        "size": 13,
+        "format": "divide10000"
       },
       {
-        "size": 13
+        "size": 13,
+        "format": "divide10000"
       },
       {
         "size": 1
@@ -1560,14 +1573,14 @@
       },
       {
         "name": "BMS/PerCell/Alpha/{2}/VPV",
-        "unit": "C",
+        "unit": "V",
         "values": [
           4
         ]
       },
       {
         "name": "BMS/PerCell/Alpha/{2}/VMV",
-        "unit": "C",
+        "unit": "V",
         "values": [
           5
         ]
@@ -1657,19 +1670,23 @@
     "desc": "Alpha Chip B Debug",
     "points": [
       {
-        "size": 13
+        "size": 13,
+        "format": "divide10000"
       },
       {
         "size": 4
       },
       {
-        "size": 13
+        "size": 13,
+        "format": "divide10000"
       },
       {
-        "size": 13
+        "size": 13,
+        "format": "divide10000"
       },
       {
-        "size": 13
+        "size": 13,
+        "format": "divide10000"
       },
       {
         "size": 1
