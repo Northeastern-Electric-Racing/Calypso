@@ -312,6 +312,31 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
         }
     }
 }
+#[proc_macro]
+pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
+    let __simulate_expanded = quote! {
+        pub fn get_hello_world() -> &'static str {
+            "Hello, world!"
+        }
+    };
+
+
+    if let Ok(entries) = fs::read_dir(CANGEN_SPEC_PATH) {
+        entries.filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| {
+                path.is_file() && path.extension().map(|ext| ext == "json").unwrap_or(false)
+            })
+            .for_each(|path| { 
+                println!("[gen_simulate_data] JSON Path: {:?}", path);
+            });
+    } else {
+        eprintln!("Could not read from directory: {}", CANGEN_SPEC_PATH);
+    }
+
+
+    TokenStream::from(__simulate_expanded)
+}
 
 // TODO: Convert Sim to new spec
 //

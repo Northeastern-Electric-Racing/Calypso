@@ -1,33 +1,97 @@
 // TODO: Convert Sim to new spec
-//
-// use super::data::DecodeData;
-// use rand::prelude::*;
-// use std::time::Instant;
-//
-// /// Base properties of every simulated message
-// pub struct SimComponent {
-//     values: Vec<f32>,      // DecodeData.value
-//     topic: String,        // DecodeData.topic
-//     unit: String,         // DecodeData.unit
-//     last_update: Instant, // when the data was last updated
-//     #[allow(dead_code)]
-//     n_canpoints: u32, // number of can points
-//     sim_freq: f32,        // Frequency in ms
-//     #[allow(dead_code)]
-//     id: String, // e.g. "0x80"
-//
-//                           // signed: bool,        // is the value signed?
-//                           // size: u8,            // size of the value in bits
-//                           // format: String,      // e.g. "divide10"
-// }
-//
+
+use super::data::DecodeData;
+use rand::prelude::*;
+use std::time::Instant;
+
+
+/********************* SIMULATE_MESSAGE.H *********************/
+
+/**
+ * A SimComponent roughly corresponds to a NetField with properties inherited from CANMsg
+ */
+#[derive(Debug)]
+ pub struct SimComponent {
+    id: String,             // e.g. "0x80"
+    points: Vec<SimValue>,  // 
+    topic: String,          // DecodeData.topic
+    unit: String,           // DecodeData.unit
+    name: String,
+    last_update: Instant, 
+    desc: String,
+    key: Option<String>,        // the "FirstOff" and "SecondOff" thing
+    is_ext: Option<bool>,
+    sim_freq: f32,
+}
+
+
+/**
+ * Corresponds to CANPoint of a NetField
+ */
+#[derive(Debug)]
+pub struct SimPoint {
+    size: usize,
+    parse: Option<bool>,
+    signed: Option<bool>,
+    endianness: Option<String>,
+    format: Option<String>,
+    default: Option<f32>,
+    ieee754_f32: Option<bool>,
+    value: Option<SimValue>, // DO THE POLYMOOOORPHISM SHIT HERE
+}
+
+/**
+ * The mode of simulation and the real-time value of the CANPoint
+ */
+#[derive(Debug)]
+pub enum SimValue {
+    /// Ranged mode where the value is within a min/max range and can include increment parameters.
+    Range {
+        min: f32,
+        max: f32,
+        inc_min: f32,
+        inc_max: f32,
+        round: Option<bool>,
+        current: f32  // current value in range mode
+    },
+    /// Options mode where the value is selected from a set of predefined options.
+    Discrete {
+        options: Vec<(f32, f32)>,  // List of option pairs. This could be converted to a more descriptive structure.
+        current: f32      // currently selected option
+    },
+}
+
+
+
+/********************* SIMULATE_MESSAGE.C *********************/
+
+
+impl SimComponent {
+    pub fn should_update(&self) -> bool {
+        self.last_update.elapsed().as_millis() > self.sim_freq as u128
+    }
+
+    pub fn get_value(&self) -> DecodeData {
+        DecodeData::new(vec![0.0, 0.1], "0xDEADBEEF", &self.unit)
+        // TODO: the first field here would be a getter that forms a vector from all the simvalue in all the simpoints
+    }
+}
+
+
+impl SimPoint {
+    
+}
+
+
+
+// TODO create a SimComponentArgs -- for bypassing the arugment number limit, and also to keep the Simcompoennt attr private
 // /// A wrapper struct for giving properties of a message from the macros to simulator
 // pub struct SimComponentAttr {
 //     pub sim_freq: f32,
 //     pub n_canpoints: u32,
 //     pub id: String,
 // }
-//
+
 // /// A simulation mode where a value is selected from a list at a given frequency
 // pub struct SimEnum {
 //     components: Vec<SimComponent>,
@@ -35,7 +99,7 @@
 //     /// note the frequency here is not an individual pecentage but a running total of the probability
 //     enum_ls: Vec<[f32; 2]>,     // Possible values and their frequencies
 // }
-//
+
 // /// A simulation mode where a value is choosen within a range with a range of possible increments
 // pub struct SimSweep {
 //     components: Vec<SimComponent>,
@@ -46,7 +110,7 @@
 //     inc_max: f32,       // Maximum possible increment
 //     round: bool,        // Round number?
 // }
-//
+
 // /// Shared functions of a simulator
 // pub trait SimShared {
 //     fn update(&mut self);
@@ -58,18 +122,9 @@
 //     }
 //     fn get_component(&self) -> &SimComponent;
 // }
-//
-// /// Base implementations of a simulator
-// impl SimComponent {
-//     pub fn should_update(&self) -> bool {
-//         self.last_update.elapsed().as_millis() > self.sim_freq as u128
-//     }
-//
-//     pub fn get_value(&self) -> DecodeData {
-//         DecodeData::new(self.value.clone(), &self.topic, &self.unit)
-//     }
-// }
-//
+
+
+
 // /// Sweep specific logic
 // impl SimSweep {
 //     pub fn new(
@@ -83,9 +138,9 @@
 //         let sim_freq: f32 = attr.sim_freq;
 //         let n_canpoints: u32 = attr.n_canpoints;
 //         let id: String = attr.id;
-//
+
 //         let mut values = vec![0.0; n_canpoints as usize];
-//
+
 //         // initialize values with random values between sim_min and sim_max
 //         let mut rng = rand::thread_rng();
 //         for item in values.iter_mut().take(n_canpoints as usize) {
@@ -94,7 +149,7 @@
 //                 *item = (*item / sweep_settings.2).round() * sweep_settings.2;
 //             }
 //         }
-//
+
 //         Self {
 //             component: SimComponent {
 //                 values,
@@ -112,7 +167,7 @@
 //             round,
 //         }
 //     }
-//
+
 //     /**
 //      * Get a random offset within the range of sim_inc_min and sim_inc_max with a random sign.
 //      * Use sim_inc_min as the offset if sim_inc_min == sim_inc_max.
@@ -134,7 +189,7 @@
 //         offset * sign
 //     }
 // }
-//
+
 // /// Base logic impl for sweeped sim
 // impl SimShared for SimSweep {
 //     /**
@@ -146,38 +201,38 @@
 //         self.component.last_update = Instant::now();
 //         for i in 0..self.component.values.len() {
 //             let mut new_value = self.component.values[i] + self.get_rand_offset();
-//
+
 //             // ensuring value is within range AND limit to 10 attempts
 //             let mut attempts = 0;
 //             while (new_value < self.min || new_value > self.max) && attempts < MAX_ATTEMPTS {
 //                 new_value = self.component.values[i] + self.get_rand_offset();
 //                 attempts += 1;
 //             }
-//
+
 //             // give up if all attempts failed
 //             if attempts >= MAX_ATTEMPTS {
 //                 return;
 //             }
-//
+
 //             // rounding the new value
 //             if self.inc_min != 0.0 {
 //                 new_value = (new_value / self.inc_min).round() * self.inc_min;
 //             }
-//
+
 //             // additional rounding override to whole number if enabled
 //             if self.round {
 //                 new_value = new_value.round();
 //             }
-//
+
 //             self.component.values[i] = new_value;
 //         }
 //     }
-//
+
 //     fn get_component(&self) -> &SimComponent {
 //         &self.component
 //     }
 // }
-//
+
 // /// Enum specific logic
 // impl SimEnum {
 //     pub fn new(
@@ -190,10 +245,10 @@
 //         let sim_freq: f32 = attr.sim_freq;
 //         let n_canpoints: u32 = attr.n_canpoints;
 //         let id: String = attr.id;
-//
+
 //         // placeholder value
 //         let values = vec![0.0; n_canpoints as usize];
-//
+
 //         Self {
 //             component: SimComponent {
 //                 values,
@@ -208,7 +263,7 @@
 //         }
 //     }
 // }
-//
+
 // /// Base logic for enum sim
 // impl SimShared for SimEnum {
 //     fn update(&mut self) {
@@ -228,7 +283,7 @@
 //             component.values[self.value_index] = new_value.unwrap_or(-1f32);
 //         }
 //     }
-//
+
 //     fn get_component(&self) -> &SimComponent {
 //         &self.component
 //     }
