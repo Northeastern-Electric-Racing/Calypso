@@ -1,0 +1,27 @@
+# editor things
+.idea/
+.zed/
+.vscode/
+
+# misc things
+.DS_Store
+.gitignore
+*.nix
+
+# python things
+pyrightconfig.json
+__pycache__/
+
+# Added by cargo (rust things)
+/target
+build/
+dist/
+logs/
+
+# protobuf
+mod.rs
+command_data.rs
+serverdata.rs
+
+# private testing 
+/privatetest/

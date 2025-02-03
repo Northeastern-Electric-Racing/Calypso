@@ -4,7 +4,7 @@ name: Create and publish Calypso docker image
 on:
   push:
     branches: ['Develop']
-    path:
+    paths:
         - "Dockerfile"
   workflow_dispatch:
 

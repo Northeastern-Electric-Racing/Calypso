@@ -1,7 +1,7 @@
 use std :: time :: Instant; use crate :: simulatable_message ::
 { SimComponent, SimValue, SimPoint }; pub fn get_hello_world() -> & 'static
-str { "Hello, world!" } fn create_simulated_components() -> Vec < SimComponent
->
+str { "Hello, world!" } pub fn create_simulated_components() -> Vec <
+SimComponent >
 {
     let mut __all_sim_components : Vec < SimComponent > = Vec :: new(); let
     _____START_DEBUG_FIELD_NAME = "DTI/RPM/ERPM"; let mut vec_points : Vec <
@@ -964,7 +964,7 @@ str { "Hello, world!" } fn create_simulated_components() -> Vec < SimComponent
     }; __all_sim_components.push(__new_component); let
     _____END___DEBUG_FIELD_NAME = "MSB/BR/WheelTemp"; let
     _____START_DEBUG_FIELD_NAME = "BMS/Pack/PerCell/Cell-{6}/Attr/{3}"; let
-    mut vec_points_intopic : Vec < SimPoint > = Vec :: new(); let __new_value
+    mut vec_points_in_topic : Vec < SimPoint > = Vec :: new(); let __new_value
     = SimValue :: Range
     {
         min : 1f32, max : 15f32, inc_min : 1f32, inc_max : 5f32, round :
@@ -973,7 +973,7 @@ str { "Hello, world!" } fn create_simulated_components() -> Vec < SimComponent
     {
         size : 8usize, parse : None, signed : None, endianness : None, format
         : None, default : None, ieee754_f32 : None, value : __new_value,
-    }; vec_points_intopic.push(__new_point); let __new_value = SimValue ::
+    }; vec_points_in_topic.push(__new_point); let __new_value = SimValue ::
     Range
     {
         min : 1f32, max : 15f32, inc_min : 1f32, inc_max : 5f32, round :
@@ -982,7 +982,7 @@ str { "Hello, world!" } fn create_simulated_components() -> Vec < SimComponent
     {
         size : 8usize, parse : None, signed : None, endianness : None, format
         : None, default : None, ieee754_f32 : None, value : __new_value,
-    }; vec_points_intopic.push(__new_point); let mut vec_points : Vec <
+    }; vec_points_in_topic.push(__new_point); let mut vec_points : Vec <
     SimPoint > = Vec :: new(); let __new_value = SimValue :: Discrete
     { options : vec! [(0f32, 0.5f32), (1f32, 0.5f32)], current : 0.0 }; let
     __new_point = SimPoint
@@ -1019,7 +1019,7 @@ str { "Hello, world!" } fn create_simulated_components() -> Vec < SimComponent
     }; __all_sim_components.push(__new_component); let
     _____END___DEBUG_FIELD_NAME = "BMS/Pack/PerCell/Cell-{6}/Attr/{3}"; let
     _____START_DEBUG_FIELD_NAME = "BMS/Pack/PerCell/Cell-{6}/Attr/{3}"; let
-    mut vec_points_intopic : Vec < SimPoint > = Vec :: new(); let __new_value
+    mut vec_points_in_topic : Vec < SimPoint > = Vec :: new(); let __new_value
     = SimValue :: Range
     {
         min : 1f32, max : 15f32, inc_min : 1f32, inc_max : 5f32, round :
@@ -1028,7 +1028,7 @@ str { "Hello, world!" } fn create_simulated_components() -> Vec < SimComponent
     {
         size : 8usize, parse : None, signed : None, endianness : None, format
         : None, default : None, ieee754_f32 : None, value : __new_value,
-    }; vec_points_intopic.push(__new_point); let __new_value = SimValue ::
+    }; vec_points_in_topic.push(__new_point); let __new_value = SimValue ::
     Range
     {
         min : 1f32, max : 15f32, inc_min : 1f32, inc_max : 5f32, round :
@@ -1037,7 +1037,7 @@ str { "Hello, world!" } fn create_simulated_components() -> Vec < SimComponent
     {
         size : 8usize, parse : None, signed : None, endianness : None, format
         : None, default : None, ieee754_f32 : None, value : __new_value,
-    }; vec_points_intopic.push(__new_point); let mut vec_points : Vec <
+    }; vec_points_in_topic.push(__new_point); let mut vec_points : Vec <
     SimPoint > = Vec :: new(); let __new_value = SimValue :: Range
     {
         min : -100f32, max : 300f32, inc_min : 1f32, inc_max : 5f32, round :
@@ -1059,7 +1059,7 @@ str { "Hello, world!" } fn create_simulated_components() -> Vec < SimComponent
     }; __all_sim_components.push(__new_component); let
     _____END___DEBUG_FIELD_NAME = "BMS/Pack/PerCell/Cell-{6}/Attr/{3}"; let
     _____START_DEBUG_FIELD_NAME = "BMS/Pack/PerCell/Cell-{5}/Attr/{4}"; let
-    mut vec_points_intopic : Vec < SimPoint > = Vec :: new(); let __new_value
+    mut vec_points_in_topic : Vec < SimPoint > = Vec :: new(); let __new_value
     = SimValue :: Range
     {
         min : 1f32, max : 15f32, inc_min : 1f32, inc_max : 5f32, round :
@@ -1068,7 +1068,7 @@ str { "Hello, world!" } fn create_simulated_components() -> Vec < SimComponent
     {
         size : 8usize, parse : None, signed : None, endianness : None, format
         : None, default : None, ieee754_f32 : None, value : __new_value,
-    }; vec_points_intopic.push(__new_point); let __new_value = SimValue ::
+    }; vec_points_in_topic.push(__new_point); let __new_value = SimValue ::
     Range
     {
         min : 1f32, max : 15f32, inc_min : 1f32, inc_max : 5f32, round :
@@ -1077,7 +1077,7 @@ str { "Hello, world!" } fn create_simulated_components() -> Vec < SimComponent
     {
         size : 8usize, parse : None, signed : None, endianness : None, format
         : None, default : None, ieee754_f32 : None, value : __new_value,
-    }; vec_points_intopic.push(__new_point); let mut vec_points : Vec <
+    }; vec_points_in_topic.push(__new_point); let mut vec_points : Vec <
     SimPoint > = Vec :: new(); let __new_value = SimValue :: Discrete
     { options : vec! [(0f32, 0.5f32), (1f32, 0.5f32)], current : 0.0 }; let
     __new_point = SimPoint
@@ -1114,7 +1114,7 @@ str { "Hello, world!" } fn create_simulated_components() -> Vec < SimComponent
     }; __all_sim_components.push(__new_component); let
     _____END___DEBUG_FIELD_NAME = "BMS/Pack/PerCell/Cell-{5}/Attr/{4}"; let
     _____START_DEBUG_FIELD_NAME = "BMS/Pack/PerCell/Cell-{5}/Attr/{4}"; let
-    mut vec_points_intopic : Vec < SimPoint > = Vec :: new(); let __new_value
+    mut vec_points_in_topic : Vec < SimPoint > = Vec :: new(); let __new_value
     = SimValue :: Range
     {
         min : 1f32, max : 15f32, inc_min : 1f32, inc_max : 5f32, round :
@@ -1123,7 +1123,7 @@ str { "Hello, world!" } fn create_simulated_components() -> Vec < SimComponent
     {
         size : 8usize, parse : None, signed : None, endianness : None, format
         : None, default : None, ieee754_f32 : None, value : __new_value,
-    }; vec_points_intopic.push(__new_point); let __new_value = SimValue ::
+    }; vec_points_in_topic.push(__new_point); let __new_value = SimValue ::
     Range
     {
         min : 1f32, max : 15f32, inc_min : 1f32, inc_max : 5f32, round :
@@ -1132,7 +1132,7 @@ str { "Hello, world!" } fn create_simulated_components() -> Vec < SimComponent
     {
         size : 8usize, parse : None, signed : None, endianness : None, format
         : None, default : None, ieee754_f32 : None, value : __new_value,
-    }; vec_points_intopic.push(__new_point); let mut vec_points : Vec <
+    }; vec_points_in_topic.push(__new_point); let mut vec_points : Vec <
     SimPoint > = Vec :: new(); let __new_value = SimValue :: Range
     {
         min : -50f32, max : 50f32, inc_min : 0.5f32, inc_max : 1.5f32, round :

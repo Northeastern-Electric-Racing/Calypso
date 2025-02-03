@@ -8,13 +8,11 @@ use std::{
     time::{Duration, UNIX_EPOCH},
 };
 
-// use calypso::{
-//     mqtt::MqttClient, serverdata, simulatable_message::SimShared,
-//     simulate_data::create_simulated_components,
-// };
-
-use calypso::mqtt::MqttClient;
 use calypso::simulate_data::get_hello_world;
+use calypso::proto::serverdata;
+use calypso::{
+    mqtt::MqttClient, simulatable_message::SimComponent, simulate_data::create_simulated_components,
+};
 use clap::Parser;
 
 /**
