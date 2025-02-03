@@ -51,14 +51,14 @@ pub struct CANPoint {
 #[derive(Deserialize, Debug)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum Sim {
-    SimSweep {
+    SimRange {
         min: f32,
         max: f32,
         inc_min: f32,
         inc_max: f32,
         round: Option<bool>,
     },
-    SimEnum {
+    SimDiscrete {
         options: Vec<[f32; 2]>,
     },
 }

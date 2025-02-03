@@ -1,9 +1,11 @@
-// TODO: Convert Sim to new spec
+#![allow(dead_code)] // TODO: Cleanup
+#![allow(unused_imports)]
+#![allow(unused_variables)]
 
+// TODO: Convert Sim to new spec
 use super::data::DecodeData;
 use rand::prelude::*;
 use std::time::Instant;
-
 
 /********************* SIMULATE_MESSAGE.H *********************/
 
@@ -11,33 +13,33 @@ use std::time::Instant;
  * A SimComponent roughly corresponds to a NetField with properties inherited from CANMsg
  */
 #[derive(Debug)]
- pub struct SimComponent {
-    id: String,             // e.g. "0x80"
-    points: Vec<SimValue>,  // 
-    topic: String,          // DecodeData.topic
-    unit: String,           // DecodeData.unit
-    name: String,
-    last_update: Instant, 
-    desc: String,
-    key: Option<String>,        // the "FirstOff" and "SecondOff" thing
-    is_ext: Option<bool>,
-    sim_freq: f32,
+pub struct SimComponent {
+    pub id: String,            
+    pub points: Vec<SimPoint>, 
+    pub points_intopic: Option<Vec<SimPoint>>, 
+    pub topic: String, 
+    pub unit: String,  
+    pub name: String,
+    pub last_update: Instant,
+    pub desc: String,
+    pub key: Option<String>, // the "FirstOff" and "SecondOff" thing
+    pub is_ext: Option<bool>,
+    pub sim_freq: f32,
 }
-
 
 /**
  * Corresponds to CANPoint of a NetField
  */
 #[derive(Debug)]
 pub struct SimPoint {
-    size: usize,
-    parse: Option<bool>,
-    signed: Option<bool>,
-    endianness: Option<String>,
-    format: Option<String>,
-    default: Option<f32>,
-    ieee754_f32: Option<bool>,
-    value: Option<SimValue>, // DO THE POLYMOOOORPHISM SHIT HERE
+    pub size: usize,
+    pub parse: Option<bool>,
+    pub signed: Option<bool>,
+    pub endianness: Option<String>,
+    pub format: Option<String>,
+    pub default: Option<f32>,
+    pub ieee754_f32: Option<bool>,
+    pub value: SimValue, 
 }
 
 /**
@@ -51,20 +53,17 @@ pub enum SimValue {
         max: f32,
         inc_min: f32,
         inc_max: f32,
-        round: Option<bool>,
-        current: f32  // current value in range mode
+        round: bool,
+        current: f32, // current value in range mode
     },
     /// Options mode where the value is selected from a set of predefined options.
     Discrete {
-        options: Vec<(f32, f32)>,  // List of option pairs. This could be converted to a more descriptive structure.
-        current: f32      // currently selected option
+        options: Vec<(f32, f32)>, // List of option pairs. 
+        current: f32,             // currently selected option
     },
 }
 
-
-
 /********************* SIMULATE_MESSAGE.C *********************/
-
 
 impl SimComponent {
     pub fn should_update(&self) -> bool {
@@ -77,12 +76,7 @@ impl SimComponent {
     }
 }
 
-
-impl SimPoint {
-    
-}
-
-
+impl SimPoint {}
 
 // TODO create a SimComponentArgs -- for bypassing the arugment number limit, and also to keep the Simcompoennt attr private
 // /// A wrapper struct for giving properties of a message from the macros to simulator
@@ -122,8 +116,6 @@ impl SimPoint {
 //     }
 //     fn get_component(&self) -> &SimComponent;
 // }
-
-
 
 // /// Sweep specific logic
 // impl SimSweep {

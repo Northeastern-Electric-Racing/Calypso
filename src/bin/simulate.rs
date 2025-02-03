@@ -1,5 +1,8 @@
+#![allow(dead_code)] // TODO: Cleanup
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+
 // TODO: Convert Sim to new spec
- 
 use std::{
     thread::{self},
     time::{Duration, UNIX_EPOCH},
@@ -30,12 +33,10 @@ struct CalypsoArgs {
     siren_host_url: String,
 }
 
-
-//
 fn simulate_out(pub_path: &str) {
     let mut client = MqttClient::new(pub_path, "calypso-simulator");
     let _ = client.connect(); // todo: add error handling
-    let sleep_time = Duration::from_millis(10);
+    let _sleep_time = Duration::from_millis(10);
 
     let hello_world = get_hello_world();
     println!("message: {:?}", hello_world);
@@ -45,7 +46,6 @@ fn simulate_out(pub_path: &str) {
 
     // loop through the simulated components, if they should update, update them and publish the data
     // loop {
-
 
     //     // for component in simulated_components.iter_mut() {
     //     //     if component.should_update() {
@@ -68,13 +68,11 @@ fn simulate_out(pub_path: &str) {
     //     //     }
     //     // }
 
-        
     //     // sleep for a bit
     //     thread::sleep(sleep_time);
     // }
 }
 //
-
 
 /**
  * Main Function

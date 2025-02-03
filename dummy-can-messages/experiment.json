@@ -1,0 +1,218 @@
+[
+    {
+        "id": "0x1337",
+        "desc": "Experimental Segment Temperatures",
+        "sim_freq": 700,
+        "points": [
+            {
+                "size": 8,
+                "signed": true,
+                "sim": {
+                    "min": -50,
+                    "max": 50,
+                    "inc_min": 0.5,
+                    "inc_max": 1.5
+                }
+            },
+            {
+                "size": 16,
+                "endianness": "little",
+                "format": "divide100",
+                "signed": true,
+                "default": -20.0,
+                "sim": {
+                    "min": -100,
+                    "max": 300,
+                    "inc_min": 1,
+                    "inc_max": 5
+                }
+            },
+            {
+                "size": 8,
+                "sim": {
+                    "min": 1,
+                    "max": 15,
+                    "inc_min": 1,
+                    "inc_max": 5
+                }
+            },
+            {
+                "size": 8,
+                "sim": {
+                    "min": 1,
+                    "max": 15,
+                    "inc_min": 1,
+                    "inc_max": 5
+                }
+            },
+            {
+                "size": 8,
+                "sim": {
+                    "min": 1,
+                    "max": 15,
+                    "inc_min": 1,
+                    "inc_max": 5
+                }
+            },
+            {
+                "size": 8,
+                "sim": {
+                    "min": 1,
+                    "max": 15,
+                    "inc_min": 1,
+                    "inc_max": 5
+                }
+            },
+            {
+                "size": 1,
+                "sim": {
+                    "options": [
+                        [
+                          0,
+                          0.5
+                        ],
+                        [
+                            1,
+                            0.5
+                        ]
+                    ]
+                }
+            },
+            {
+                "size": 1,
+                "sim": {
+                    "options": [
+                        [
+                          0,
+                          0.5
+                        ],
+                        [
+                            1,
+                            0.5
+                        ]
+                    ]
+                }
+            },
+            {
+                "size": 1,
+                "sim": {
+                    "options": [
+                        [
+                          0,
+                          0.5
+                        ],
+                        [
+                            1,
+                            0.5
+                        ]
+                    ]
+                }
+            },
+            {
+                "size": 1,
+                "sim": {
+                    "options": [
+                        [
+                          0,
+                          0.5
+                        ],
+                        [
+                            1,
+                            0.5
+                        ]
+                    ]
+                }
+            },
+            {
+                "size": 1,
+                "sim": {
+                    "options": [
+                        [
+                          0,
+                          0.5
+                        ],
+                        [
+                            1,
+                            0.5
+                        ]
+                    ]
+                }
+            },
+            {
+                "size": 1,
+                "sim": {
+                    "options": [
+                        [
+                          0,
+                          0.5
+                        ],
+                        [
+                            1,
+                            0.5
+                        ]
+                    ]
+                }
+            },
+            {
+                "size": 1,
+                "sim": {
+                    "options": [
+                        [
+                          0,
+                          0.5
+                        ],
+                        [
+                            1,
+                            0.5
+                        ]
+                    ]
+                }
+            },
+            {
+                "size": 1,
+                "sim": {
+                    "options": [
+                        [
+                          0,
+                          0.5
+                        ],
+                        [
+                            1,
+                            0.5
+                        ]
+                    ]
+                }
+            }
+        ],
+        "fields": [
+            {
+                "name": "BMS/Pack/PerCell/Cell-{6}/Attr/{3}",
+                "unit": "V",
+                "values": [
+                    7, 8, 9, 10
+                ]
+            },
+            {
+                "name": "BMS/Pack/PerCell/Cell-{6}/Attr/{3}",
+                "unit": "Ah",
+                "values": [
+                    2
+                ]
+            },
+            {
+                "name": "BMS/Pack/PerCell/Cell-{5}/Attr/{4}",
+                "unit": "V",
+                "values": [
+                    11, 12, 13, 14
+                ]
+            },
+            {
+                "name": "BMS/Pack/PerCell/Cell-{5}/Attr/{4}",
+                "unit": "Ah",
+                "values": [
+                    1
+                ]
+            }
+        ]
+    }
+]

@@ -1,9 +1,14 @@
+#![allow(dead_code)] // TODO: Cleanup
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+
 // #![allow(clippy::all)]
 extern crate calypso_cangen;
 extern crate proc_macro;
 extern crate serde_json;
 use calypso_cangen::can_gen_decode::*;
 use calypso_cangen::can_gen_encode::*;
+use calypso_cangen::can_gen_simulate::*;
 use calypso_cangen::can_types::*;
 use calypso_cangen::CANGEN_SPEC_PATH;
 use proc_macro::TokenStream;
@@ -312,30 +317,90 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
         }
     }
 }
+
 #[proc_macro]
 pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
-    let __simulate_expanded = quote! {
+    let _simulate_prelude = quote! {
+        use std::time::Instant;
+        use crate::simulatable_message::{SimComponent, SimValue, SimPoint};
+    };
+
+    let mut _simulate_dummy = quote! {
         pub fn get_hello_world() -> &'static str {
             "Hello, world!"
         }
     };
 
+    let mut _simulate_obj_entries = quote! {};
+
+    // Temporary filter list
+    // let _filterlist: Vec<&str> = vec!["experiment.json"];
 
     if let Ok(entries) = fs::read_dir(CANGEN_SPEC_PATH) {
-        entries.filter_map(Result::ok)
-            .map(|entry| entry.path())
-            .filter(|path| {
-                path.is_file() && path.extension().map(|ext| ext == "json").unwrap_or(false)
+        entries
+            .filter_map(Result::ok)
+            .map(|_entry| _entry.path())
+            .filter(|_path| {
+                _path.is_file()
+                    && _path.extension().map(|ext| ext == "json").unwrap_or(false)
+                    // && _filterlist.contains(&_path.file_name().unwrap().to_str().unwrap())
             })
-            .for_each(|path| { 
-                println!("[gen_simulate_data] JSON Path: {:?}", path);
+            .for_each(|path| {
+                println!("[gen_simulate_data] Processing JSON: {:?}", path);
+                _simulate_obj_entries.extend(gen_simulate_file_to_tokens(path.clone()));
             });
     } else {
         eprintln!("Could not read from directory: {}", CANGEN_SPEC_PATH);
     }
 
+    let _simulate_mainfunc = quote! {
+        fn create_simulated_components() -> Vec<SimComponent> {
+            let mut __all_sim_components: Vec<SimComponent> = Vec::new();
+            #_simulate_obj_entries // Loop of (new entry, push entry)...
+            __all_sim_components
+        }
+    };
 
-    TokenStream::from(__simulate_expanded)
+    let combined = quote! {
+        #_simulate_prelude
+        #_simulate_dummy
+        #_simulate_mainfunc
+    };
+
+    let combined_text = format!("{}", combined);
+    if let Ok(()) = fs::write("macro_expanded.rs", combined_text) {
+        println!("[macro_expand] Successfully wrote expanded macro to file");
+    } else {
+        eprintln!("[macro_expand] Failed to write expanded macro to file");
+    }
+    TokenStream::from(combined)
+}
+
+/**
+
+*/
+fn gen_simulate_file_to_tokens(path: PathBuf) -> ProcMacro2TokenStream {
+    let contents = match fs::read_to_string(&path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error opening file {:?}: {}", path, e);
+            return quote! {};
+        }
+    };
+
+    let mut msgs: Vec<CANMsg> = serde_json::from_str(&contents).unwrap();
+    let tokens: ProcMacro2TokenStream = msgs.iter_mut().map(|msg| gen_simulate_canmsg(msg)).fold(
+        ProcMacro2TokenStream::new(),
+        |mut acc, ts| {
+            acc.extend(ts);
+            acc.extend(ProcMacro2TokenStream::from_str("\n"));
+            acc
+        },
+    );
+
+    quote! {
+        #tokens
+    }
 }
 
 // TODO: Convert Sim to new spec
