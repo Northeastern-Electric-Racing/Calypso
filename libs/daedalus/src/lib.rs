@@ -323,9 +323,6 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
 
     let mut _simulate_obj_entries = quote! {};
 
-    // Temporary filter list
-    // let _filterlist: Vec<&str> = vec!["experiment.json"];
-
     if let Ok(entries) = fs::read_dir(CANGEN_SPEC_PATH) {
         entries
             .filter_map(Result::ok)
@@ -333,7 +330,6 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
             .filter(|_path| {
                 _path.is_file()
                     && _path.extension().map(|ext| ext == "json").unwrap_or(false)
-                    // && _filterlist.contains(&_path.file_name().unwrap().to_str().unwrap())
             })
             .for_each(|path| {
                 _simulate_obj_entries.extend(gen_simulate_file_to_tokens(path.clone()));
@@ -356,12 +352,6 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
         #_simulate_mainfunc
     };
 
-    let combined_text = format!("{}", combined);
-    if let Ok(()) = fs::write("macro_expanded.rs", combined_text) {
-        println!("[macro_expand] Successfully wrote expanded macro to file");
-    } else {
-        eprintln!("[macro_expand] Failed to write expanded macro to file");
-    }
     TokenStream::from(combined)
 }
 
