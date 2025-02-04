@@ -1,8 +1,3 @@
-#![allow(dead_code)] // TODO: Cleanup
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-
-// TODO: Convert Sim to new spec
 use super::data::DecodeData;
 use rand::prelude::*;
 use regex::Regex;
@@ -120,7 +115,7 @@ impl SimValue {
     pub fn initialize(&mut self) {
         let mut rng = rand::thread_rng();
         match self {
-            SimValue::Range { min, max, inc_min, inc_max, round, current } => {
+            SimValue::Range { min, max, inc_min, round, current, .. } => {
                 *current = rng.gen_range(*min..*max);
                 if *inc_min != 0.0 {
                     *current = (*current / *inc_min).round() * *inc_min; // Round to nearest inc_min
@@ -138,8 +133,8 @@ impl SimValue {
 
     pub fn get_value(&self) -> f32 {
         match self {
-            SimValue::Range { min, max, inc_min, inc_max, round, current } => *current,
-            SimValue::Discrete { options, current } => *current
+            SimValue::Range { current, .. } => *current,
+            SimValue::Discrete { current, .. } => *current
         }
     }
 

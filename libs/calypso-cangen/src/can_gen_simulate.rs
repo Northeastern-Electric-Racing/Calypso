@@ -1,19 +1,13 @@
-#![allow(dead_code)] // TODO: Cleanup
-#![allow(unused_imports)]
-#![allow(unused_mut)]
-#![allow(unused_variables)]
-
 use crate::can_types::*;
-use proc_macro2::Literal;
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
-use quote::{format_ident, quote};
+use quote::{quote};
 use regex::Regex;
 
 /**
  * Function to turn a CANMsg into multiple SimComponents
  */
 pub fn gen_simulate_canmsg(msg: &CANMsg) -> ProcMacro2TokenStream {
-    let Some(sim_freq) = msg.sim_freq else {
+    let Some(_sim_freq) = msg.sim_freq else {
         return quote! {};
     };
 
@@ -146,13 +140,6 @@ pub fn gen_simulate_netfield(field: &NetField, points: &Vec<CANPoint>, msg: &CAN
     }
 }
 
-/**
- *  Function to generate variable name for a SimComponentAttr  
- */
-fn gen_sim_component_attr_name(field: &NetField) -> ProcMacro2TokenStream {
-    // format_ident!("{}_attr", field.name.clone().to_lowercase().replace(['/', ' ', '-'], "_"));
-    quote! {}
-}
 
 /**
  * Function to generate SimPoint (and the SimValue inside it) for a CANPoint

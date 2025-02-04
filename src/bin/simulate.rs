@@ -1,9 +1,3 @@
-#![allow(dead_code)] // TODO: Cleanup
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-#![allow(unused_mut)]
-
-use core::{fmt, num};
 use std::{
     thread::{self},
     time::{Duration, UNIX_EPOCH},
@@ -14,7 +8,6 @@ use calypso::{
     mqtt::MqttClient, simulatable_message::SimComponent, simulate_data::create_simulated_components,
 };
 use clap::Parser;
-use regex::Regex;
 
 /**
 * The command line arguments for the simulator.
