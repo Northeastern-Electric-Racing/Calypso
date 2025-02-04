@@ -27,6 +27,7 @@ rand = "0.8"
 phf = { version = "0.11.3", features = ["macros"] }
 calypso-cangen = { path = "./libs/calypso-cangen" }
 daedalus = { path = "./libs/daedalus" }
+regex = "1.11.1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 socketcan = { version = "3.3.1" }

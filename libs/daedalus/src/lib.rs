@@ -325,12 +325,6 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
         use crate::simulatable_message::{SimComponent, SimValue, SimPoint};
     };
 
-    let mut _simulate_dummy = quote! {
-        pub fn get_hello_world() -> &'static str {
-            "Hello, world!"
-        }
-    };
-
     let mut _simulate_obj_entries = quote! {};
 
     // Temporary filter list
@@ -346,7 +340,6 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
                     // && _filterlist.contains(&_path.file_name().unwrap().to_str().unwrap())
             })
             .for_each(|path| {
-                println!("[gen_simulate_data] Processing JSON: {:?}", path);
                 _simulate_obj_entries.extend(gen_simulate_file_to_tokens(path.clone()));
             });
     } else {
@@ -357,13 +350,13 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
         pub fn create_simulated_components() -> Vec<SimComponent> {
             let mut __all_sim_components: Vec<SimComponent> = Vec::new();
             #_simulate_obj_entries // Loop of (new entry, push entry)...
+            __all_sim_components.iter_mut().for_each(|c| c.initialize());
             __all_sim_components
         }
     };
 
     let combined = quote! {
         #_simulate_prelude
-        #_simulate_dummy
         #_simulate_mainfunc
     };
 

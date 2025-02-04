@@ -1,19 +1,20 @@
 #![allow(dead_code)] // TODO: Cleanup
 #![allow(unused_imports)]
 #![allow(unused_variables)]
+#![allow(unused_mut)]
 
-// TODO: Convert Sim to new spec
+use core::{fmt, num};
 use std::{
     thread::{self},
     time::{Duration, UNIX_EPOCH},
 };
 
-use calypso::simulate_data::get_hello_world;
 use calypso::proto::serverdata;
 use calypso::{
     mqtt::MqttClient, simulatable_message::SimComponent, simulate_data::create_simulated_components,
 };
 use clap::Parser;
+use regex::Regex;
 
 /**
 * The command line arguments for the simulator.
@@ -31,44 +32,40 @@ struct CalypsoArgs {
     siren_host_url: String,
 }
 
+
 fn simulate_out(pub_path: &str) {
     let mut client = MqttClient::new(pub_path, "calypso-simulator");
     let _ = client.connect(); // todo: add error handling
-    let _sleep_time = Duration::from_millis(10);
-
-    let hello_world = get_hello_world();
-    println!("message: {:?}", hello_world);
+    let sleep_time = Duration::from_millis(10);
 
     // todo: a way to turn individual components on and off
-    // let mut simulated_components: Vec<Box<dyn SimShared>> = create_simulated_components();
+    // note: components are pre-initialized within the function
+    let mut simulated_components: Vec<SimComponent> = create_simulated_components();
 
-    // loop through the simulated components, if they should update, update them and publish the data
-    // loop {
+    loop {
+        for component in simulated_components.iter_mut() {
+            if component.should_update() {
+                component.update();
+                let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
+                let data: calypso::data::DecodeData = component.get_decode_data();
+                let mut payload = serverdata::ServerData::new();
+                payload.unit = data.unit.to_string();
+                payload.values = data.value;
+                payload.time_us = timestamp;
 
-    //     // for component in simulated_components.iter_mut() {
-    //     //     if component.should_update() {
-    //     //         component.update();
-    //     //         let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
-    //     //         let data: calypso::data::DecodeData = component.get_value();
-    //     //         let mut payload = serverdata::ServerData::new();
-    //     //         payload.unit = data.unit.to_string();
-    //     //         payload.values = data.value;
-    //     //         payload.time_us = timestamp;
+                client
+                    .publish(
+                        data.topic.to_string(),
+                        protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
+                            format!("failed to serialize {}", e).as_bytes().to_vec()
+                        }),
+                    ).expect("Could not publish!");
+            }
+        }
 
-    //     //         client
-    //     //             .publish(
-    //     //                 data.topic.to_string(),
-    //     //                 protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
-    //     //                     format!("failed to serialize {}", e).as_bytes().to_vec()
-    //     //                 }),
-    //     //             )
-    //     //             .expect("Could not publish!");
-    //     //     }
-    //     // }
-
-    //     // sleep for a bit
-    //     thread::sleep(sleep_time);
-    // }
+        // sleep for a bit
+        thread::sleep(sleep_time);
+    }
 }
 //
 

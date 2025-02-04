@@ -31,36 +31,36 @@
                 "size": 8,
                 "sim": {
                     "min": 1,
-                    "max": 15,
+                    "max": 5,
                     "inc_min": 1,
-                    "inc_max": 5
+                    "inc_max": 3
                 }
             },
             {
                 "size": 8,
                 "sim": {
-                    "min": 1,
-                    "max": 15,
+                    "min": 6,
+                    "max": 10,
                     "inc_min": 1,
-                    "inc_max": 5
+                    "inc_max": 3
                 }
             },
             {
                 "size": 8,
                 "sim": {
-                    "min": 1,
+                    "min": 11,
                     "max": 15,
                     "inc_min": 1,
-                    "inc_max": 5
+                    "inc_max": 3
                 }
             },
             {
                 "size": 8,
                 "sim": {
-                    "min": 1,
-                    "max": 15,
+                    "min": 16,
+                    "max": 20,
                     "inc_min": 1,
-                    "inc_max": 5
+                    "inc_max": 3
                 }
             },
             {
@@ -83,11 +83,11 @@
                 "sim": {
                     "options": [
                         [
-                          0,
+                          2,
                           0.5
                         ],
                         [
-                            1,
+                            3,
                             0.5
                         ]
                     ]
@@ -98,11 +98,11 @@
                 "sim": {
                     "options": [
                         [
-                          0,
+                          4,
                           0.5
                         ],
                         [
-                            1,
+                            5,
                             0.5
                         ]
                     ]
@@ -113,11 +113,11 @@
                 "sim": {
                     "options": [
                         [
-                          0,
+                          6,
                           0.5
                         ],
                         [
-                            1,
+                            7,
                             0.5
                         ]
                     ]
@@ -128,11 +128,11 @@
                 "sim": {
                     "options": [
                         [
-                          0,
+                          8,
                           0.5
                         ],
                         [
-                            1,
+                            9,
                             0.5
                         ]
                     ]
@@ -143,11 +143,11 @@
                 "sim": {
                     "options": [
                         [
-                          0,
+                          10,
                           0.5
                         ],
                         [
-                            1,
+                            11,
                             0.5
                         ]
                     ]
@@ -158,11 +158,11 @@
                 "sim": {
                     "options": [
                         [
-                          0,
+                          12,
                           0.5
                         ],
                         [
-                            1,
+                            13,
                             0.5
                         ]
                     ]
@@ -173,11 +173,11 @@
                 "sim": {
                     "options": [
                         [
-                          0,
+                          14,
                           0.5
                         ],
                         [
-                            1,
+                            15,
                             0.5
                         ]
                     ]
@@ -186,28 +186,28 @@
         ],
         "fields": [
             {
-                "name": "BMS/Pack/PerCell/Cell-{6}/Attr/{3}",
+                "name": "Experiment/Pack/PerCell/Cell-{6}/Attr/{3}",
                 "unit": "V",
                 "values": [
                     7, 8, 9, 10
                 ]
             },
             {
-                "name": "BMS/Pack/PerCell/Cell-{6}/Attr/{3}",
+                "name": "Experiment/Pack/PerCell/Cell-{6}/Attr/{3}",
                 "unit": "Ah",
                 "values": [
                     2
                 ]
             },
             {
-                "name": "BMS/Pack/PerCell/Cell-{5}/Attr/{4}",
+                "name": "Experiment/Pack/PerCell/Cell-{5}/Attr/{4}",
                 "unit": "V",
                 "values": [
                     11, 12, 13, 14
                 ]
             },
             {
-                "name": "BMS/Pack/PerCell/Cell-{5}/Attr/{4}",
+                "name": "Experiment/Pack/PerCell/Cell-{5}/Attr/{4}",
                 "unit": "Ah",
                 "values": [
                     1

@@ -10,20 +10,12 @@ use quote::{format_ident, quote};
 use regex::Regex;
 
 /**
- *  Function to generate SimComponentAttrs and SimComponents for a CANMsg
+ * Function to turn a CANMsg into multiple SimComponents
  */
 pub fn gen_simulate_canmsg(msg: &CANMsg) -> ProcMacro2TokenStream {
     let Some(sim_freq) = msg.sim_freq else {
         return quote! {};
     };
-
-    if msg.points.iter().any(|point| point.sim.is_none()) {
-        eprintln!(
-            "[warning] sim_freq defined for {} ({}), but some points have no sim values",
-            msg.id, msg.desc
-        );
-        return quote! {};
-    }
 
     let sim_components_token = msg
         .fields
@@ -36,7 +28,11 @@ pub fn gen_simulate_canmsg(msg: &CANMsg) -> ProcMacro2TokenStream {
     }
 }
 
-fn get_topic_format_value_indexes(field: &NetField) -> Vec<usize> {
+/**
+ * Return a list of indices of in-topic CANPoints
+ * BMS/Pack/PerCell/Cell-{5}/Attr/{4} ==> vec![5, 4]
+ */
+fn get_intopic_point_idx(field: &NetField) -> Vec<usize> {
     let topic_regex_pattern = Regex::new(r"\{(\d+)\}").unwrap(); // Basically, digits enclosed in braces
     let topic_format_value_indexes: Vec<usize> = topic_regex_pattern
         .captures_iter(&field.name.clone())
@@ -46,9 +42,25 @@ fn get_topic_format_value_indexes(field: &NetField) -> Vec<usize> {
 }
 
 /**
+ * Converts numbered placeholders to empty placeholders
+ * "BMS/Pack/PerCell/Cell-{5}/Attr/{4}" => "BMS/Pack/PerCell/Cell-{}/Attr/{}"
+ */
+fn prep_intopic_fields(name: &str) -> String {
+    let re = Regex::new(r"\{\d+\}").unwrap();
+    re.replace_all(name, "{}").into_owned()
+}
+
+
+
+/**
  * Convert a NetField to a SimComponent
  */
 pub fn gen_simulate_netfield(field: &NetField, points: &Vec<CANPoint>, msg: &CANMsg) -> ProcMacro2TokenStream {
+    // Check if all associated CANPoints have sim values
+    if field.values.iter().any(|&idx| points[idx - 1].sim.is_none()) {
+        return quote! {};
+    }
+    
     let mut token_pts_val_buffer = ProcMacro2TokenStream::new();
     
     #[allow(unused_doc_comments)]
@@ -67,11 +79,11 @@ pub fn gen_simulate_netfield(field: &NetField, points: &Vec<CANPoint>, msg: &CAN
      *          ( create SimPoint, embedding the SimValue )
      *      ( add SimPoint to vec<SimPoint> )
      * 
-     *      ( create SimComponent, embedding the vec<SimPoint> )
+     *      ( create SimComponent, embedding the normal & in-point vec<SimPoint> )
      */
 
     // Handle in-topic CANPoint values
-    let points_idx_intopic = get_topic_format_value_indexes(field);
+    let points_idx_intopic = get_intopic_point_idx(field);
     if points_idx_intopic.len() > 0 {
         token_pts_val_buffer.extend(quote! {
             let mut vec_points_in_topic: Vec<SimPoint> = Vec::new();
@@ -91,15 +103,15 @@ pub fn gen_simulate_netfield(field: &NetField, points: &Vec<CANPoint>, msg: &CAN
         token_pts_val_buffer.extend(quote! { vec_points.push(__new_point); });
     }
 
-    // println!("in topic values are {:?}", intopic_values)
-
-    let _debug_field_name = &field.name;
-
     let token_id = &msg.id;
     let token_simfreq = &msg.sim_freq;
-    let token_topic = &field.name; // TODO: transformation needed because of in topic values
     let token_desc = &msg.desc;
-    let token_name = &field.name;
+    let token_name = prep_intopic_fields(&field.name);
+    let token_vec_points_intopic = 
+        match points_idx_intopic.len() {
+            0 => quote! { None },
+            _ => quote! { Some(vec_points_in_topic) }
+        };
     let token_unit = &field.unit;
     let token_key = msg
         .key
@@ -113,14 +125,13 @@ pub fn gen_simulate_netfield(field: &NetField, points: &Vec<CANPoint>, msg: &CAN
         .unwrap_or_else(|| quote! { None });
 
     quote! {
-        let _____START_DEBUG_FIELD_NAME = #_debug_field_name;
+        let _____START_DEBUG_FIELD_NAME = #token_name;
         #token_pts_val_buffer
 
         let __new_component = SimComponent {
             id: #token_id.to_string(),
             points: vec_points,
-            points_intopic: None,
-            topic: #token_topic.to_string(),
+            points_intopic: #token_vec_points_intopic,
             unit: #token_unit.to_string(),
             name: #token_name.to_string(),
             last_update: Instant::now(),
@@ -131,7 +142,7 @@ pub fn gen_simulate_netfield(field: &NetField, points: &Vec<CANPoint>, msg: &CAN
         };
         __all_sim_components.push(__new_component);
 
-        let _____END___DEBUG_FIELD_NAME = #_debug_field_name;
+        let _____END___DEBUG_FIELD_NAME = #token_name;
     }
 }
 
@@ -166,7 +177,19 @@ fn gen_sim_point(point: &CANPoint) -> ProcMacro2TokenStream {
                 });
             }
             Sim::SimDiscrete { options } => {
-                let formatted_options = options
+                // [(0, 0.3), (1, 0.3), (2, 0.4)]
+                //               |
+                //               V
+                // [(0, 0.3), (1, 0.6), (2, 1.0)]
+                let options_accumulated: Vec<[f32; 2]> = options
+                    .iter()
+                    .scan(0.0, |acc, [a, b]| {
+                        *acc += b;
+                        Some([*a, *acc])
+                    })
+                    .collect();
+
+                let formatted_options = options_accumulated
                     .iter()
                     .map(|[a, b]| quote! { (#a, #b) })
                     .collect::<Vec<_>>();
