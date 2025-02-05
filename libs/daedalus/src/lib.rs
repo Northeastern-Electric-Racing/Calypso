@@ -11,7 +11,6 @@ use proc_macro::TokenStream;
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
 use quote::{format_ident, quote};
 use std::fs;
-use std::io::Read;
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -45,7 +44,7 @@ pub fn gen_decode_data(_item: TokenStream) -> TokenStream {
             .filter_map(Result::ok)
             .map(|__entry| __entry.path())
             .filter(|__path| {
-                __path.is_file() && _path.extension().is_some_and(|ext| ext == "json")
+                __path.is_file() && __path.extension().is_some_and(|ext| ext == "json")
             })
             .for_each(|__path| {
                 __decode_functions.extend(gen_decode_fns(__path.clone()));
@@ -166,7 +165,7 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
             .filter_map(Result::ok)
             .map(|__entry| __entry.path())
             .filter(|__path| {
-                __path.is_file() && _path.extension().is_some_and(|ext| ext == "json")
+                __path.is_file() && __path.extension().is_some_and(|ext| ext == "json")
             })
             .for_each(|__path| {
                 __encode_functions.extend(gen_encode_fns(__path.clone()));

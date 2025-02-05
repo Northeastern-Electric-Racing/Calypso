@@ -4,6 +4,7 @@ use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
 use thiserror::Error;
+use regex::Regex;
 
 /**
  *  JSON spec error enum   
@@ -19,7 +20,6 @@ pub enum CANSpecError {
     #[error("NetField {0} references a value ({1}) that is out of bounds of the corresponding points list (max: {2})")]
     FieldValueOutOfBounds(String, usize, usize),
 
-    // TODO implement
     #[error("NetField topic name {0} references a a value ({1}) that is out of bounds of the corresponding points list (max: {2})")]
     FieldInTopicValueOutOfBounds(String, usize, usize),
 
@@ -210,7 +210,7 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
     for _field in _msg.fields {
         // Check that field doesn't reference any OoB points
         for _value in _field.values {
-            if _value <= 0 || _value > _msg.points.len() {
+            if _value == 0 || _value > _msg.points.len() {
                 _errors.push(CANSpecError::FieldValueOutOfBounds(
                     _field.name.clone(),
                     _value,
@@ -219,13 +219,20 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
             }
         }
 
-        // TODO: Check that field name doesn't reference any OoB points
-        if false {
-            _errors.push(CANSpecError::FieldInTopicValueOutOfBounds(
-                _field.name.clone(),
-                0,
-                _msg.points.len(),
-            ));
+        // Check that field name doesn't reference any OoB points
+        let _topic_regex_pattern = Regex::new(r"\{(\d+)\}").unwrap();  // Basically, digits enclosed in braces 
+        let _topic_format_value_indexes: Vec<usize> = _topic_regex_pattern
+            .captures_iter(&_field.name.clone())
+            .map(|cap| cap[1].parse::<usize>().unwrap())
+            .collect();
+        for _value in _topic_format_value_indexes {
+            if _value == 0 || _value > _msg.points.len() {
+                _errors.push(CANSpecError::FieldInTopicValueOutOfBounds(
+                    _field.name.clone(),
+                    _value,
+                    _msg.points.len(),
+                ));
+            }
         }
     }
 

@@ -60,13 +60,13 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
 fn gen_decoder_field(field: &mut NetField, points: &mut Vec<CANPoint>) -> ProcMacro2TokenStream {
     // First, check that all of the correlated points are to be parsed
     // If not, return a blank TokenStream
-    if let false = field
+    if !field
         .values
         .iter()
         .map(|value| points[value-1].parse.unwrap_or(true))
         .fold(true, |mut acc, p| { acc &= p; acc })
     {
-       return quote! { };
+       return quote! {};
     }
     // Otherwise, construct TokenStream as normal
 
@@ -81,7 +81,7 @@ fn gen_decoder_field(field: &mut NetField, points: &mut Vec<CANPoint>) -> ProcMa
                 let val_point = format_ident!("point_{}", value);
                 quote! { #val_point, }
             } else {
-                quote! { }
+                quote! {}
             }
         })
         .collect::<Vec<ProcMacro2TokenStream>>()
@@ -107,7 +107,7 @@ fn gen_decoder_field(field: &mut NetField, points: &mut Vec<CANPoint>) -> ProcMa
                 let val_point = format_ident!("point_{}", value);
                 quote! { #val_point, }
             } else {
-                quote! { }
+                quote! {}
             }
         })
         .collect::<Vec<ProcMacro2TokenStream>>()
