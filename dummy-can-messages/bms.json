@@ -1067,30 +1067,93 @@
     "desc": "Alpha Cell Data Debug",
     "points": [
       {
-        "size": 10
+        "size": 10,
+        "sim": {
+          "min": 20,
+          "max": 80,
+          "inc_min": 0.01,
+          "inc_max": 0.5
+        }
       },
       {
         "size": 13,
-        "format": "divide10000"
+        "format": "divide10000",
+        "sim": {
+          "min": 2.5,
+          "max": 4.25,
+          "inc_min": 0.01,
+          "inc_max": 0.2
+        }
       },
       {
         "size": 13,
-        "format": "divide10000"
+        "format": "divide10000",
+        "sim": {
+          "min": 2.5,
+          "max": 4.25,
+          "inc_min": 0.01,
+          "inc_max": 0.2
+        }
       },
       {
-        "size": 4
+        "size": 4,
+        "sim": {
+          "min": 0,
+          "max": 4,
+          "inc_min": 1,
+          "inc_max": 1,
+          "round": true
+        }
       },
       {
-        "size": 4
+        "size": 4,
+        "sim": {
+          "min": 0,
+          "max": 13,
+          "inc_min": 1,
+          "inc_max": 1,
+          "round": true
+        }
       },
       {
-        "size": 4
+        "size": 4,
+         "sim": {
+          "min": 0,
+          "max": 13,
+          "inc_min": 1,
+          "inc_max": 1,
+          "round": true
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
         "size":6,
@@ -1134,37 +1197,100 @@
         ]
       }
     ],
-    "sim_freq": 700
+    "sim_freq": 35
   },
   {
     "id": "0x6FB",
     "desc": "Beta Cell Data Debug",
     "points": [
       {
-        "size": 10
+        "size": 10,
+        "sim": {
+          "min": 20,
+          "max": 80,
+          "inc_min": 0.01,
+          "inc_max": 0.5
+        }
       },
       {
         "size": 13,
-        "format": "divide10000"
+        "format": "divide10000",
+        "sim": {
+          "min": 2.5,
+          "max": 4.25,
+          "inc_min": 0.01,
+          "inc_max": 0.2
+        }
       },
       {
         "size": 13,
-        "format": "divide10000"
+        "format": "divide10000",
+        "sim": {
+          "min": 2.5,
+          "max": 4.25,
+          "inc_min": 0.01,
+          "inc_max": 0.2
+        }
       },
       {
-        "size": 4
+        "size": 4,
+        "sim": {
+          "min": 0,
+          "max": 4,
+          "inc_min": 1,
+          "inc_max": 1,
+          "round": true
+        }
       },
       {
-        "size": 4
+        "size": 4,
+         "sim": {
+          "min": 0,
+          "max": 10,
+          "inc_min": 1,
+          "inc_max": 1,
+          "round": true
+        }
       },
       {
-        "size": 4
+        "size": 4,
+         "sim": {
+          "min": 0,
+          "max": 10,
+          "inc_min": 1,
+          "inc_max": 1,
+          "round": true
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
         "size": 6,
@@ -1208,34 +1334,83 @@
         ]
       }
     ],
-    "sim_freq": 700
+    "sim_freq": 25
   },
   {
     "id": "0x6FD",
     "desc": "Beta Chip A Debug",
     "points": [
       {
-        "size": 10
+        "size": 10,
+        "sim": {
+          "min": 20,
+          "max": 80,
+          "inc_min": 0.01,
+          "inc_max": 0.5
+        }
       },
       {
         "size": 13,
-        "format": "divide10000"
+        "format": "divide10000",
+        "sim": {
+          "min": 2.5,
+          "max": 4.25,
+          "inc_min": 0.01,
+          "inc_max": 0.2
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 4
+        "size": 4,
+         "sim": {
+          "min": 0,
+          "max": 4,
+          "inc_min": 1,
+          "inc_max": 1,
+          "round": true
+        }
       },
       {
-        "size": 10
-      },
-      {
-        "size": 13
+        "size": 10,
+        "sim": {
+          "min": 20,
+          "max": 80,
+          "inc_min": 0.01,
+          "inc_max": 0.5
+        }
       },
       {
         "size": 13,
-        "format": "divide10000"
+        "sim": {
+          "min": 20,
+          "max": 80,
+          "inc_min": 0.01,
+          "inc_max": 0.5
+        }
+      },
+      {
+        "size": 13,
+        "format": "divide10000",
+        "sim": {
+          "min": 45,
+          "max": 52.5,
+          "inc_min": 0.5,
+          "inc_max": 2
+        }
       }
     ],
     "fields": [
@@ -1282,7 +1457,7 @@
         ]
       }
     ],
-    "sim_freq": 700
+    "sim_freq": 200
   },
   {
     "id": "0x6FE",
@@ -1290,26 +1465,63 @@
     "points": [
       {
         "size": 13,
-        "format": "divide10000"
+        "format": "divide10000",
+        "sim": {
+          "min": 2.998,
+          "max": 3.002,
+          "inc_min": 0.001,
+          "inc_max": 0.005
+        }
       },
       {
         "size": 10,
-        "format": "divide10000"
+        "format": "divide10000",
+        "sim": {
+          "min": 4.75,
+          "max": 5.25,
+          "inc_min": 0.1,
+          "inc_max": 0.5
+        }
       },
       {
         "size": 10,
-        "format": "divide10000"
+        "format": "divide10000",
+        "sim": {
+          "min": 2.75,
+          "max": 3.25,
+          "inc_min": 0.1,
+          "inc_max": 0.5
+        }
       },
       {
-        "size": 4
+        "size": 4,
+        "sim": {
+          "min": 0,
+          "max": 4,
+          "inc_min": 1,
+          "inc_max": 1,
+          "round": true
+        }
       },
       {
         "size": 13,
-        "format": "divide10000"
+        "format": "divide10000",
+        "sim": {
+          "min": 2.998,
+          "max": 3.002,
+          "inc_min": 0.001,
+          "inc_max": 0.005
+        }
       },
       {
         "size": 13,
-        "format": "divide10000"
+        "format": "divide10000",
+        "sim": {
+          "min": -0.05,
+          "max": 0.05,
+          "inc_min": 0.001,
+          "inc_max": 0.005
+        }
       },
       {
         "size": 1,
@@ -1353,53 +1565,216 @@
         ]
       }
     ],
-    "sim_freq": 700
+    "sim_freq": 200
   },
   {
     "id": "0x6F0",
     "desc": "Beta Chip C Debug",
     "points": [
       {
-        "size": 4
+        "size": 4,
+        "sim": {
+          "min": 0,
+          "max": 4,
+          "inc_min": 1,
+          "inc_max": 1,
+          "round": true
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
         "size": 7,
@@ -1499,61 +1874,224 @@
         ]
       }
     ],
-    "sim_freq": 700
+    "sim_freq": 200
   },
   {
     "id": "0x6FC",
     "desc": "Alpha Chip A Debug",
     "points": [
       {
-        "size": 10
+        "size": 10,
+        "sim": {
+          "min": 20,
+          "max": 80,
+          "inc_min": 0.01,
+          "inc_max": 0.5
+        }
       },
       {
-        "size": 4
-      },
-      {
-        "size": 13
+        "size": 4,
+        "sim": {
+          "min": 0,
+          "max": 4,
+          "inc_min": 1,
+          "inc_max": 1,
+          "round": true
+        }
       },
       {
         "size": 13,
-        "format": "divide10000"
+        "sim": {
+          "min": 20,
+          "max": 80,
+          "inc_min": 0.01,
+          "inc_max": 0.5
+        }
       },
       {
         "size": 13,
-        "format": "divide10000"
+        "format": "divide10000",
+        "sim": {
+          "min": 45,
+          "max": 52.5,
+          "inc_min": 0.5,
+          "inc_max": 2
+        }
       },
       {
-        "size": 1
+        "size": 13,
+        "format": "divide10000",
+        "sim": {
+          "min": -0.05,
+          "max": 0.05,
+          "inc_min": 0.001,
+          "inc_max": 0.005
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
+      },
+      {
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       }
     ],
     "fields": [
@@ -1663,7 +2201,7 @@
         ]
       }
     ],
-    "sim_freq": 700
+    "sim_freq": 200
   },
   {
     "id": "0x6FF",
@@ -1671,28 +2209,83 @@
     "points": [
       {
         "size": 13,
-        "format": "divide10000"
+        "format": "divide10000",
+        "sim": {
+          "min": 2.998,
+          "max": 3.002,
+          "inc_min": 0.001,
+          "inc_max": 0.005
+        }
       },
       {
-        "size": 4
+        "size": 4,
+        "sim": {
+          "min": 0,
+          "max": 4,
+          "inc_min": 1,
+          "inc_max": 1,
+          "round": true
+        }
       },
       {
         "size": 13,
-        "format": "divide10000"
+        "format": "divide10000",
+        "sim": {
+          "min": 2.998,
+          "max": 3.002,
+          "inc_min": 0.001,
+          "inc_max": 0.005
+        }
       },
       {
         "size": 13,
-        "format": "divide10000"
+        "format": "divide10000",
+        "sim": {
+          "min": 4.75,
+          "max": 5.25,
+          "inc_min": 0.01,
+          "inc_max": 0.05
+        }
       },
       {
         "size": 13,
-        "format": "divide10000"
+        "format": "divide10000",
+        "sim": {
+          "min": 2.75,
+          "max": 3.25,
+          "inc_min": 0.01,
+          "inc_max": 0.05
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
-        "size": 1
+        "size": 1,
+        "sim": {
+          "options": [
+            [
+              0,
+              0.9
+            ],
+            [
+              1,
+              0.1
+            ]
+          ]
+        }
       },
       {
         "size": 6,
@@ -1743,6 +2336,6 @@
         ]
       }
     ],
-    "sim_freq": 700
+    "sim_freq": 200
   }
 ]
