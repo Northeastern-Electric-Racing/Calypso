@@ -117,7 +117,7 @@ fn gen_decode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
     let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
     let _fns = _msgs
         .iter_mut()
-        .map(|_m| gen_decoder_fn(_m))
+        .map(gen_decoder_fn)
         .collect::<Vec<ProcMacro2TokenStream>>()
         .into_iter()
         .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
@@ -211,7 +211,7 @@ fn gen_encode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
     let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
     let _fns = _msgs
         .iter_mut()
-        .map(|_m| gen_encoder_fn(_m))
+        .map(gen_encoder_fn)
         .collect::<Vec<ProcMacro2TokenStream>>()
         .into_iter()
         .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
@@ -236,27 +236,25 @@ fn gen_encode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
         }
     };
 
-    let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
-    let mut _entries = ProcMacro2TokenStream::new();
-
     // Only create encode mappings for CANMsgs with key field
-    for mut _msg in _msgs {
-        let _entry = match &_msg.key {
-            Some(key) => {
+    let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
+    let _entries = _msgs
+        .iter_mut()
+        .map(|_m| {
+            if let Some(key) = &_m.key {
                 let fn_name = format_ident!(
                     "encode_{}",
-                    _msg.desc.clone().to_lowercase().replace(' ', "_")
+                    _m.desc.clone().to_lowercase().replace(' ', "_")
                 );
-                quote! {
-                    #key => #fn_name,
-                }
-            }
-            None => {
+                quote! { #key => #fn_name, }
+            } else {
                 quote! {}
             }
-        };
-        _entries.extend(_entry);
-    }
+        })
+        .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
+            acc.extend(ts);
+            acc
+        });
 
     quote! {
         #_entries
@@ -276,21 +274,20 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
     };
 
     let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
-    let mut _entries = ProcMacro2TokenStream::new();
-    for mut _msg in _msgs {
-        let _entry = match &_msg.key {
-            Some(key) => {
+    let _entries = _msgs 
+        .iter_mut()
+        .map(|_m| {
+            if let Some(key) = &_m.key {
                 *_key_list_size += 1;
-                quote! {
-                    #key,
-                }
-            }
-            None => {
+                quote! { #key, }
+            } else {
                 quote! {}
             }
-        };
-        _entries.extend(_entry);
-    }
+        })
+        .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
+            acc.extend(ts);
+            acc
+        });
 
     quote! {
         #_entries

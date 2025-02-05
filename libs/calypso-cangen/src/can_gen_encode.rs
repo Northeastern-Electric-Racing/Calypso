@@ -13,7 +13,7 @@ pub fn gen_encoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
             let point_encoders = msg
                 .points
                 .iter_mut()
-                .map(|point| gen_encoder_point(point))
+                .map(gen_encoder_point)
                 .collect::<Vec<ProcMacro2TokenStream>>()
                 .into_iter()
                 .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
