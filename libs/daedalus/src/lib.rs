@@ -38,28 +38,21 @@ pub fn gen_decode_data(_item: TokenStream) -> TokenStream {
     };
     let mut __decode_map_entries = ProcMacro2TokenStream::new();
 
-
-    match fs::read_dir(CANGEN_SPEC_PATH) {
-        Ok(__entries) => {
-            for __entry in __entries {
-                match __entry {
-                    Ok(__entry) => {
-                        let __path = __entry.path();
-                        if __path.is_file() && __path.extension().is_some_and(|ext| ext == "json")
-                        {
-                            __decode_functions.extend(gen_decode_fns(__path.clone()));
-                            __decode_map_entries.extend(gen_decode_mappings(__path.clone()));
-                        }
-                    }
-                    Err(_) => {
-                        eprintln!("Could not generate decode functions and mappings");
-                    }
-                }
-            }
-        }
-        Err(_) => {
-            eprintln!("Could not read from directory");
-        }
+    // Iterate through CAN spec directory and generate decode functions/mappings
+    // for each valid entry
+    if let Ok(__entries) = fs::read_dir(CANGEN_SPEC_PATH) {
+        __entries 
+            .filter_map(Result::ok)
+            .map(|__entry| __entry.path())
+            .filter(|__path| {
+                __path.is_file() && _path.extension().is_some_and(|ext| ext == "json")
+            })
+            .for_each(|__path| {
+                __decode_functions.extend(gen_decode_fns(__path.clone()));
+                __decode_map_entries.extend(gen_decode_mappings(__path.clone()));
+            });
+    } else {
+        eprintln!("Could not read from directory: {}", CANGEN_SPEC_PATH);
     }
 
     let __decode_expanded = quote! {
@@ -78,31 +71,34 @@ pub fn gen_decode_data(_item: TokenStream) -> TokenStream {
  *  Helper function to generate decode phf map entries for a given JSON spec file
  */
 fn gen_decode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
-    match fs::File::open(_path) {
-        Ok(mut _file) => {
-            let mut _contents = String::new();
-            let _ = _file.read_to_string(&mut _contents);
-            let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
-            let mut _entries = ProcMacro2TokenStream::new();
-            for mut _msg in _msgs {
-                let id_int =
-                    u32::from_str_radix(_msg.id.clone().trim_start_matches("0x"), 16).unwrap();
-                let fn_name = format_ident!(
-                    "decode_{}",
-                    _msg.desc.clone().to_lowercase().replace(' ', "_")
-                );
-                let _entry = quote! { #id_int => #fn_name, };
-                _entries.extend(_entry);
-            }
+    let _contents = match fs::read_to_string(&_path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error opening file {:?}: {}", _path, e);
+            return quote! {};
+        }
+    };
 
-            quote! {
-                #_entries
-            }
-        }
-        Err(_) => {
-            eprintln!("Error opening file");
-            quote! {}
-        }
+    // Iterate through CANMsg list and generate decode mapping for each
+    let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
+    let _entries: ProcMacro2TokenStream = _msgs 
+        .iter_mut()
+        .map(|_m| {
+            let _id_int = 
+                u32::from_str_radix(_m.id.clone().trim_start_matches("0x"), 16).unwrap();
+            let _fn_name = format_ident!(
+                "decode_{}",
+                _m.desc.clone().to_lowercase().replace(' ', "_")
+            );
+            quote! { #_id_int => #_fn_name, }
+        })
+        .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
+            acc.extend(ts);
+            acc
+        });
+
+    quote! {
+        #_entries
     }
 }
 
@@ -110,30 +106,29 @@ fn gen_decode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
  *  Helper function to generate decode functions for a given JSON spec file
  */
 fn gen_decode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
-    match fs::File::open(_path) {
-        Ok(mut _file) => {
-            let mut _contents = String::new();
-            let _ = _file.read_to_string(&mut _contents);
-            let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
-            let _fns = _msgs
-                .iter_mut()
-                .map(|_m| gen_decoder_fn(_m))
-                .collect::<Vec<ProcMacro2TokenStream>>()
-                .into_iter()
-                .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
-                    acc.extend(ts);
-                    acc.extend(ProcMacro2TokenStream::from_str("\n"));
-                    acc
-                });
+    let _contents = match fs::read_to_string(&_path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error opening file {:?}: {}", _path, e);
+            return quote! {};
+        }
+    };
 
-            quote! {
-                #_fns
-            }
-        }
-        Err(_) => {
-            eprintln!("Error opening file");
-            quote! {}
-        }
+    // Iterate through CANMsg list and generate decode function for each
+    let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
+    let _fns = _msgs
+        .iter_mut()
+        .map(|_m| gen_decoder_fn(_m))
+        .collect::<Vec<ProcMacro2TokenStream>>()
+        .into_iter()
+        .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
+            acc.extend(ts);
+            acc.extend(ProcMacro2TokenStream::from_str("\n"));
+            acc
+        });
+
+    quote! {
+        #_fns
     }
 }
 
@@ -164,31 +159,25 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
     let mut __encode_key_list_entries = ProcMacro2TokenStream::new();
     let mut __encode_key_list_size: usize = 0;
 
-    match fs::read_dir(CANGEN_SPEC_PATH) {
-        Ok(__entries) => {
-            for __entry in __entries {
-                match __entry {
-                    Ok(__entry) => {
-                        let __path = __entry.path();
-                        if __path.is_file() && __path.extension().map_or(false, |ext| ext == "json")
-                        {
-                            __encode_functions.extend(gen_encode_fns(__path.clone()));
-                            __encode_map_entries.extend(gen_encode_mappings(__path.clone()));
-                            __encode_key_list_entries.extend(gen_encode_keys(
-                                __path.clone(),
-                                &mut __encode_key_list_size,
-                            ));
-                        }
-                    }
-                    Err(_) => {
-                        eprintln!("Could not generate encode functions and mappings");
-                    }
-                }
-            }
-        }
-        Err(_) => {
-            eprintln!("Could not read from directory");
-        }
+    // Iterate through CAN spec directory and generate encode functions/mappings
+    // for each valid entry
+    if let Ok(__entries) = fs::read_dir(CANGEN_SPEC_PATH) {
+        __entries 
+            .filter_map(Result::ok)
+            .map(|__entry| __entry.path())
+            .filter(|__path| {
+                __path.is_file() && _path.extension().is_some_and(|ext| ext == "json")
+            })
+            .for_each(|__path| {
+                __encode_functions.extend(gen_encode_fns(__path.clone()));
+                __encode_map_entries.extend(gen_encode_mappings(__path.clone()));
+                __encode_key_list_entries.extend(gen_encode_keys(
+                    __path.clone(),
+                    &mut __encode_key_list_size,
+                ));
+            });
+    } else {
+        eprintln!("Could not read from directory: {}", CANGEN_SPEC_PATH);
     }
 
     let __encode_expanded = quote! {
@@ -211,29 +200,28 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
  *  Helper function to generate encode functions for a given JSON spec file
  */
 fn gen_encode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
-    match fs::File::open(_path) {
-        Ok(mut _file) => {
-            let mut _contents = String::new();
-            let _ = _file.read_to_string(&mut _contents);
-            let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
-            let _fns = _msgs
-                .iter_mut()
-                .map(|_m| gen_encoder_fn(_m))
-                .collect::<Vec<ProcMacro2TokenStream>>()
-                .into_iter()
-                .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
-                    acc.extend(ts);
-                    acc
-                });
+    let _contents = match fs::read_to_string(&_path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error opening file {:?}: {}", _path, e);
+            return quote! {};
+        }
+    };
 
-            quote! {
-                #_fns
-            }
-        }
-        Err(_) => {
-            eprintln!("Error opening file");
-            quote! {}
-        }
+    // Iterate through CANMsg list and generate encode function for each
+    let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
+    let _fns = _msgs
+        .iter_mut()
+        .map(|_m| gen_encoder_fn(_m))
+        .collect::<Vec<ProcMacro2TokenStream>>()
+        .into_iter()
+        .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
+            acc.extend(ts);
+            acc
+        });
+
+    quote! {
+        #_fns
     }
 }
 
@@ -241,40 +229,38 @@ fn gen_encode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
  *  Helper function to generate encode phf map entries for a given JSON spec file
  */
 fn gen_encode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
-    match fs::File::open(_path) {
-        Ok(mut _file) => {
-            let mut _contents = String::new();
-            let _ = _file.read_to_string(&mut _contents);
-            let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
-            let mut _entries = ProcMacro2TokenStream::new();
-
-            // Only create encode mappings for CANMsgs with key field
-            for mut _msg in _msgs {
-                let _entry = match &_msg.key {
-                    Some(key) => {
-                        let fn_name = format_ident!(
-                            "encode_{}",
-                            _msg.desc.clone().to_lowercase().replace(' ', "_")
-                        );
-                        quote! {
-                            #key => #fn_name,
-                        }
-                    }
-                    None => {
-                        quote! {}
-                    }
-                };
-                _entries.extend(_entry);
-            }
-
-            quote! {
-                #_entries
-            }
+    let _contents = match fs::read_to_string(&_path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error opening file {:?}: {}", _path, e);
+            return quote! {};
         }
-        Err(_) => {
-            eprintln!("Error opening file");
-            quote! {}
-        }
+    };
+
+    let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
+    let mut _entries = ProcMacro2TokenStream::new();
+
+    // Only create encode mappings for CANMsgs with key field
+    for mut _msg in _msgs {
+        let _entry = match &_msg.key {
+            Some(key) => {
+                let fn_name = format_ident!(
+                    "encode_{}",
+                    _msg.desc.clone().to_lowercase().replace(' ', "_")
+                );
+                quote! {
+                    #key => #fn_name,
+                }
+            }
+            None => {
+                quote! {}
+            }
+        };
+        _entries.extend(_entry);
+    }
+
+    quote! {
+        #_entries
     }
 }
 
@@ -282,38 +268,41 @@ fn gen_encode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
  *  Helper function to generate encode key list entries for a given JSON spec file
  */
 fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2TokenStream {
-    match fs::File::open(_path) {
-        Ok(mut _file) => {
-            let mut _contents = String::new();
-            let _ = _file.read_to_string(&mut _contents);
-            let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
-            let mut _entries = ProcMacro2TokenStream::new();
-            for mut _msg in _msgs {
-                let _entry = match &_msg.key {
-                    Some(key) => {
-                        *_key_list_size += 1;
-                        quote! {
-                            #key,
-                        }
-                    }
-                    None => {
-                        quote! {}
-                    }
-                };
-                _entries.extend(_entry);
-            }
+    let _contents = match fs::read_to_string(&_path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error opening file {:?}: {}", _path, e);
+            return quote! {};
+        }
+    };
 
-            quote! {
-                #_entries
+    let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
+    let mut _entries = ProcMacro2TokenStream::new();
+    for mut _msg in _msgs {
+        let _entry = match &_msg.key {
+            Some(key) => {
+                *_key_list_size += 1;
+                quote! {
+                    #key,
+                }
             }
-        }
-        Err(_) => {
-            eprintln!("Error opening file");
-            quote! {}
-        }
+            None => {
+                quote! {}
+            }
+        };
+        _entries.extend(_entry);
+    }
+
+    quote! {
+        #_entries
     }
 }
 
+
+/**
+ *  Macro to generate all the code for simulate_data.rs 
+ *  - Generates prelude, main function, and all components
+ */
 #[proc_macro]
 pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
     let _simulate_prelude = quote! {
@@ -321,7 +310,7 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
         use crate::simulatable_message::{SimComponent, SimValue, SimPoint};
     };
 
-    let mut _simulate_obj_entries = quote! {};
+    let mut _simulate_obj_entries = ProcMacro2TokenStream::new();
 
     if let Ok(entries) = fs::read_dir(CANGEN_SPEC_PATH) {
         entries
@@ -332,7 +321,7 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
                     && _path.extension().map(|ext| ext == "json").unwrap_or(false)
             })
             .for_each(|path| {
-                _simulate_obj_entries.extend(gen_simulate_file_to_tokens(path.clone()));
+                _simulate_obj_entries.extend(gen_simulate_file_to_objects(path.clone()));
             });
     } else {
         eprintln!("Could not read from directory: {}", CANGEN_SPEC_PATH);
@@ -356,28 +345,28 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
 }
 
 /**
-
-*/
-fn gen_simulate_file_to_tokens(path: PathBuf) -> ProcMacro2TokenStream {
-    let contents = match fs::read_to_string(&path) {
+ *  Helper function to generate Sim objects for a given JSON spec file
+ */
+fn gen_simulate_file_to_objects(_path: PathBuf) -> ProcMacro2TokenStream {
+    let _contents = match fs::read_to_string(&_path) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("Error opening file {:?}: {}", path, e);
+            eprintln!("Error opening file {:?}: {}", _path, e);
             return quote! {};
         }
     };
 
-    let mut msgs: Vec<CANMsg> = serde_json::from_str(&contents).unwrap();
-    let tokens: ProcMacro2TokenStream = msgs.iter_mut().map(|msg| gen_simulate_canmsg(msg)).fold(
-        ProcMacro2TokenStream::new(),
-        |mut acc, ts| {
+    let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
+    let _objects: ProcMacro2TokenStream = _msgs
+        .iter_mut()
+        .map(|_m| gen_simulate_canmsg(_m))
+        .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
             acc.extend(ts);
             acc.extend(ProcMacro2TokenStream::from_str("\n"));
             acc
-        },
-    );
+        });
 
     quote! {
-        #tokens
+        #_objects
     }
 }
