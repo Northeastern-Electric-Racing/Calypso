@@ -137,7 +137,7 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
         let _parse = !matches!(_point.parse, Some(false));
 
         // Check Sim enum frequencies add to 1 (roughly, f32s are approximate)
-        if let Some(Sim::SimEnum { options }) = &_point.sim {
+        if let Some(Sim::SimDiscrete { options }) = &_point.sim {
             let mut _sim_total: f32 = 0.0;
             options.iter().for_each(|opt| {
                 _sim_total += opt[1];
