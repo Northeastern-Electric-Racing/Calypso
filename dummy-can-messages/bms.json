@@ -1068,6 +1068,7 @@
     "points": [
       {
         "size": 10,
+        "format": "divide10",
         "sim": {
           "min": 20,
           "max": 80,
@@ -1077,7 +1078,7 @@
       },
       {
         "size": 13,
-        "format": "divide10000",
+        "format": "divide1000",
         "sim": {
           "min": 2.5,
           "max": 4.25,
@@ -1087,7 +1088,7 @@
       },
       {
         "size": 13,
-        "format": "divide10000",
+        "format": "divide1000",
         "sim": {
           "min": 2.5,
           "max": 4.25,
@@ -1205,6 +1206,7 @@
     "points": [
       {
         "size": 10,
+        "format": "divide10",
         "sim": {
           "min": 20,
           "max": 80,
@@ -1214,7 +1216,7 @@
       },
       {
         "size": 13,
-        "format": "divide10000",
+        "format": "divide1000",
         "sim": {
           "min": 2.5,
           "max": 4.25,
@@ -1224,7 +1226,7 @@
       },
       {
         "size": 13,
-        "format": "divide10000",
+        "format": "divide1000",
         "sim": {
           "min": 2.5,
           "max": 4.25,
@@ -1342,6 +1344,7 @@
     "points": [
       {
         "size": 10,
+        "format": "divide10",
         "sim": {
           "min": 20,
           "max": 80,
@@ -1351,7 +1354,7 @@
       },
       {
         "size": 13,
-        "format": "divide10000",
+        "format": "divide1000",
         "sim": {
           "min": 2.5,
           "max": 4.25,
@@ -1386,6 +1389,7 @@
       },
       {
         "size": 10,
+        "format": "divide10",
         "sim": {
           "min": 20,
           "max": 80,
@@ -1395,6 +1399,7 @@
       },
       {
         "size": 13,
+        "format": "divide1000",
         "sim": {
           "min": 20,
           "max": 80,
@@ -1404,7 +1409,7 @@
       },
       {
         "size": 13,
-        "format": "divide10000",
+        "format": "divide1000",
         "sim": {
           "min": 45,
           "max": 52.5,
@@ -1465,7 +1470,7 @@
     "points": [
       {
         "size": 13,
-        "format": "divide10000",
+        "format": "divide1000",
         "sim": {
           "min": 2.998,
           "max": 3.002,
@@ -1475,7 +1480,7 @@
       },
       {
         "size": 10,
-        "format": "divide10000",
+        "format": "divide100",
         "sim": {
           "min": 4.75,
           "max": 5.25,
@@ -1485,7 +1490,7 @@
       },
       {
         "size": 10,
-        "format": "divide10000",
+        "format": "divide100",
         "sim": {
           "min": 2.75,
           "max": 3.25,
@@ -1505,7 +1510,7 @@
       },
       {
         "size": 13,
-        "format": "divide10000",
+        "format": "divide1000",
         "sim": {
           "min": 2.998,
           "max": 3.002,
@@ -1515,7 +1520,7 @@
       },
       {
         "size": 13,
-        "format": "divide10000",
+        "format": "divide1000",
         "sim": {
           "min": -0.05,
           "max": 0.05,
@@ -1882,6 +1887,7 @@
     "points": [
       {
         "size": 10,
+        "format": "divide10",
         "sim": {
           "min": 20,
           "max": 80,
@@ -1901,6 +1907,7 @@
       },
       {
         "size": 13,
+        "format": "divide1000",
         "sim": {
           "min": 20,
           "max": 80,
@@ -1910,7 +1917,7 @@
       },
       {
         "size": 13,
-        "format": "divide10000",
+        "format": "divide1000",
         "sim": {
           "min": 45,
           "max": 52.5,
@@ -1920,7 +1927,7 @@
       },
       {
         "size": 13,
-        "format": "divide10000",
+        "format": "divide1000",
         "sim": {
           "min": -0.05,
           "max": 0.05,
@@ -2209,7 +2216,7 @@
     "points": [
       {
         "size": 13,
-        "format": "divide10000",
+        "format": "divide1000",
         "sim": {
           "min": 2.998,
           "max": 3.002,
@@ -2229,7 +2236,7 @@
       },
       {
         "size": 13,
-        "format": "divide10000",
+        "format": "divide1000",
         "sim": {
           "min": 2.998,
           "max": 3.002,
@@ -2239,7 +2246,7 @@
       },
       {
         "size": 13,
-        "format": "divide10000",
+        "format": "divide1000",
         "sim": {
           "min": 4.75,
           "max": 5.25,
@@ -2249,7 +2256,7 @@
       },
       {
         "size": 13,
-        "format": "divide10000",
+        "format": "divide1000",
         "sim": {
           "min": 2.75,
           "max": 3.25,
