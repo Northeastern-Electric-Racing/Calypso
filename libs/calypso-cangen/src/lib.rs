@@ -8,4 +8,4 @@ pub mod validate;
  *  Used by all daedalus macros
  *  Filepath is relative to project root (i.e. /Calypso)
  */
-pub const CANGEN_SPEC_PATH: &str = "./dummy-can-messages/";
+pub const CANGEN_SPEC_PATH: &str = "./Embedded-Base/cangen/can-messages/";
