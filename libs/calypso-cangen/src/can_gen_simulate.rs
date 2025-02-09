@@ -119,7 +119,6 @@ pub fn gen_simulate_netfield(field: &NetField, points: &Vec<CANPoint>, msg: &CAN
         .unwrap_or_else(|| quote! { None });
 
     quote! {
-        let _____START_DEBUG_FIELD_NAME = #token_name;
         #token_pts_val_buffer
 
         let __new_component = SimComponent {
@@ -135,8 +134,6 @@ pub fn gen_simulate_netfield(field: &NetField, points: &Vec<CANPoint>, msg: &CAN
             sim_freq: #token_simfreq,
         };
         __all_sim_components.push(__new_component);
-
-        let _____END___DEBUG_FIELD_NAME = #token_name;
     }
 }
 

@@ -68,7 +68,6 @@ fn simulate_out(pub_path: &str) {
  */
 fn main() {
     let cli = CalypsoArgs::parse();
-    println!("&cli.siren_host_url: {:?}", &cli.siren_host_url);
     simulate_out(&cli.siren_host_url);
     return;
 }
