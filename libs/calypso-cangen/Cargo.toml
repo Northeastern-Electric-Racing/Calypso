@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-proc-macro2.workspace = true
-quote.workspace = true
-regex = "1.11.1"
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
-serde_json.workspace = true
+serde_json = { workspace = true }
 thiserror = "2.0.11"
