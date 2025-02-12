@@ -221,10 +221,6 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
         }
 
         // Check that field name doesn't reference any OoB points
-<<<<<<< HEAD
-        let _topic_regex_pattern = Regex::new(r"\{(\d+)\}").unwrap(); // Basically, digits enclosed in braces
-=======
->>>>>>> 786af11 (clippy appeased)
         let _topic_format_value_indexes: Vec<usize> = _topic_regex_pattern
             .captures_iter(&_field.name.clone())
             .map(|cap| cap[1].parse::<usize>().unwrap())
