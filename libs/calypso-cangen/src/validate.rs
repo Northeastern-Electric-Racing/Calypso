@@ -58,8 +58,7 @@ pub fn validate_all_spec() -> Result<(), Vec<CANSpecError>> {
                 match __entry {
                     Ok(__entry) => {
                         let __path = __entry.path();
-                        if __path.is_file() && __path.extension().is_some_and(|ext| ext == "json")
-                        {
+                        if __path.is_file() && __path.extension().is_some_and(|ext| ext == "json") {
                             match validate_spec_file(__path.clone()) {
                                 Ok(()) => {}
                                 Err(__file_errors) => __all_errors.extend(__file_errors),
@@ -123,8 +122,8 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
     let mut _bit_count: usize = 0;
 
     // Regex pattern for in-topic naming
-    let _topic_regex_pattern = Regex::new(r"\{(\d+)\}").unwrap();  // Basically, digits enclosed in braces 
-    
+    let _topic_regex_pattern = Regex::new(r"\{(\d+)\}").unwrap(); // Basically, digits enclosed in braces
+
     // Check description contains legal chars
     let _desc = _msg.desc.clone();
     if !_desc

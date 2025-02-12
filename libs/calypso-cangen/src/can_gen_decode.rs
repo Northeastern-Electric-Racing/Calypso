@@ -12,19 +12,15 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
         "decode_{}",
         msg.desc.clone().to_lowercase().replace(' ', "_")
     );
-    let min_size: usize = msg
-        .points
-        .iter()
-        .map(|point| point.size)
-        .sum::<usize>()
-        / 8;
-    let result_len: usize = msg 
+    let min_size: usize = msg.points.iter().map(|point| point.size).sum::<usize>() / 8;
+    let result_len: usize = msg
         .fields
         .iter()
-        .filter(|field| { 
-            field.values
+        .filter(|field| {
+            field
+                .values
                 .iter()
-                .all(|&value| msg.points[value-1].parse.is_some_and(|p| p == true))
+                .all(|&value| msg.points[value - 1].parse.is_some_and(|p| p))
         })
         .count();
     // Generate local variables for each CANPoint in the Message
