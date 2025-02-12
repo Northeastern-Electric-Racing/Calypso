@@ -8,6 +8,25 @@ use regex::Regex;
  *  Function to generate decoder function for a CANMsg
  */
 pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
+    let fn_name = format_ident!(
+        "decode_{}",
+        msg.desc.clone().to_lowercase().replace(' ', "_")
+    );
+    let min_size: usize = msg
+        .points
+        .iter()
+        .map(|point| point.size)
+        .sum::<usize>()
+        / 8;
+    let result_len: usize = msg 
+        .fields
+        .iter()
+        .filter(|field| { 
+            field.values
+                .iter()
+                .all(|&value| msg.points[value-1].parse.is_some_and(|p| p == true))
+        })
+        .count();
     // Generate local variables for each CANPoint in the Message
     let point_decoders = msg
         .points
@@ -31,17 +50,12 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
             acc.extend(ts);
             acc
         });
-    let min_size: usize = msg.points.iter().map(|point| point.size).sum::<usize>() / 8;
-    let fn_name = format_ident!(
-        "decode_{}",
-        msg.desc.clone().to_lowercase().replace(' ', "_")
-    );
 
     quote! {
         pub fn #fn_name(data: &[u8]) -> Vec<DecodeData> {
             if data.len() < #min_size { return vec![]; }
             let mut reader = BitReader::endian(Cursor::new(&data), BigEndian);
-            let mut result: Vec<DecodeData> = Vec::new();
+            let mut result: Vec<DecodeData> = Vec::with_capacity(#result_len);
             #point_decoders
             #field_decoders
             result
