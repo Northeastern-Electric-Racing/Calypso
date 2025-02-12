@@ -33,7 +33,7 @@ Process for testing:
 
 run ```cargo run -- -u localhost:1883 -c vcan0```
 
-To send a can message:
+To send a CAN message:
 - `cansend vcan0 <ID_IN_HEX>#<PAYLOAD_IN_HEX>`
 Ex. `cansend vcan0 702#01010101FFFFFFFF`  
 Now view calypso interpret the can message and broadcast it on `mqttui`
