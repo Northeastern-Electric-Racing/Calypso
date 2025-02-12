@@ -1,10 +1,10 @@
 use crate::can_types::*;
 use crate::CANGEN_SPEC_PATH;
+use regex::Regex;
 use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
 use thiserror::Error;
-use regex::Regex;
 
 /**
  *  JSON spec error enum   
@@ -29,7 +29,9 @@ pub enum CANSpecError {
     #[error("Point {0} of Message {1} is {2} bits. The maximum size for a point is 32 bits.")]
     PointSizeOverMax(usize, String, usize),
 
-    #[error("Signed point {0} of Message {1} is {2} bits. Signed points must be 8, 16, or 32 bits.")]
+    #[error(
+        "Signed point {0} of Message {1} is {2} bits. Signed points must be 8, 16, or 32 bits."
+    )]
     PointSignedBitCount(usize, String, usize),
 
     #[error("Little-endian point {0} of Message {1} is {2} bits. Little-endian points must be 8, 16, or 32 bits.")]
@@ -69,7 +71,7 @@ pub fn validate_all_spec() -> Result<(), Vec<CANSpecError>> {
             }
 
             if __all_errors.is_empty() {
-       Ok(())
+                Ok(())
             } else {
                 Err(__all_errors)
             }
@@ -132,7 +134,7 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
         ));
     }
 
-    for (_i, _point) in _msg.points.iter().enumerate(){
+    for (_i, _point) in _msg.points.iter().enumerate() {
         _bit_count += _point.size;
         let _parse = !matches!(_point.parse, Some(false));
 
@@ -182,11 +184,7 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
                 ));
             }
             // Check little endian point bit count
-            else if s == "little"
-                && _point.size != 8
-                && _point.size != 16
-                && _point.size != 32
-            {
+            else if s == "little" && _point.size != 8 && _point.size != 16 && _point.size != 32 {
                 _errors.push(CANSpecError::PointLittleEndianBitCount(
                     _i,
                     _msg.id.clone(),
@@ -220,7 +218,7 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
         }
 
         // Check that field name doesn't reference any OoB points
-        let _topic_regex_pattern = Regex::new(r"\{(\d+)\}").unwrap();  // Basically, digits enclosed in braces 
+        let _topic_regex_pattern = Regex::new(r"\{(\d+)\}").unwrap(); // Basically, digits enclosed in braces
         let _topic_format_value_indexes: Vec<usize> = _topic_regex_pattern
             .captures_iter(&_field.name.clone())
             .map(|cap| cap[1].parse::<usize>().unwrap())

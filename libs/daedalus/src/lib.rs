@@ -40,7 +40,7 @@ pub fn gen_decode_data(_item: TokenStream) -> TokenStream {
     // Iterate through CAN spec directory and generate decode functions/mappings
     // for each valid entry
     if let Ok(__entries) = fs::read_dir(CANGEN_SPEC_PATH) {
-        __entries 
+        __entries
             .filter_map(Result::ok)
             .map(|__entry| __entry.path())
             .filter(|__path| {
@@ -80,11 +80,10 @@ fn gen_decode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
 
     // Iterate through CANMsg list and generate decode mapping for each
     let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
-    let _entries: ProcMacro2TokenStream = _msgs 
+    let _entries: ProcMacro2TokenStream = _msgs
         .iter_mut()
         .map(|_m| {
-            let _id_int = 
-                u32::from_str_radix(_m.id.clone().trim_start_matches("0x"), 16).unwrap();
+            let _id_int = u32::from_str_radix(_m.id.clone().trim_start_matches("0x"), 16).unwrap();
             let _fn_name = format_ident!(
                 "decode_{}",
                 _m.desc.clone().to_lowercase().replace(' ', "_")
@@ -161,7 +160,7 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
     // Iterate through CAN spec directory and generate encode functions/mappings
     // for each valid entry
     if let Ok(__entries) = fs::read_dir(CANGEN_SPEC_PATH) {
-        __entries 
+        __entries
             .filter_map(Result::ok)
             .map(|__entry| __entry.path())
             .filter(|__path| {
@@ -170,10 +169,8 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
             .for_each(|__path| {
                 __encode_functions.extend(gen_encode_fns(__path.clone()));
                 __encode_map_entries.extend(gen_encode_mappings(__path.clone()));
-                __encode_key_list_entries.extend(gen_encode_keys(
-                    __path.clone(),
-                    &mut __encode_key_list_size,
-                ));
+                __encode_key_list_entries
+                    .extend(gen_encode_keys(__path.clone(), &mut __encode_key_list_size));
             });
     } else {
         eprintln!("Could not read from directory: {}", CANGEN_SPEC_PATH);
@@ -274,7 +271,7 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
     };
 
     let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
-    let _entries = _msgs 
+    let _entries = _msgs
         .iter_mut()
         .map(|_m| {
             if let Some(key) = &_m.key {
@@ -294,9 +291,8 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
     }
 }
 
-
 /**
- *  Macro to generate all the code for simulate_data.rs 
+ *  Macro to generate all the code for simulate_data.rs
  *  - Generates prelude, main function, and all components
  */
 #[proc_macro]
@@ -313,8 +309,7 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
             .filter_map(Result::ok)
             .map(|_entry| _entry.path())
             .filter(|_path| {
-                _path.is_file()
-                    && _path.extension().map(|ext| ext == "json").unwrap_or(false)
+                _path.is_file() && _path.extension().map(|ext| ext == "json").unwrap_or(false)
             })
             .for_each(|path| {
                 _simulate_obj_entries.extend(gen_simulate_file_to_objects(path.clone()));
@@ -353,14 +348,14 @@ fn gen_simulate_file_to_objects(_path: PathBuf) -> ProcMacro2TokenStream {
     };
 
     let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
-    let _objects: ProcMacro2TokenStream = _msgs
-        .iter_mut()
-        .map(|_m| gen_simulate_canmsg(_m))
-        .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
+    let _objects: ProcMacro2TokenStream = _msgs.iter_mut().map(|_m| gen_simulate_canmsg(_m)).fold(
+        ProcMacro2TokenStream::new(),
+        |mut acc, ts| {
             acc.extend(ts);
             acc.extend(ProcMacro2TokenStream::from_str("\n"));
             acc
-        });
+        },
+    );
 
     quote! {
         #_objects

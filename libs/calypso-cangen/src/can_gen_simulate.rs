@@ -1,6 +1,6 @@
 use crate::can_types::*;
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
-use quote::{quote};
+use quote::quote;
 use regex::Regex;
 
 /**
@@ -14,7 +14,7 @@ pub fn gen_simulate_canmsg(msg: &CANMsg) -> ProcMacro2TokenStream {
     let sim_components_token = msg
         .fields
         .iter()
-        .map(|field| gen_simulate_netfield(field, &msg.points, &msg))
+        .map(|field| gen_simulate_netfield(field, &msg.points, msg))
         .collect::<ProcMacro2TokenStream>();
 
     quote! {
@@ -44,19 +44,25 @@ fn prep_intopic_fields(name: &str) -> String {
     re.replace_all(name, "{}").into_owned()
 }
 
-
-
 /**
  * Convert a NetField to a SimComponent
  */
-pub fn gen_simulate_netfield(field: &NetField, points: &Vec<CANPoint>, msg: &CANMsg) -> ProcMacro2TokenStream {
+pub fn gen_simulate_netfield(
+    field: &NetField,
+    points: &[CANPoint],
+    msg: &CANMsg,
+) -> ProcMacro2TokenStream {
     // Check if all associated CANPoints have sim values
-    if field.values.iter().any(|&idx| points[idx - 1].sim.is_none()) {
+    if field
+        .values
+        .iter()
+        .any(|&idx| points[idx - 1].sim.is_none())
+    {
         return quote! {};
     }
-    
+
     let mut token_pts_val_buffer = ProcMacro2TokenStream::new();
-    
+
     #[allow(unused_doc_comments)]
     /**
      * forEach(NetField)
@@ -66,19 +72,18 @@ pub fn gen_simulate_netfield(field: &NetField, points: &Vec<CANPoint>, msg: &CAN
      *             ( create SimValue )
      *              ( create SimPoint, embedding the SimValue )
      *          ( add SimPoint to vec<SimPoint> )
-     * 
+     *
      *      ( create vec<SimPoint> )
      *      forEach(normal canpoint values)
      *          ( create SimValue )
      *          ( create SimPoint, embedding the SimValue )
      *      ( add SimPoint to vec<SimPoint> )
-     * 
+     *
      *      ( create SimComponent, embedding the normal & in-point vec<SimPoint> )
      */
-
     // Handle in-topic CANPoint values
     let points_idx_intopic = get_intopic_point_idx(field);
-    if points_idx_intopic.len() > 0 {
+    if !points_idx_intopic.is_empty() {
         token_pts_val_buffer.extend(quote! {
             let mut vec_points_in_topic: Vec<SimPoint> = Vec::new();
         });
@@ -101,11 +106,10 @@ pub fn gen_simulate_netfield(field: &NetField, points: &Vec<CANPoint>, msg: &CAN
     let token_simfreq = &msg.sim_freq;
     let token_desc = &msg.desc;
     let token_name = prep_intopic_fields(&field.name);
-    let token_vec_points_intopic = 
-        match points_idx_intopic.len() {
-            0 => quote! { None },
-            _ => quote! { Some(vec_points_in_topic) }
-        };
+    let token_vec_points_intopic = match points_idx_intopic.len() {
+        0 => quote! { None },
+        _ => quote! { Some(vec_points_in_topic) },
+    };
     let token_unit = &field.unit;
     let token_key = msg
         .key
@@ -137,7 +141,6 @@ pub fn gen_simulate_netfield(field: &NetField, points: &Vec<CANPoint>, msg: &CAN
     }
 }
 
-
 /**
  * Function to generate SimPoint (and the SimValue inside it) for a CANPoint
  */
@@ -152,10 +155,7 @@ fn gen_sim_point(point: &CANPoint) -> ProcMacro2TokenStream {
                 inc_max,
                 round,
             } => {
-                let _round = match round {
-                    Some(true) => true,
-                    _ => false,
-                };
+                let _round = matches!(round, Some(true));
                 ret_stream.extend(quote! {
                     let __new_value = SimValue::Range { min: #min, max: #max, inc_min: #inc_min, inc_max: #inc_max, round: #_round, current: 0.0 };
                 });

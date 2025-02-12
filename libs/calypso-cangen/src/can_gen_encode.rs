@@ -24,8 +24,7 @@ pub fn gen_encoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
                 "encode_{}",
                 msg.desc.clone().to_lowercase().replace(' ', "_")
             );
-            let id_int =
-                u32::from_str_radix(msg.id.clone().trim_start_matches("0x"), 16).unwrap();
+            let id_int = u32::from_str_radix(msg.id.clone().trim_start_matches("0x"), 16).unwrap();
             let ext_ident = msg.is_ext.unwrap_or(false);
             quote! {
                 pub fn #fn_name(data: Vec<f32>) -> EncodeData {

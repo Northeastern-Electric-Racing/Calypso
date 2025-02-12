@@ -21,7 +21,7 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
             acc
         });
     // Push DecodeData structs to result for each NetField in the message
-    let field_decoders = msg 
+    let field_decoders = msg
         .fields
         .iter_mut()
         .map(|field| gen_decoder_field(field, &mut msg.points))
@@ -31,12 +31,7 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
             acc.extend(ts);
             acc
         });
-    let min_size: usize = msg
-        .points
-        .iter()
-        .map(|point| point.size)
-        .sum::<usize>()
-        / 8;
+    let min_size: usize = msg.points.iter().map(|point| point.size).sum::<usize>() / 8;
     let fn_name = format_ident!(
         "decode_{}",
         msg.desc.clone().to_lowercase().replace(' ', "_")
@@ -57,16 +52,19 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
 /**
  *  Function to generate DecodeData struct for decoding a NetField
  */
-fn gen_decoder_field(field: &mut NetField, points: &mut Vec<CANPoint>) -> ProcMacro2TokenStream {
+fn gen_decoder_field(field: &mut NetField, points: &mut [CANPoint]) -> ProcMacro2TokenStream {
     // First, check that all of the correlated points are to be parsed
     // If not, return a blank TokenStream
     if !field
         .values
         .iter()
-        .map(|value| points[value-1].parse.unwrap_or(true))
-        .fold(true, |mut acc, p| { acc &= p; acc })
+        .map(|value| points[value - 1].parse.unwrap_or(true))
+        .fold(true, |mut acc, p| {
+            acc &= p;
+            acc
+        })
     {
-       return quote! {};
+        return quote! {};
     }
     // Otherwise, construct TokenStream as normal
 
@@ -77,7 +75,7 @@ fn gen_decoder_field(field: &mut NetField, points: &mut Vec<CANPoint>) -> ProcMa
         .values
         .iter()
         .map(|value| {
-            if points[value-1].parse.unwrap_or(true) {
+            if points[value - 1].parse.unwrap_or(true) {
                 let val_point = format_ident!("point_{}", value);
                 quote! { #val_point, }
             } else {
@@ -91,10 +89,9 @@ fn gen_decoder_field(field: &mut NetField, points: &mut Vec<CANPoint>) -> ProcMa
             acc
         });
 
-
     // In-topic name handling
     // Use regex to parse point indices from field name
-    let topic_regex_pattern = Regex::new(r"\{(\d+)\}").unwrap();  // Basically, digits enclosed in braces 
+    let topic_regex_pattern = Regex::new(r"\{(\d+)\}").unwrap(); // Basically, digits enclosed in braces
     let topic_format_value_indexes: Vec<usize> = topic_regex_pattern
         .captures_iter(&field.name.clone())
         .map(|cap| cap[1].parse::<usize>().unwrap())
@@ -103,7 +100,7 @@ fn gen_decoder_field(field: &mut NetField, points: &mut Vec<CANPoint>) -> ProcMa
     let topic_format_values = topic_format_value_indexes
         .iter()
         .map(|value| {
-            if points[value-1].parse.unwrap_or(true) {
+            if points[value - 1].parse.unwrap_or(true) {
                 let val_point = format_ident!("point_{}", value);
                 quote! { #val_point, }
             } else {
@@ -124,7 +121,7 @@ fn gen_decoder_field(field: &mut NetField, points: &mut Vec<CANPoint>) -> ProcMa
         let replacement = format!("{{{}}}", i);
         topic_format_string = topic_format_string.replace(&pattern, &replacement);
     }
-    let topic = quote! { 
+    let topic = quote! {
         &format!(#topic_format_string, #topic_format_values)
     };
 
@@ -151,7 +148,7 @@ fn gen_decoder_point(index: usize, point: &mut CANPoint) -> ProcMacro2TokenStrea
         };
     }
     // Otherwise, parse this point as normal (default behavior)
-    let point_name = format_ident!("point_{}", index+1); 
+    let point_name = format_ident!("point_{}", index + 1);
 
     // If this point is an IEEE754 f32, always read it as a u32, and transmute to f32 later
     let read_type = match point.ieee754_f32 {

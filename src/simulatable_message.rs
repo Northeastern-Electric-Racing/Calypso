@@ -10,10 +10,10 @@ use std::time::Instant;
  */
 #[derive(Debug)]
 pub struct SimComponent {
-    pub id: String,            
-    pub points: Vec<SimPoint>, 
-    pub points_intopic: Option<Vec<SimPoint>>, 
-    pub unit: String,  
+    pub id: String,
+    pub points: Vec<SimPoint>,
+    pub points_intopic: Option<Vec<SimPoint>>,
+    pub unit: String,
     pub name: String,
     pub last_update: Instant,
     pub desc: String,
@@ -34,7 +34,7 @@ pub struct SimPoint {
     pub format: Option<String>,
     pub default: Option<f32>,
     pub ieee754_f32: Option<bool>,
-    pub value: SimValue, 
+    pub value: SimValue,
 }
 
 /**
@@ -53,7 +53,7 @@ pub enum SimValue {
     },
     /// Options mode where the value is selected from a set of predefined options.
     Discrete {
-        options: Vec<(f32, f32)>, // List of option pairs. 
+        options: Vec<(f32, f32)>, // List of option pairs.
         current: f32,             // currently selected option
     },
 }
@@ -67,15 +67,18 @@ impl SimComponent {
             points_intopic.iter_mut().for_each(|p| p.initialize());
         }
     }
-    
+
     pub fn should_update(&self) -> bool {
         self.last_update.elapsed().as_millis() > self.sim_freq as u128
     }
 
-
     pub fn get_decode_data(&self) -> DecodeData {
-        let topic_name = topic_values_inject(&self);
-        DecodeData::new(self.points.iter().map(|p| p.get_value()).collect(), &topic_name, &self.unit)
+        let topic_name = topic_values_inject(self);
+        DecodeData::new(
+            self.points.iter().map(|p| p.get_value()).collect(),
+            &topic_name,
+            &self.unit,
+        )
     }
 
     pub fn update(&mut self) {
@@ -90,15 +93,12 @@ impl SimComponent {
 impl SimPoint {
     fn initialize(&mut self) {
         match self.default {
-            Some(default_val) => {
-                match &mut self.value {
-                    SimValue::Range { current, .. } => *current = default_val,
-                    SimValue::Discrete { current, .. } => *current = default_val,
-                }
+            Some(default_val) => match &mut self.value {
+                SimValue::Range { current, .. } => *current = default_val,
+                SimValue::Discrete { current, .. } => *current = default_val,
             },
             None => self.value.initialize(),
         }
-
     }
 
     pub fn get_value(&self) -> f32 {
@@ -110,12 +110,18 @@ impl SimPoint {
     }
 }
 
-
 impl SimValue {
     pub fn initialize(&mut self) {
         let mut rng = rand::thread_rng();
         match self {
-            SimValue::Range { min, max, inc_min, round, current, .. } => {
+            SimValue::Range {
+                min,
+                max,
+                inc_min,
+                round,
+                current,
+                ..
+            } => {
                 *current = rng.gen_range(*min..*max);
                 if *inc_min != 0.0 {
                     *current = (*current / *inc_min).round() * *inc_min; // Round to nearest inc_min
@@ -123,7 +129,7 @@ impl SimValue {
                 if *round {
                     *current = current.round(); // Round to nearest whole number
                 }
-            },
+            }
             SimValue::Discrete { options, current } => {
                 let idx = rng.gen_range(0..options.len());
                 *current = options[idx].0;
@@ -134,10 +140,9 @@ impl SimValue {
     pub fn get_value(&self) -> f32 {
         match self {
             SimValue::Range { current, .. } => *current,
-            SimValue::Discrete { current, .. } => *current
+            SimValue::Discrete { current, .. } => *current,
         }
     }
-
 
     /**  
      * Get a random offset within the range of sim_inc_min and sim_inc_max with a random sign.
@@ -161,12 +166,18 @@ impl SimValue {
         offset * sign
     }
 
-    
     fn update(&mut self) {
         match self {
-            SimValue::Range { min, max, inc_min, inc_max, round, current } => {
+            SimValue::Range {
+                min,
+                max,
+                inc_min,
+                inc_max,
+                round,
+                current,
+            } => {
                 const MAX_ATTEMPTS: u8 = 10;
-                
+
                 let cur = *current;
                 let min_val = *min;
                 let max_val = *max;
@@ -182,37 +193,37 @@ impl SimValue {
                     new_value = cur + SimValue::get_rand_offset(inc_min_val, inc_max_val);
                     attempts += 1;
                 }
-    
+
                 if attempts >= MAX_ATTEMPTS {
                     return;
                 }
-    
+
                 if inc_min_val != 0.0 {
                     new_value = (new_value / inc_min_val).round() * inc_min_val;
                 }
-    
+
                 if *round {
                     new_value = new_value.round();
                 }
-    
+
                 *current = new_value;
-            },
+            }
             SimValue::Discrete { options, current } => {
                 let mut rng = rand::thread_rng();
                 let prob = rng.gen_range(0f32..1f32);
                 let mut new_value = None;
-                
+
                 for i in 0..options.len() {
-                    let prob_floor = if i == 0 { 0f32 } else { options[i-1].1 };
+                    let prob_floor = if i == 0 { 0f32 } else { options[i - 1].1 };
                     let prob_ceiling = options[i].1;
                     if prob >= prob_floor && prob <= prob_ceiling {
                         new_value = Some(options[i].0);
                         break;
                     }
                 }
-                
+
                 *current = new_value.unwrap_or(-1f32);
-            },
+            }
         }
     }
 }
@@ -221,24 +232,31 @@ impl SimValue {
  * This helper function takes a SimComponent, injects the associated CANPoint values into the topic string
  * e.g. "Hello/{}/World/{}" -> "Hello/{4}/World{5}"
  */
-pub fn topic_values_inject(component: &SimComponent) -> String { 
+pub fn topic_values_inject(component: &SimComponent) -> String {
     if let Some(points_intopic) = &component.points_intopic {
-        let component_name = &component.name; 
+        let component_name = &component.name;
         // check: placeholder count lines up with in point vector array length
         let re = Regex::new(r"\{\}").unwrap();
         if points_intopic.len() != re.find_iter(component_name).count() {
-            eprintln!("[error] in-topic points vector length does not line up with placeholder count");
+            eprintln!(
+                "[error] in-topic points vector length does not line up with placeholder count"
+            );
             return component_name.to_string();
         }
-        let in_topic_values: Vec<u32>  = points_intopic.iter().map(|p| {p.get_value() as u32}).collect();
-        
+        let in_topic_values: Vec<u32> = points_intopic
+            .iter()
+            .map(|p| p.get_value() as u32)
+            .collect();
+
         // Replace {} placeholders with values
         let mut value_iter = in_topic_values.iter();
         re.replace_all(component_name, |_: &regex::Captures| {
-            value_iter.next().map_or("{}".to_string(), |val| val.to_string())
-        }).into_owned()
+            value_iter
+                .next()
+                .map_or("{}".to_string(), |val| val.to_string())
+        })
+        .into_owned()
     } else {
         component.name.to_string()
-    }   
+    }
 }
-

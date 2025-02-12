@@ -25,7 +25,6 @@ struct CalypsoArgs {
     siren_host_url: String,
 }
 
-
 fn simulate_out(pub_path: &str) {
     let mut client = MqttClient::new(pub_path, "calypso-simulator");
     let _ = client.connect(); // todo: add error handling
@@ -52,7 +51,8 @@ fn simulate_out(pub_path: &str) {
                         protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
                             format!("failed to serialize {}", e).as_bytes().to_vec()
                         }),
-                    ).expect("Could not publish!");
+                    )
+                    .expect("Could not publish!");
             }
         }
 
@@ -69,5 +69,4 @@ fn simulate_out(pub_path: &str) {
 fn main() {
     let cli = CalypsoArgs::parse();
     simulate_out(&cli.siren_host_url);
-    return;
 }
