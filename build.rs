@@ -1,4 +1,4 @@
-use calypso_cangen::validate::*;
+use calypso_cangen::{validate::*, version::version_canfiles};
 use std::process;
 
 /* Prebuild script */
@@ -28,4 +28,9 @@ fn main() {
             process::exit(1);
         }
     }
+
+    println!(
+        "cargo::rustc-env=CALYPSO_CANGEN_HASH={}",
+        version_canfiles().expect("Error creating hash of CANGEN files!")
+    );
 }

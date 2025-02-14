@@ -40,6 +40,10 @@ struct CalypsoArgs {
         default_value = "vcan0"
     )]
     socketcan_iface: String,
+
+    /// The version information of Calypso and CANGEN
+    #[arg(long)]
+    cangen_version: bool,
 }
 
 /**
@@ -274,6 +278,12 @@ fn send_out(
  */
 fn main() {
     let cli = CalypsoArgs::parse();
+
+    if cli.cangen_version {
+        println!("CANGEN Hash: {}", env!("CALYPSO_CANGEN_HASH"));
+        return;
+    }
+
     let can_handle = read_can(&cli.siren_host_url, &cli.socketcan_iface);
 
     // use a arc for mutlithread, and a rwlock to enforce one writer

@@ -3,6 +3,8 @@ pub mod can_gen_encode;
 pub mod can_gen_simulate;
 pub mod can_types;
 pub mod validate;
+pub mod version;
+
 /**
  *  Path to CAN spec JSON files
  *  Used by all daedalus macros
