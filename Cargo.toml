@@ -23,7 +23,7 @@ protobuf-codegen = "3.5.1"
 protobuf = "3.5.1"
 bitstream-io = "2.6.0"
 clap = { version = "4.5.29", features = ["derive", "env"] }
-rand = "0.8"
+rand = "0.9"
 regex = { workspace = true }
 phf = { version = "0.11.3", features = ["macros"] }
 calypso-cangen = { path = "./libs/calypso-cangen" }

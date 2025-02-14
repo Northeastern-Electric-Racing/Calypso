@@ -112,7 +112,7 @@ impl SimPoint {
 
 impl SimValue {
     pub fn initialize(&mut self) {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         match self {
             SimValue::Range {
                 min,
@@ -122,7 +122,7 @@ impl SimValue {
                 current,
                 ..
             } => {
-                *current = rng.gen_range(*min..*max);
+                *current = rng.random_range(*min..*max);
                 if *inc_min != 0.0 {
                     *current = (*current / *inc_min).round() * *inc_min; // Round to nearest inc_min
                 }
@@ -131,7 +131,7 @@ impl SimValue {
                 }
             }
             SimValue::Discrete { options, current } => {
-                let idx = rng.gen_range(0..options.len());
+                let idx = rng.random_range(0..options.len());
                 *current = options[idx].0;
             }
         }
@@ -150,13 +150,13 @@ impl SimValue {
      * Rounds the offset to the nearest sim_inc_min if sim_inc_min is not 0.
      */
     fn get_rand_offset(inc_min: f32, inc_max: f32) -> f32 {
-        let mut rng = rand::thread_rng();
-        let sign = if rng.gen_bool(0.5) { 1.0 } else { -1.0 };
+        let mut rng = rand::rng();
+        let sign = if rng.random_bool(0.5) { 1.0 } else { -1.0 };
 
         let offset: f32 = if inc_min == inc_max {
             inc_min
         } else {
-            let rand_offset = rng.gen_range(inc_min..inc_max);
+            let rand_offset = rng.random_range(inc_min..inc_max);
             if inc_min != 0.0 {
                 (rand_offset / inc_min).round() * inc_min
             } else {
@@ -209,8 +209,8 @@ impl SimValue {
                 *current = new_value;
             }
             SimValue::Discrete { options, current } => {
-                let mut rng = rand::thread_rng();
-                let prob = rng.gen_range(0f32..1f32);
+                let mut rng = rand::rng();
+                let prob = rng.random_range(0f32..1f32);
                 let mut new_value = None;
 
                 for i in 0..options.len() {
