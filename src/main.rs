@@ -76,11 +76,10 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
                     socketcan::Id::Standard(std) => std.as_raw().into(),
                     socketcan::Id::Extended(ext) => ext.as_raw(),
                 };
-                let decoder_func = match DECODE_FUNCTION_MAP.get(&id) {
-                    Some(func) => *func,
-                    None => decode_mock,
-                };
-                decoder_func(data)
+                match DECODE_FUNCTION_MAP.get(&id) {
+                    Some(func) => func(data),
+                    None => vec![DecodeData::new(vec![id as f32], "Calypso/Unknown", "ID")],
+                }
             }
             // CanRemoteFrame
             Ok(CanFrame::Remote(remote_frame)) => {
@@ -172,7 +171,7 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
         let key_owned = key.to_owned();
         let encoder_func = match ENCODE_FUNCTION_MAP.get(&key_owned) {
             Some(func) => *func,
-            None => encode_mock,
+            None => panic!("An unknown message was initialized!"),
         };
         let ret = encoder_func(Vec::new());
         writable_send_map.insert(ret.id, ret);
@@ -197,16 +196,30 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
                     }
                 };
 
-                let encoder_func = match ENCODE_FUNCTION_MAP.get(&key) {
-                    Some(func) => *func,
-                    None => encode_mock,
-                };
-                let ret = encoder_func(buf.data);
-
-                send_map
-                    .write()
-                    .expect("Could not modify send messages!")
-                    .insert(ret.id, ret);
+                match ENCODE_FUNCTION_MAP.get(&key) {
+                    Some(func) => {
+                        let ret = func(buf.data);
+                        send_map
+                            .write()
+                            .expect("Could not modify send messages!")
+                            .insert(ret.id, ret);
+                    }
+                    None => {
+                        let id: u32 = 0x7FF;
+                        let mut send_map_writable =
+                            send_map.write().expect("Could not modify send messages!");
+                        let cnt = match send_map_writable.get(&id) {
+                            Some(item) => item.value.first().unwrap_or(&0) + 1,
+                            None => 1,
+                        };
+                        let ret = EncodeData {
+                            value: vec![cnt],
+                            id,
+                            is_ext: false,
+                        };
+                        send_map_writable.insert(ret.id, ret);
+                    }
+                }
             } else {
                 while !client.is_connected() {
                     println!(

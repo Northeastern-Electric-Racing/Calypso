@@ -27,14 +27,7 @@ pub fn gen_decode_data(_item: TokenStream) -> TokenStream {
         use calypso_cangen::can_types::*;
         use crate::data::{DecodeData, FormatData};
     };
-    let mut __decode_functions = quote! {
-        pub fn decode_mock(_data: &[u8]) -> Vec::<DecodeData> {
-            let result = vec![
-                DecodeData::new(vec![0.0], "Calypso/Unknown", "")
-            ];
-            result
-        }
-    };
+    let mut __decode_functions = quote! {};
     let mut __decode_map_entries = ProcMacro2TokenStream::new();
 
     // Iterate through CAN spec directory and generate decode functions/mappings
@@ -142,17 +135,7 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
         use calypso_cangen::can_types::*;
         use crate::data::{EncodeData, FormatData};
     };
-    let mut __encode_functions = quote! {
-        pub fn encode_mock(data: Vec<f32>) -> EncodeData {
-            let mut writer = BitWriter::endian(Vec::new(), BigEndian);
-            writer.write_from::<u8>(data.len() as u8).unwrap();
-            EncodeData {
-                value: writer.into_writer(),
-                id: 2047,
-                is_ext: false,
-            }
-        }
-    };
+    let mut __encode_functions = quote! {};
     let mut __encode_map_entries = ProcMacro2TokenStream::new();
     let mut __encode_key_list_entries = ProcMacro2TokenStream::new();
     let mut __encode_key_list_size: usize = 0;
