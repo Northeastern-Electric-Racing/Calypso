@@ -27,14 +27,7 @@ pub fn gen_decode_data(_item: TokenStream) -> TokenStream {
         use calypso_cangen::can_types::*;
         use crate::data::{DecodeData, FormatData};
     };
-    let mut __decode_functions = quote! {
-        pub fn decode_mock(_data: &[u8]) -> Vec::<DecodeData> {
-            let result = vec![
-                DecodeData::new(vec![0.0], "Calypso/Unknown", "")
-            ];
-            result
-        }
-    };
+    let mut __decode_functions = quote! {};
     let mut __decode_map_entries = ProcMacro2TokenStream::new();
 
     // Iterate through CAN spec directory and generate decode functions/mappings

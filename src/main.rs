@@ -76,11 +76,10 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
                     socketcan::Id::Standard(std) => std.as_raw().into(),
                     socketcan::Id::Extended(ext) => ext.as_raw(),
                 };
-                let decoder_func = match DECODE_FUNCTION_MAP.get(&id) {
-                    Some(func) => *func,
-                    None => decode_mock,
-                };
-                decoder_func(data)
+                match DECODE_FUNCTION_MAP.get(&id) {
+                    Some(func) => func(data),
+                    None => vec![DecodeData::new(vec![id as f32], "Calypso/Unknown", "ID")],
+                }
             }
             // CanRemoteFrame
             Ok(CanFrame::Remote(remote_frame)) => {
