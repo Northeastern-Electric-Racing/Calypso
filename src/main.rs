@@ -196,19 +196,30 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
                     }
                 };
 
-                let ret = match ENCODE_FUNCTION_MAP.get(&key) {
-                    Some(func) => func(buf.data),
-                    None => EncodeData {
-                        value: vec![buf.data.len().try_into().unwrap_or_default()],
-                        id: 2047,
-                        is_ext: false,
-                    },
-                };
-
-                send_map
-                    .write()
-                    .expect("Could not modify send messages!")
-                    .insert(ret.id, ret);
+                match ENCODE_FUNCTION_MAP.get(&key) {
+                    Some(func) => {
+                        let ret = func(buf.data);
+                        send_map
+                            .write()
+                            .expect("Could not modify send messages!")
+                            .insert(ret.id, ret);
+                    }
+                    None => {
+                        let id: u32 = 0x7FF;
+                        let mut send_map_writable =
+                            send_map.write().expect("Could not modify send messages!");
+                        let cnt = match send_map_writable.get(&id) {
+                            Some(item) => item.value.first().unwrap_or(&0) + 1,
+                            None => 1,
+                        };
+                        let ret = EncodeData {
+                            value: vec![cnt],
+                            id,
+                            is_ext: false,
+                        };
+                        send_map_writable.insert(ret.id, ret);
+                    }
+                }
             } else {
                 while !client.is_connected() {
                     println!(
