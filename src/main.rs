@@ -171,7 +171,7 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
         let key_owned = key.to_owned();
         let encoder_func = match ENCODE_FUNCTION_MAP.get(&key_owned) {
             Some(func) => *func,
-            None => encode_mock,
+            None => panic!("An unknown message was initialized!"),
         };
         let ret = encoder_func(Vec::new());
         writable_send_map.insert(ret.id, ret);
@@ -196,11 +196,14 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
                     }
                 };
 
-                let encoder_func = match ENCODE_FUNCTION_MAP.get(&key) {
-                    Some(func) => *func,
-                    None => encode_mock,
+                let ret = match ENCODE_FUNCTION_MAP.get(&key) {
+                    Some(func) => func(buf.data),
+                    None => EncodeData {
+                        value: vec![buf.data.len().try_into().unwrap_or_default()],
+                        id: 2047,
+                        is_ext: false,
+                    },
                 };
-                let ret = encoder_func(buf.data);
 
                 send_map
                     .write()

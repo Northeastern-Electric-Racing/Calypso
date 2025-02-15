@@ -135,17 +135,7 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
         use calypso_cangen::can_types::*;
         use crate::data::{EncodeData, FormatData};
     };
-    let mut __encode_functions = quote! {
-        pub fn encode_mock(data: Vec<f32>) -> EncodeData {
-            let mut writer = BitWriter::endian(Vec::new(), BigEndian);
-            writer.write_from::<u8>(data.len() as u8).unwrap();
-            EncodeData {
-                value: writer.into_writer(),
-                id: 2047,
-                is_ext: false,
-            }
-        }
-    };
+    let mut __encode_functions = quote! {};
     let mut __encode_map_entries = ProcMacro2TokenStream::new();
     let mut __encode_key_list_entries = ProcMacro2TokenStream::new();
     let mut __encode_key_list_size: usize = 0;
