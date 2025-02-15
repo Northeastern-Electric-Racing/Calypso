@@ -48,7 +48,7 @@ pub fn gen_encoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
 /**
  *  Function to generate encoder line for CANPoint
  */
-fn gen_encoder_point(point: &mut CANPoint) -> ProcMacro2TokenStream {
+pub fn gen_encoder_point(point: &mut CANPoint) -> ProcMacro2TokenStream {
     let size_literal = Literal::usize_unsuffixed(point.size);
     let write_type = match point.signed {
         Some(true) => match point.size {
@@ -74,7 +74,7 @@ fn gen_encoder_point(point: &mut CANPoint) -> ProcMacro2TokenStream {
         _ => 0f32,
     };
     let float_final = quote! {
-        #format_prefix ( *data.get(pt_index).unwrap_or(&(#default_value)) )
+        #format_prefix( *data.get(pt_index).unwrap_or(&(#default_value)) )
     };
 
     let write_line = match point.endianness {

@@ -62,7 +62,7 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
 /**
  *  Function to generate DecodeData struct for decoding a NetField
  */
-fn gen_decoder_field(field: &mut NetField, points: &mut [CANPoint]) -> ProcMacro2TokenStream {
+pub fn gen_decoder_field(field: &mut NetField, points: &mut [CANPoint]) -> ProcMacro2TokenStream {
     // First, check that all of the correlated points are to be parsed
     // If not, return a blank TokenStream
     if !field
@@ -148,7 +148,7 @@ fn gen_decoder_field(field: &mut NetField, points: &mut [CANPoint]) -> ProcMacro
  *  Function to generate formatted reader line for decoding a CANPoint
  *  i.e. `let point_X = ...;`, where X is index
  */
-fn gen_decoder_point(index: usize, point: &mut CANPoint) -> ProcMacro2TokenStream {
+pub fn gen_decoder_point(index: usize, point: &mut CANPoint) -> ProcMacro2TokenStream {
     let size_literal = Literal::usize_unsuffixed(point.size);
 
     // If parse exists and is false, then skip this point
@@ -203,8 +203,8 @@ fn gen_decoder_point(index: usize, point: &mut CANPoint) -> ProcMacro2TokenStrea
 
     // Transmute if point is IEEE754 f32, else convert
     if let Some(true) = point.ieee754_f32 {
-        quote! { let #point_name = #format_prefix (f32::from_bits(#read_func)); }
+        quote! { let #point_name = #format_prefix(f32::from_bits(#read_func)); }
     } else {
-        quote! { let #point_name = #format_prefix (#read_func as f32); }
+        quote! { let #point_name = #format_prefix(#read_func as f32); }
     }
 }
