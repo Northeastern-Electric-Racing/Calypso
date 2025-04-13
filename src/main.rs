@@ -188,7 +188,7 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
                         continue;
                     }
                 };
-                let key = match msg.topic().split('/').last() {
+                let key = match msg.topic().split('/').next_back() {
                     Some(key) => key.to_owned(),
                     None => {
                         println!("Could not parse the key value in {}", msg.topic());
