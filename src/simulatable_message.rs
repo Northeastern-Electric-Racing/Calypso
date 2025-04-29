@@ -78,6 +78,7 @@ impl SimComponent {
             self.points.iter().map(|p| p.get_value()).collect(),
             &topic_name,
             &self.unit,
+            None,
         )
     }
 

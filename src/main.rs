@@ -52,7 +52,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
         (1883, MqttClient::new(pub_path, "calypso-decoder")),
         (1882, MqttClient::new("localhost:1882", "calypso-2"))
     ]);
-    for (port, client) in &clients {
+    for (port, client) in &mut clients {
         if client.connect().is_err() {
             println!("Unable to connect to host on port {}, going into reconnection mode.", port);
             if client.reconnect().is_ok() {
@@ -67,10 +67,12 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
         .expect("Failed to set error mask on CAN socket!");
 
     thread::spawn(move || loop {
-        if !client.is_connected() {
-            println!("[read_can] Unable to connect to Siren, going into reconnection mode.");
-            if client.reconnect().is_ok() {
-                println!("[read_can] Reconnected to Siren!");
+        for (_, client) in &mut clients {
+            if !client.is_connected() {
+                println!("[read_can] Unable to connect to Siren, going into reconnection mode.");
+                if client.reconnect().is_ok() {
+                    println!("[read_can] Reconnected to Siren!");
+                }
             }
         }
         // Read from CAN socket
@@ -84,7 +86,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
                 };
                 match DECODE_FUNCTION_MAP.get(&id) {
                     Some(func) => func(data),
-                    None => vec![DecodeData::new(vec![id as f32], "Calypso/Unknown", "ID")],
+                    None => vec![DecodeData::new(vec![id as f32], "Calypso/Unknown", "ID", None)],
                 }
             }
             // CanRemoteFrame
@@ -94,6 +96,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
                     vec![remote_frame.raw_id() as f32],
                     "Calypso/Events/RemoteFrame",
                     "id",
+                    None,
                 )]
             }
             // CanErrorFrame
@@ -117,6 +120,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
                     vec![error_index],
                     "Calypso/Events/ErrorFrame",
                     "CanError enum",
+                    None,
                 )]
             }
             // Socket failure
@@ -134,18 +138,38 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
             payload.values = data.value.clone();
             payload.time_us = timestamp;
 
-            // TODO: Publish to other MQTT clients, if necessary.
+            // Publish to Siren.
+            if let Some(client) = clients.get_mut(&1883) {
+                if client
+                    .publish(
+                        data.topic.to_string(),
+                        protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
+                            format!("failed to serialize {}", e).as_bytes().to_vec()
+                        }),
+                    )
+                    .is_err()
+                {
+                    println!("[read_can] Failed to publish to Siren.");
+                }
+            }
 
-            if client
-                .publish(
-                    data.topic.to_string(),
-                    protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
-                        format!("failed to serialize {}", e).as_bytes().to_vec()
-                    }),
-                )
-                .is_err()
-            {
-                println!("[read_can] Failed to publish to Siren.");
+            // TODO: Publish to other MQTT clients, if necessary.
+            if let Some(additional_clients) = &data.clients {
+                for port in additional_clients.iter() {
+                    if let Some(client) = clients.get_mut(port) {
+                        if client
+                            .publish(
+                                data.topic.to_string(),
+                                protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
+                                    format!("failed to serialize {}", e).as_bytes().to_vec()
+                                }),
+                            )
+                            .is_err()
+                        {
+                            println!("[read_can] Failed to publish to port {}.", port);
+                        }
+                    }
+                }
             }
 
             // TODO: investigate disabling this

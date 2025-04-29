@@ -12,6 +12,10 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
         "decode_{}",
         msg.desc.clone().to_lowercase().replace(' ', "_")
     );
+    // let clients: Option<Vec<String>> = match msg.clients {
+    //     Some(c) => Some(c),
+    //     _ => None,
+    // };
     let min_size: usize = msg.points.iter().map(|point| point.size).sum::<usize>() / 8;
     let result_len: usize = msg
         .fields
@@ -39,7 +43,7 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
     let field_decoders = msg
         .fields
         .iter_mut()
-        .map(|field| gen_decoder_field(field, &mut msg.points, ))
+        .map(|field| gen_decoder_field(field, &mut msg.points, &msg.clients))
         .collect::<Vec<ProcMacro2TokenStream>>()
         .into_iter()
         .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
@@ -62,7 +66,7 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
 /**
  *  Function to generate DecodeData struct for decoding a NetField
  */
-fn gen_decoder_field(field: &mut NetField, points: &mut [CANPoint], clients: Vec<String>)
+fn gen_decoder_field(field: &mut NetField, points: &mut [CANPoint], clients: &Option<Vec<u16>>)
     -> ProcMacro2TokenStream {
     // First, check that all of the correlated points are to be parsed
     // If not, return a blank TokenStream
@@ -136,11 +140,18 @@ fn gen_decoder_field(field: &mut NetField, points: &mut [CANPoint], clients: Vec
         &format!(#topic_format_string, #topic_format_values)
     };
 
+    // Add any additional clients to DecodeData struct
+    let add_clients = match clients {
+        Some(cl) => quote! { Some(vec![#(#cl),*])},
+        None => quote! { None },
+    };
+
     quote! {
         result.push(
             DecodeData::new(vec![#values],
                 #topic,
-                #unit)
+                #unit,
+                #add_clients)
         );
     }
 }

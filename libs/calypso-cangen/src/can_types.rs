@@ -19,7 +19,7 @@ pub struct CANMsg {
     pub key: Option<String>,
     pub is_ext: Option<bool>,
     pub sim_freq: Option<f32>,
-    pub clients: Option<Vec<String>>,
+    pub clients: Option<Vec<u16>>,
 }
 
 /**
