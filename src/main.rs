@@ -48,10 +48,13 @@ struct CalypsoArgs {
 fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
     // Open CAN socket channel at name can_interface
     // let mut client = MqttClient::new(pub_path, "calypso-decoder");
-    let mut clients = HashMap::from([
+    let mut clients: HashMap<u16, MqttClient> = HashMap::from([
         (1883, MqttClient::new(pub_path, "calypso-decoder")),
         (1882, MqttClient::new("localhost:1882", "calypso-priority")),
     ]);
+    let mut client_connections: HashMap<u16, bool> = clients.keys()
+        .map(|k| (*key, false))
+        .collect();
     for (port, client) in &mut clients {
         if client.connect().is_err() {
             println!(
@@ -70,10 +73,10 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
         .expect("Failed to set error mask on CAN socket!");
 
     thread::spawn(move || loop {
-        for client in clients.values_mut() {
-            if !client.is_connected() {
+        if let Some(siren) = client.get_mut(1883) {
+            if !siren.is_connected() {
                 println!("[read_can] Unable to connect to Siren, going into reconnection mode.");
-                if client.reconnect().is_ok() {
+                if siren.reconnect().is_ok() {
                     println!("[read_can] Reconnected to Siren!");
                 }
             }
@@ -146,21 +149,6 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
             payload.values = data.value.clone();
             payload.time_us = timestamp;
 
-            // Publish to Siren.
-            if let Some(client) = clients.get_mut(&1883) {
-                if client
-                    .publish(
-                        data.topic.to_string(),
-                        protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
-                            format!("failed to serialize {}", e).as_bytes().to_vec()
-                        }),
-                    )
-                    .is_err()
-                {
-                    println!("[read_can] Failed to publish to Siren.");
-                }
-            }
-
             // TODO: Publish to other MQTT clients, if necessary.
             if let Some(additional_clients) = &data.clients {
                 for port in additional_clients.iter() {
@@ -177,6 +165,21 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
                             println!("[read_can] Failed to publish to port {}.", port);
                         }
                     }
+                }
+            }
+
+            // Publish to Siren.
+            if let Some(client) = clients.get_mut(&1883) {
+                if client
+                    .publish(
+                        data.topic.to_string(),
+                        protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
+                            format!("failed to serialize {}", e).as_bytes().to_vec()
+                        }),
+                    )
+                    .is_err()
+                {
+                    println!("[read_can] Failed to publish to Siren.");
                 }
             }
 
