@@ -50,7 +50,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
     // let mut client = MqttClient::new(pub_path, "calypso-decoder");
     let mut clients = HashMap::from([
         (1883, MqttClient::new(pub_path, "calypso-decoder")),
-        (1882, MqttClient::new("localhost:1882", "calypso-2"))
+        (1882, MqttClient::new("localhost:1882", "calypso-priority"))
     ]);
     for (port, client) in &mut clients {
         if client.connect().is_err() {

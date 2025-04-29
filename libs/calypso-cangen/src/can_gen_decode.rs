@@ -12,10 +12,6 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
         "decode_{}",
         msg.desc.clone().to_lowercase().replace(' ', "_")
     );
-    // let clients: Option<Vec<String>> = match msg.clients {
-    //     Some(c) => Some(c),
-    //     _ => None,
-    // };
     let min_size: usize = msg.points.iter().map(|point| point.size).sum::<usize>() / 8;
     let result_len: usize = msg
         .fields
