@@ -47,11 +47,17 @@ struct CalypsoArgs {
  */
 fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
     // Open CAN socket channel at name can_interface
-    let mut client = MqttClient::new(pub_path, "calypso-decoder");
-    if client.connect().is_err() {
-        println!("Unable to connect to Siren, going into reconnection mode.");
-        if client.reconnect().is_ok() {
-            println!("Reconnected to Siren!");
+    // let mut client = MqttClient::new(pub_path, "calypso-decoder");
+    let mut clients = HashMap::from([
+        (1883, MqttClient::new(pub_path, "calypso-decoder")),
+        (1882, MqttClient::new("localhost:1882", "calypso-2"))
+    ]);
+    for (port, client) in &clients {
+        if client.connect().is_err() {
+            println!("Unable to connect to host on port {}, going into reconnection mode.", port);
+            if client.reconnect().is_ok() {
+                println!("Reconnected to host on port {}!", port);
+            }
         }
     }
 
@@ -67,7 +73,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
                 println!("[read_can] Reconnected to Siren!");
             }
         }
-        // Read from MQTT socket
+        // Read from CAN socket
         let decoded_data = match socket.read_frame() {
             // CanDataFrame
             Ok(CanFrame::Data(data_frame)) => {
@@ -127,6 +133,8 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
             payload.unit = data.unit.to_string();
             payload.values = data.value.clone();
             payload.time_us = timestamp;
+
+            // TODO: Publish to other MQTT clients, if necessary.
 
             if client
                 .publish(

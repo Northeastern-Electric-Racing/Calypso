@@ -7,6 +7,7 @@ pub struct DecodeData {
     pub value: Vec<f32>,
     pub topic: String,
     pub unit: String,
+    pub clients: Option<Vec<String>>,
 }
 
 /**
