@@ -7,6 +7,7 @@ pub struct DecodeData {
     pub value: Vec<f32>,
     pub topic: String,
     pub unit: String,
+    pub clients: Option<Vec<u16>>,
 }
 
 /**
@@ -18,8 +19,8 @@ impl fmt::Display for DecodeData {
 
         write!(
             f,
-            "topic: {}, value: {:#?}, unit: {}",
-            self.topic, self.value, self.unit
+            "topic: {}, value: {:#?}, unit: {}, clients: {:#?}",
+            self.topic, self.value, self.unit, self.clients
         )
     }
 }
@@ -33,12 +34,14 @@ impl DecodeData {
      * @param id: the id of the data
      * @param value: the value of the data
      * @param topic: the topic of the data
+     * @param clients: additional MQTT clients
      */
-    pub fn new(value: Vec<f32>, topic: &str, unit: &str) -> Self {
+    pub fn new(value: Vec<f32>, topic: &str, unit: &str, clients: Option<Vec<u16>>) -> Self {
         Self {
             value,
             topic: topic.to_string(),
             unit: unit.to_string(),
+            clients,
         }
     }
 }
