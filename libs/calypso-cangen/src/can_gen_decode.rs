@@ -62,8 +62,11 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
 /**
  *  Function to generate DecodeData struct for decoding a NetField
  */
-fn gen_decoder_field(field: &mut NetField, points: &mut [CANPoint], clients: &Option<Vec<u16>>)
-    -> ProcMacro2TokenStream {
+fn gen_decoder_field(
+    field: &mut NetField,
+    points: &mut [CANPoint],
+    clients: &Option<Vec<u16>>,
+) -> ProcMacro2TokenStream {
     // First, check that all of the correlated points are to be parsed
     // If not, return a blank TokenStream
     if !field
