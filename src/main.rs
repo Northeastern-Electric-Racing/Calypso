@@ -181,7 +181,7 @@ fn read_can(pub_path: &str, can_interface: &str) -> JoinHandle<u32> {
             }
 
             // TODO: investigate disabling this
-            thread::sleep(Duration::from_micros(100));
+            //thread::sleep(Duration::from_micros(100));
         }
     })
 }
