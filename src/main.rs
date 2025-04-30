@@ -145,21 +145,27 @@ fn read_can(pub_path: &str, can_interface: &str, mqtt_multiclient: bool) -> Join
 
             // TODO: Publish to other MQTT clients, if necessary.
             if let Some(additional_clients) = &data.clients {
+                println!("ADDITIONAL CLIENTS: {}", additional_clients.len());
                 for port in additional_clients.iter() {
+                    println!("CLIENT: {}", port);
                     if let Some(client) = clients.get_mut(port) {
                         let current_time = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
                         println!(
                             "PUBLISHING PRIORITY MESSAGE, TIME TAKEN: {}",
                             (current_time - time) / 1000
                         );
-                        client.send((data.topic.clone(), payload.clone()));
+                        if client.send((data.topic.clone(), payload.clone())).is_err() {
+                            println!("Failed to send to client, {}", port);
+                        }
                     }
                 }
             }
 
             // Publish to Siren.
             if let Some(client) = clients.get_mut(&1883) {
-                client.send((data.topic.clone(), payload));
+                if client.send((data.topic.clone(), payload)).is_err() {
+                    println!("Failed to send to siren");
+                }
             }
         }
     })
