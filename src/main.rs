@@ -159,7 +159,7 @@ fn read_can(pub_path: &str, can_interface: &str, mqtt_multiclient: bool) -> Join
 
             // Publish to Siren.
             if let Some(client) = clients.get_mut(&1883) {
-                client.send((data.topic, payload));
+                client.send((data.topic.clone(), payload));
             }
         }
     })
