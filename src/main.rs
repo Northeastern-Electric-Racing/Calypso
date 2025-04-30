@@ -167,6 +167,8 @@ fn read_can(pub_path: &str, can_interface: &str, mqtt_multiclient: bool) -> Join
                     println!("Failed to send to siren");
                 }
             }
+
+            thread::sleep(Duration::from_micros(100));
         }
     })
 }
