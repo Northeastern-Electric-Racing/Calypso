@@ -128,4 +128,20 @@ impl FormatData {
     pub fn acceleration_e(value: f32) -> f32 {
         value / 0.0029
     }
+
+    /* Energy meter temperature is (degC = raw * 0.5) according to datasheet */
+    pub fn temperature_d(value: f32) -> f32 {
+        value * 0.5
+    }
+    pub fn temperature_e(value: f32) -> f32 {
+        value * 2.0
+    }
+
+    /* Energy meter temperature indices are determined by multiplexor signal */
+    pub fn multiply5_d(value: f32) -> f32 {
+        value * 5.0
+    }
+    pub fn multiply5_e(value: f32) -> f32 {
+        value / 5.0
+    }
 }
