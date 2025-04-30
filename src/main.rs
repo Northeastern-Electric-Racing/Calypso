@@ -54,21 +54,15 @@ struct CalypsoArgs {
 /**
  * Reads the can socket and publishes the data to the given client.
  */
-fn read_can(
-    pub_path: &str,
-    can_interface: &str,
-    mqtt_multiclient: &bool,
-) -> JoinHandle<u32> {
-    let mut clients: HashMap<u16, MqttClient> = HashMap::from([
-        (1883, MqttClient::new(pub_path, "calypso-decoder")),
-    ]);
+fn read_can(pub_path: &str, can_interface: &str, mqtt_multiclient: &bool) -> JoinHandle<u32> {
+    let mut clients: HashMap<u16, MqttClient> =
+        HashMap::from([(1883, MqttClient::new(pub_path, "calypso-decoder"))]);
     // Add 1882 client if multi-client is enabled
     if mqtt_multiclient {
         clients.insert(1882, MqttClient::new("localhost:1882", "calypso-priority"));
     }
-    let mut client_connections: HashMap<u16, bool> = clients.keys()
-        .map(|k| (*key, false))
-        .collect();
+    let mut client_connections: HashMap<u16, bool> =
+        clients.keys().map(|k| (*key, false)).collect();
 
     // Attempt to connect to all registered clients
     for (port, client) in &mut clients {
@@ -101,10 +95,12 @@ fn read_can(
                 client_connections.insert(port, false);
             }
         }
+        let mut time = 0;
         // Read from CAN socket
         let decoded_data = match socket.read_frame() {
             // CanDataFrame
             Ok(CanFrame::Data(data_frame)) => {
+                time = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
                 let data = data_frame.data();
                 let id: u32 = match data_frame.id() {
                     socketcan::Id::Standard(std) => std.as_raw().into(),
@@ -174,12 +170,19 @@ fn read_can(
                 for port in additional_clients.iter() {
                     if let Some(true) = client_connections.get(port) {
                         if let Some(client) = clients.get_mut(port) {
+                            let current_time = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
+                            println!(
+                                "PUBLISHING MESSAGE, TIME TAKEN: {}",
+                                (current_time - time) / 1000
+                            );
                             if client
                                 .publish(
                                     data.topic.to_string(),
-                                    protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
-                                        format!("failed to serialize {}", e).as_bytes().to_vec()
-                                    }),
+                                    protobuf::Message::write_to_bytes(&payload).unwrap_or_else(
+                                        |e| {
+                                            format!("failed to serialize {}", e).as_bytes().to_vec()
+                                        },
+                                    ),
                                 )
                                 .is_err()
                             {
@@ -206,7 +209,8 @@ fn read_can(
             }
 
             // Attempt to reconnect to all failed connections
-            client_connections.into_iter()
+            client_connections
+                .into_iter()
                 .filter(&|(port, status)| status == false)
                 .map(&|(port, _)| {
                     if let Some(client) = clients.get_mut(port) {
@@ -366,7 +370,11 @@ fn send_out(
  */
 fn main() {
     let cli = CalypsoArgs::parse();
-    let can_handle = read_can(&cli.siren_host_url, &cli.socketcan_iface, &cli.mqtt_multiclient);
+    let can_handle = read_can(
+        &cli.siren_host_url,
+        &cli.socketcan_iface,
+        &cli.mqtt_multiclient,
+    );
 
     // use a arc for mutlithread, and a rwlock to enforce one writer
     if cli.encode {
