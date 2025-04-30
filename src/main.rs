@@ -1,13 +1,19 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, RwLock},
+    sync::{mpsc, Arc, RwLock},
     thread::{self, JoinHandle},
     time::{Duration, UNIX_EPOCH},
 };
 
 use calypso::{
-    data::DecodeData, data::EncodeData, decode_data::*, encode_data::*, mqtt::MqttClient,
-    proto::command_data, proto::serverdata,
+    data::{DecodeData, EncodeData},
+    decode_data::*,
+    encode_data::*,
+    mqtt::MqttClient,
+    proto::{
+        command_data,
+        serverdata::{self, ServerData},
+    },
 };
 use clap::Parser;
 use protobuf::Message;
@@ -42,47 +48,23 @@ struct CalypsoArgs {
     socketcan_iface: String,
 
     // Whether to enable MQTT multi-client
-    #[arg(
-        short = 'm',
-        long,
-        env = "CALYPSO_MQTT_MULTICLIENT",
-    )]
+    #[arg(short = 'm', long, env = "CALYPSO_MQTT_MULTICLIENT")]
     mqtt_multiclient: bool,
 }
 
 /**
  * Reads the can socket and publishes the data to the given client.
  */
-fn read_can(
-    pub_path: &str,
-    can_interface: &str,
-    mqtt_multiclient: bool,
-) -> JoinHandle<u32> {
-    let mut clients: HashMap<u16, MqttClient> = HashMap::from([
-        (1883, MqttClient::new(pub_path, "calypso-decoder")),
-    ]);
+fn read_can(pub_path: &str, can_interface: &str, mqtt_multiclient: bool) -> JoinHandle<u32> {
+    let (siren_send, siren_recv) = mpsc::channel::<(String, ServerData)>();
+    MqttClient::new(pub_path, "calypso-decoder").sending_loop(siren_recv, 1883);
+    let mut clients: HashMap<u16, mpsc::Sender<(String, ServerData)>> =
+        HashMap::from([(1883, siren_send)]);
     // Add 1882 client if multi-client is enabled
     if mqtt_multiclient {
-        clients.insert(1882, MqttClient::new("localhost:1882", "calypso-priority"));
-    }
-    let mut client_connections: HashMap<u16, bool> = clients.keys()
-        .map(|k| (*k, false))
-        .collect();
-
-    // Attempt to connect to all registered clients
-    for (port, client) in &mut clients {
-        if client.connect().is_err() {
-            println!(
-                "Unable to connect to host on port {}, going into reconnection mode.",
-                port
-            );
-            if client.reconnect().is_ok() {
-                println!("Reconnected to host on port {}!", port);
-                client_connections.insert(*port, true);
-            }
-        } else {
-            client_connections.insert(*port, true);
-        }
+        let (priority_send, priority_recv) = mpsc::channel::<(String, ServerData)>();
+        MqttClient::new("localhost:1882", "calypso-priority").sending_loop(priority_recv, 1882);
+        clients.insert(1882, priority_send);
     }
 
     let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
@@ -91,15 +73,6 @@ fn read_can(
         .expect("Failed to set error mask on CAN socket!");
 
     thread::spawn(move || loop {
-        for (port, client) in clients.iter_mut() {
-            if !client.is_connected() {
-                println!(
-                    "[read_can] Unable to connect to client on {}, going into reconnection mode.",
-                    port,
-                );
-                client_connections.insert(*port, false);
-            }
-        }
         let mut time = 0;
         // Read from CAN socket
         let decoded_data = match socket.read_frame() {
@@ -173,63 +146,21 @@ fn read_can(
             // TODO: Publish to other MQTT clients, if necessary.
             if let Some(additional_clients) = &data.clients {
                 for port in additional_clients.iter() {
-                    if let Some(true) = client_connections.get(port) {
-                        if let Some(client) = clients.get_mut(port) {
-                            let current_time = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
-                            println!(
-                                "PUBLISHING MESSAGE, TIME TAKEN: {}",
-                                (current_time - time) / 1000
-                            );
-                            if client
-                                .publish(
-                                    data.topic.to_string(),
-                                    protobuf::Message::write_to_bytes(&payload).unwrap_or_else(
-                                        |e| {
-                                            format!("failed to serialize {}", e).as_bytes().to_vec()
-                                        },
-                                    ),
-                                )
-                                .is_err()
-                            {
-                                println!("[read_can] Failed to publish to port {}.", port);
-                            }
-                        }
+                    if let Some(client) = clients.get_mut(port) {
+                        let current_time = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
+                        println!(
+                            "PUBLISHING PRIORITY MESSAGE, TIME TAKEN: {}",
+                            (current_time - time) / 1000
+                        );
+                        client.send((data.topic, payload));
                     }
                 }
             }
 
             // Publish to Siren.
             if let Some(client) = clients.get_mut(&1883) {
-                if client
-                    .publish(
-                        data.topic.to_string(),
-                        protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
-                            format!("failed to serialize {}", e).as_bytes().to_vec()
-                        }),
-                    )
-                    .is_err()
-                {
-                    println!("[read_can] Failed to publish to Siren.");
-                }
+                client.send((data.topic, payload));
             }
-
-            // Attempt to reconnect to all failed connections
-            let _ = client_connections.clone()
-                .into_iter()
-                .filter(|(_, status)| *status == false)
-                .map(|(port, _)| {
-                    if let Some(client) = clients.get_mut(&port) {
-                        if client.reconnect().is_ok() {
-                            println!("[read_can] Reconnected to client on {}!", port);
-                            client_connections.insert(port, true);
-                        } else {
-                            println!("[read_can] Failed to reconnect to client on {}.", port);
-                        }
-                    }
-                });
-
-            // TODO: investigate disabling this
-            thread::sleep(Duration::from_micros(100));
         }
     })
 }
@@ -375,7 +306,11 @@ fn send_out(
  */
 fn main() {
     let cli = CalypsoArgs::parse();
-    let can_handle = read_can(&cli.siren_host_url, &cli.socketcan_iface, cli.mqtt_multiclient);
+    let can_handle = read_can(
+        &cli.siren_host_url,
+        &cli.socketcan_iface,
+        cli.mqtt_multiclient,
+    );
 
     // use a arc for mutlithread, and a rwlock to enforce one writer
     if cli.encode {

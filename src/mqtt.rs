@@ -1,7 +1,9 @@
 extern crate paho_mqtt as mqtt;
 use mqtt::ServerResponse;
 use paho_mqtt::{Message, Receiver};
-use std::time::Duration;
+use std::{sync::mpsc, thread, time::Duration};
+
+use crate::proto::serverdata::ServerData;
 
 /**
  * MqttClient is a wrapper around the paho_mqtt::Client.
@@ -100,5 +102,43 @@ impl MqttClient {
      */
     fn _disconnect(&mut self) -> Result<(), mqtt::Error> {
         self.client.disconnect(None)
+    }
+
+    pub fn sending_loop(mut self, data_channel: mpsc::Receiver<(String, ServerData)>, port: u32) {
+        if self.connect().is_err() {
+            println!(
+                "Unable to connect to host on port {}, going into reconnection mode.",
+                port
+            );
+            if self.reconnect().is_ok() {
+                println!("Reconnected to host on port {}!", port);
+            }
+        }
+
+        thread::spawn(move || loop {
+            for (topic, payload) in data_channel.iter() {
+                if !self.is_connected() {
+                    println!(
+                    "[read_can] Unable to connect to client on {}, going into reconnection mode.",
+                    port,
+                );
+                    if self.reconnect().is_err() {
+                        println!("Could not reconnect to client {}", port)
+                    }
+                }
+
+                if self
+                    .publish(
+                        topic.to_string(),
+                        protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
+                            format!("failed to serialize {}", e).as_bytes().to_vec()
+                        }),
+                    )
+                    .is_err()
+                {
+                    println!("[read_can] Failed to publish to port {}.", port);
+                }
+            }
+        });
     }
 }
