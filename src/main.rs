@@ -46,7 +46,6 @@ struct CalypsoArgs {
         short = 'm',
         long,
         env = "CALYPSO_MQTT_MULTICLIENT",
-        default_value = false
     )]
     mqtt_multiclient: bool,
 }
@@ -54,15 +53,21 @@ struct CalypsoArgs {
 /**
  * Reads the can socket and publishes the data to the given client.
  */
-fn read_can(pub_path: &str, can_interface: &str, mqtt_multiclient: &bool) -> JoinHandle<u32> {
-    let mut clients: HashMap<u16, MqttClient> =
-        HashMap::from([(1883, MqttClient::new(pub_path, "calypso-decoder"))]);
+fn read_can(
+    pub_path: &str,
+    can_interface: &str,
+    mqtt_multiclient: bool,
+) -> JoinHandle<u32> {
+    let mut clients: HashMap<u16, MqttClient> = HashMap::from([
+        (1883, MqttClient::new(pub_path, "calypso-decoder")),
+    ]);
     // Add 1882 client if multi-client is enabled
     if mqtt_multiclient {
         clients.insert(1882, MqttClient::new("localhost:1882", "calypso-priority"));
     }
-    let mut client_connections: HashMap<u16, bool> =
-        clients.keys().map(|k| (*key, false)).collect();
+    let mut client_connections: HashMap<u16, bool> = clients.keys()
+        .map(|k| (*k, false))
+        .collect();
 
     // Attempt to connect to all registered clients
     for (port, client) in &mut clients {
@@ -73,10 +78,10 @@ fn read_can(pub_path: &str, can_interface: &str, mqtt_multiclient: &bool) -> Joi
             );
             if client.reconnect().is_ok() {
                 println!("Reconnected to host on port {}!", port);
-                client_connections.insert(port, true);
+                client_connections.insert(*port, true);
             }
         } else {
-            client_connections.insert(port, true);
+            client_connections.insert(*port, true);
         }
     }
 
@@ -92,7 +97,7 @@ fn read_can(pub_path: &str, can_interface: &str, mqtt_multiclient: &bool) -> Joi
                     "[read_can] Unable to connect to client on {}, going into reconnection mode.",
                     port,
                 );
-                client_connections.insert(port, false);
+                client_connections.insert(*port, false);
             }
         }
         let mut time = 0;
@@ -209,11 +214,11 @@ fn read_can(pub_path: &str, can_interface: &str, mqtt_multiclient: &bool) -> Joi
             }
 
             // Attempt to reconnect to all failed connections
-            client_connections
+            let _ = client_connections.clone()
                 .into_iter()
-                .filter(&|(port, status)| status == false)
-                .map(&|(port, _)| {
-                    if let Some(client) = clients.get_mut(port) {
+                .filter(|(_, status)| *status == false)
+                .map(|(port, _)| {
+                    if let Some(client) = clients.get_mut(&port) {
                         if client.reconnect().is_ok() {
                             println!("[read_can] Reconnected to client on {}!", port);
                             client_connections.insert(port, true);
@@ -370,11 +375,7 @@ fn send_out(
  */
 fn main() {
     let cli = CalypsoArgs::parse();
-    let can_handle = read_can(
-        &cli.siren_host_url,
-        &cli.socketcan_iface,
-        &cli.mqtt_multiclient,
-    );
+    let can_handle = read_can(&cli.siren_host_url, &cli.socketcan_iface, cli.mqtt_multiclient);
 
     // use a arc for mutlithread, and a rwlock to enforce one writer
     if cli.encode {
