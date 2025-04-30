@@ -50,20 +50,33 @@ struct CalypsoArgs {
     // Whether to enable MQTT multi-client
     #[arg(short = 'm', long, env = "CALYPSO_MQTT_MULTICLIENT")]
     mqtt_multiclient: bool,
+
+    // The size of queued messages from calypso to actually send out to mqtt to prevent overloading
+    #[arg(short = 'b', long, env = "CALYPSO_MQTT_BUFFER")]
+    mqtt_buffer: usize,
 }
 
 /**
  * Reads the can socket and publishes the data to the given client.
  */
-fn read_can(pub_path: &str, can_interface: &str, mqtt_multiclient: bool) -> JoinHandle<u32> {
+fn read_can(
+    pub_path: &str,
+    can_interface: &str,
+    mqtt_multiclient: bool,
+    mqtt_buffer: usize,
+) -> JoinHandle<u32> {
     let (siren_send, siren_recv) = mpsc::channel::<(String, ServerData)>();
-    MqttClient::new(pub_path, "calypso-decoder").sending_loop(siren_recv, 1883);
+    MqttClient::new(pub_path, "calypso-decoder").sending_loop(siren_recv, 1883, mqtt_buffer);
     let mut clients: HashMap<u16, mpsc::Sender<(String, ServerData)>> =
         HashMap::from([(1883, siren_send)]);
     // Add 1882 client if multi-client is enabled
     if mqtt_multiclient {
         let (priority_send, priority_recv) = mpsc::channel::<(String, ServerData)>();
-        MqttClient::new("localhost:1882", "calypso-priority").sending_loop(priority_recv, 1882);
+        MqttClient::new("localhost:1882", "calypso-priority").sending_loop(
+            priority_recv,
+            1882,
+            mqtt_buffer,
+        );
         clients.insert(1882, priority_send);
     }
 
@@ -318,6 +331,7 @@ fn main() {
         &cli.siren_host_url,
         &cli.socketcan_iface,
         cli.mqtt_multiclient,
+        cli.mqtt_buffer,
     );
 
     // use a arc for mutlithread, and a rwlock to enforce one writer
