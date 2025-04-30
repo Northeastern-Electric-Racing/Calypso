@@ -152,7 +152,7 @@ fn read_can(pub_path: &str, can_interface: &str, mqtt_multiclient: bool) -> Join
                             "PUBLISHING PRIORITY MESSAGE, TIME TAKEN: {}",
                             (current_time - time) / 1000
                         );
-                        client.send((data.topic, payload));
+                        client.send((data.topic.clone(), payload.clone()));
                     }
                 }
             }
