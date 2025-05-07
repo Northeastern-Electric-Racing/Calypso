@@ -90,13 +90,13 @@ fn gen_encoder_point(point: &mut CANPoint) -> ProcMacro2TokenStream {
                 // Signed
                 Some(true) => {
                     quote! {
-                        writer.write_signed_out::<#size_literal, #write_type>(#float_final as #write_type).unwrap();
+                        writer.write_signed::<#size_literal, #write_type>(#float_final as #write_type).unwrap();
                     }
                 }
                 // Unsigned (default)
                 _ => {
                     quote! {
-                        writer.write_out::<#size_literal, #write_type>(#float_final as #write_type).unwrap();
+                        writer.write_unsigned::<#size_literal, #write_type>(#float_final as #write_type).unwrap();
                     }
                 }
             }
