@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
-    sync::{mpsc, Arc, RwLock},
-    thread::{self, JoinHandle},
+    sync::{Arc, RwLock},
+    // thread::{self, JoinHandle},
     time::{Duration, UNIX_EPOCH},
 };
 
@@ -17,7 +17,13 @@ use calypso::{
 };
 use clap::Parser;
 use protobuf::Message;
-use socketcan::{CanError, CanFrame, CanSocket, EmbeddedFrame, Frame, Id, Socket, SocketOptions};
+use socketcan::{tokio::CanSocket, CanError, CanFrame, EmbeddedFrame, Frame, Id, Socket, SocketOptions};
+use tokio::{
+    sync::{mpsc},
+    task::{JoinHandle},
+    time::{sleep},
+};
+use futures_util::StreamExt;
 
 const ENCODER_MAP_SUB: &str = "Calypso/Bidir/Command/#";
 
@@ -64,14 +70,15 @@ fn read_can(
     can_interface: &str,
     mqtt_multiclient: bool,
     mqtt_buffer: usize,
-) -> JoinHandle<u32> {
-    let (siren_send, siren_recv) = mpsc::channel::<(String, ServerData)>();
+) -> JoinHandle<()> {
+    // TODO: Look into channel size, just mirroring broadcast size from scylla
+    let (siren_send, siren_recv) = mpsc::channel::<(String, ServerData)>(10000);
     MqttClient::new(pub_path, "calypso-decoder").sending_loop(siren_recv, 1883, mqtt_buffer);
     let mut clients: HashMap<u16, mpsc::Sender<(String, ServerData)>> =
         HashMap::from([(1883, siren_send)]);
     // Add 1882 client if multi-client is enabled
     if mqtt_multiclient {
-        let (priority_send, priority_recv) = mpsc::channel::<(String, ServerData)>();
+        let (priority_send, priority_recv) = mpsc::channel::<(String, ServerData)>(10000);
         MqttClient::new("localhost:1882", "calypso-priority").sending_loop(
             priority_recv,
             1882,
@@ -80,108 +87,114 @@ fn read_can(
         clients.insert(1882, priority_send);
     }
 
-    let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
+    let mut socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
     socket
         .set_error_filter_accept_all()
         .expect("Failed to set error mask on CAN socket!");
 
-    thread::spawn(move || loop {
-        let mut time = 0;
-        // Read from CAN socket
-        let decoded_data = match socket.read_frame() {
-            // CanDataFrame
-            Ok(CanFrame::Data(data_frame)) => {
-                time = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
-                let data = data_frame.data();
-                let id: u32 = match data_frame.id() {
-                    socketcan::Id::Standard(std) => std.as_raw().into(),
-                    socketcan::Id::Extended(ext) => ext.as_raw(),
-                };
-                match DECODE_FUNCTION_MAP.get(&id) {
-                    Some(func) => func(data),
-                    None => vec![DecodeData::new(
-                        vec![id as f32],
-                        "Calypso/Unknown",
-                        "ID",
-                        None,
-                    )],
+    tokio::spawn(async move {
+        loop {
+            let mut time = 0;
+            // Read from CAN socket
+            let decoded_data = match socket.next().await {
+                // CanDataFrame
+                Some(Ok(CanFrame::Data(data_frame))) => {
+                    time = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
+                    let data = data_frame.data();
+                    let id: u32 = match data_frame.id() {
+                        socketcan::Id::Standard(std) => std.as_raw().into(),
+                        socketcan::Id::Extended(ext) => ext.as_raw(),
+                    };
+                    match DECODE_FUNCTION_MAP.get(&id) {
+                        Some(func) => func(data),
+                        None => vec![DecodeData::new(
+                            vec![id as f32],
+                            "Calypso/Unknown",
+                            "ID",
+                            None,
+                        )],
+                    }
                 }
-            }
-            // CanRemoteFrame
-            Ok(CanFrame::Remote(remote_frame)) => {
-                // Send frame ID for Remote
-                vec![DecodeData::new(
-                    vec![remote_frame.raw_id() as f32],
-                    "Calypso/Events/RemoteFrame",
-                    "id",
-                    None,
-                )]
-            }
-            // CanErrorFrame
-            Ok(CanFrame::Error(error_frame)) => {
-                // Publish enum index of error onto CAN
-                // TODO: maybe look into better representation?
-                let error_index: f32 = match CanError::from(error_frame) {
-                    CanError::TransmitTimeout => 0.0,
-                    CanError::LostArbitration(_) => 1.0,
-                    CanError::ControllerProblem(_) => 2.0,
-                    CanError::ProtocolViolation { .. } => 3.0,
-                    CanError::TransceiverError => 4.0,
-                    CanError::NoAck => 5.0,
-                    CanError::BusOff => 6.0,
-                    CanError::BusError => 7.0,
-                    CanError::Restarted => 8.0,
-                    CanError::DecodingFailure(_) => 9.0,
-                    CanError::Unknown(_) => 10.0,
-                };
-                vec![DecodeData::new(
-                    vec![error_index],
-                    "Calypso/Events/ErrorFrame",
-                    "CanError enum",
-                    None,
-                )]
-            }
-            // Socket failure
-            Err(err) => {
-                println!("CAN Socket failure: {}", err);
-                continue;
-            }
-        };
-        let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
+                // CanRemoteFrame
+                Some(Ok(CanFrame::Remote(remote_frame))) => {
+                    // Send frame ID for Remote
+                    vec![DecodeData::new(
+                        vec![remote_frame.raw_id() as f32],
+                        "Calypso/Events/RemoteFrame",
+                        "id",
+                        None,
+                    )]
+                }
+                // CanErrorFrame
+                Some(Ok(CanFrame::Error(error_frame))) => {
+                    // Publish enum index of error onto CAN
+                    // TODO: maybe look into better representation?
+                    let error_index: f32 = match CanError::from(error_frame) {
+                        CanError::TransmitTimeout => 0.0,
+                        CanError::LostArbitration(_) => 1.0,
+                        CanError::ControllerProblem(_) => 2.0,
+                        CanError::ProtocolViolation { .. } => 3.0,
+                        CanError::TransceiverError => 4.0,
+                        CanError::NoAck => 5.0,
+                        CanError::BusOff => 6.0,
+                        CanError::BusError => 7.0,
+                        CanError::Restarted => 8.0,
+                        CanError::DecodingFailure(_) => 9.0,
+                        CanError::Unknown(_) => 10.0,
+                    };
+                    vec![DecodeData::new(
+                        vec![error_index],
+                        "Calypso/Events/ErrorFrame",
+                        "CanError enum",
+                        None,
+                    )]
+                }
+                // Socket failure
+                Some(Err(err)) => {
+                    println!("CAN Socket failure: {}", err);
+                    continue;
+                }
+                None => {
+                    println!("No next frame from CAN socket");
+                    continue;
+                }
+            };
+            let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
 
-        // Convert decoded CAN to Protobuf and publish over MQTT
-        for data in decoded_data.iter() {
-            let mut payload = serverdata::ServerData::new();
-            payload.unit = data.unit.to_string();
-            payload.values = data.value.clone();
-            payload.time_us = timestamp;
+            // Convert decoded CAN to Protobuf and publish over MQTT
+            for data in decoded_data.iter() {
+                let mut payload = serverdata::ServerData::new();
+                payload.unit = data.unit.to_string();
+                payload.values = data.value.clone();
+                payload.time_us = timestamp;
 
-            // TODO: Publish to other MQTT clients, if necessary.
-            if let Some(additional_clients) = &data.clients {
-                println!("ADDITIONAL CLIENTS: {}", additional_clients.len());
-                for port in additional_clients.iter() {
-                    println!("CLIENT: {}", port);
-                    if let Some(client) = clients.get_mut(port) {
-                        let current_time = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
-                        println!(
-                            "PUBLISHING PRIORITY MESSAGE, TIME TAKEN: {}",
-                            (current_time - time) / 1000
-                        );
-                        if client.send((data.topic.clone(), payload.clone())).is_err() {
-                            println!("Failed to send to client, {}", port);
+                // TODO: Publish to other MQTT clients, if necessary.
+                if let Some(additional_clients) = &data.clients {
+                    println!("ADDITIONAL CLIENTS: {}", additional_clients.len());
+                    for port in additional_clients.iter() {
+                        println!("CLIENT: {}", port);
+                        if let Some(client) = clients.get_mut(port) {
+                            let current_time = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
+                            println!(
+                                "PUBLISHING PRIORITY MESSAGE, TIME TAKEN: {}",
+                                (current_time - time) / 1000
+                            );
+                            if client.send((data.topic.clone(), payload.clone())).await.is_err() {
+                                println!("Failed to send to client, {}", port);
+                            }
                         }
                     }
                 }
-            }
 
-            // Publish to Siren.
-            if let Some(client) = clients.get_mut(&1883) {
-                if client.send((data.topic.clone(), payload)).is_err() {
-                    println!("Failed to send to siren");
+                // Publish to Siren.
+                if let Some(client) = clients.get_mut(&1883) {
+                    if client.send((data.topic.clone(), payload)).await.is_err() {
+                        println!("Failed to send to siren");
+                    }
                 }
-            }
 
-            thread::sleep(Duration::from_micros(100));
+                sleep(Duration::from_micros(100)).await;
+            }
         }
     })
 }
@@ -218,7 +231,7 @@ fn read_siren(pub_path: &str, send_map: Arc<RwLock<HashMap<u32, EncodeData>>>) -
     }
     drop(writable_send_map);
 
-    thread::spawn(move || {
+    tokio::spawn(async move {
         for msg in reciever.iter() {
             if let Some(msg) = msg {
                 let buf = match command_data::CommandData::parse_from_bytes(msg.payload()) {
@@ -283,36 +296,38 @@ fn send_out(
 ) -> JoinHandle<()> {
     let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
 
-    thread::spawn(move || loop {
-        thread::sleep(Duration::from_millis(750));
-        let sender = send_map.read().expect("Cannot read map of sendables!");
-        for msg in sender.iter() {
-            // let id = u32::from_str_radix((msg.1.1).trim_start_matches("0x"), 16).expect("Invalid CAN ID!");
+    tokio::spawn(async move { 
+        loop {
+            sleep(Duration::from_millis(750)).await;
+            let sender = send_map.read().expect("Cannot read map of sendables!");
+            for msg in sender.iter() {
+                // let id = u32::from_str_radix((msg.1.1).trim_start_matches("0x"), 16).expect("Invalid CAN ID!");
 
-            let id: Id = if !msg.1.is_ext {
-                socketcan::StandardId::new(
-                    msg.1
-                        .id
-                        .try_into()
-                        .unwrap_or_else(|_| panic!("Invalid standard ID: {}", msg.1.id)),
-                )
-                .unwrap_or_else(|| panic!("Invalid standard ID: {}", msg.1.id))
-                .into()
-            } else {
-                socketcan::ExtendedId::new(msg.1.id)
-                    .unwrap_or_else(|| panic!("Invalid extended ID: {}", msg.1.id))
+                let id: Id = if !msg.1.is_ext {
+                    socketcan::StandardId::new(
+                        msg.1
+                            .id
+                            .try_into()
+                            .unwrap_or_else(|_| panic!("Invalid standard ID: {}", msg.1.id)),
+                    )
+                    .unwrap_or_else(|| panic!("Invalid standard ID: {}", msg.1.id))
                     .into()
-            };
+                } else {
+                    socketcan::ExtendedId::new(msg.1.id)
+                        .unwrap_or_else(|| panic!("Invalid extended ID: {}", msg.1.id))
+                        .into()
+                };
 
-            match CanFrame::new(id, &msg.1.value) {
-                Some(packet) => {
-                    match socket.write_frame(&packet) {
-                        Ok(_) => (),
-                        Err(err) => println!("Error sending can message {}", err),
-                    };
-                }
-                None => {
-                    println!("Packet is too long: {}", msg.1);
+                match CanFrame::new(id, &msg.1.value) {
+                    Some(packet) => {
+                        match socket.write_frame(packet) {
+                            Ok(_) => (),
+                            Err(err) => println!("Error sending can message {}", err),
+                        };
+                    }
+                    None => {
+                        println!("Packet is too long: {}", msg.1);
+                    }
                 }
             }
         }
@@ -323,9 +338,9 @@ fn send_out(
  * Main Function
  * Configures the can network, retrieves the client based on the command line arguments,
  * connects the client and then reads the can socket from specified interface.
- *
  */
-fn main() {
+#[tokio::main]
+async fn main() {
     let cli = CalypsoArgs::parse();
     let can_handle = read_can(
         &cli.siren_host_url,
@@ -342,13 +357,13 @@ fn main() {
 
         let send_handle = send_out(&cli.socketcan_iface, Arc::clone(&send_map));
 
-        siren_handle.join().expect("Encoder failed with ");
+        siren_handle.await.expect("Encoder failed with ");
         println!("Encoder ended");
 
-        send_handle.join().expect("Sender failed with ");
+        send_handle.await.expect("Sender failed with ");
         println!("Sender ended");
     }
 
-    can_handle.join().expect("Decoder failed with ");
+    can_handle.await.expect("Decoder failed with ");
     println!("Decoder ended");
 }

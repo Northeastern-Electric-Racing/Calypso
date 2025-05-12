@@ -1,8 +1,8 @@
 extern crate paho_mqtt as mqtt;
 use mqtt::ServerResponse;
 use paho_mqtt::{Message, Receiver};
-use std::{collections::VecDeque, sync::mpsc, thread, time::Duration};
-
+use std::{collections::VecDeque, thread, time::Duration};
+use tokio::sync::mpsc;
 use crate::proto::serverdata::ServerData;
 
 /**
@@ -106,7 +106,7 @@ impl MqttClient {
 
     pub fn sending_loop(
         mut self,
-        data_channel: mpsc::Receiver<(String, ServerData)>,
+        mut data_channel: mpsc::Receiver<(String, ServerData)>,
         port: u32,
         mqtt_buffer_size: usize,
     ) {
