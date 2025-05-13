@@ -2,7 +2,7 @@ extern crate paho_mqtt as mqtt;
 use crate::proto::serverdata::ServerData;
 use mqtt::ServerResponse;
 use paho_mqtt::{Message, Receiver};
-use std::{collections::VecDeque, thread, time::Duration};
+use std::{collections::VecDeque, time::Duration};
 use tokio::sync::mpsc;
 
 /**
@@ -104,12 +104,12 @@ impl MqttClient {
         self.client.disconnect(None)
     }
 
-    pub fn sending_loop(
+    pub async fn sending_loop(
         mut self,
-        mut data_channel: mpsc::Receiver<(String, ServerData)>,
+        data_channel: Arc<Mutex<mpsc::Receiver<(String, ServerData)>>>,
         port: u32,
         mqtt_buffer_size: usize,
-    ) {
+    ) -> JoinHandle<()> {
         if self.connect().is_err() {
             println!(
                 "Unable to connect to host on port {}, going into reconnection mode.",
@@ -120,45 +120,31 @@ impl MqttClient {
             }
         }
 
-        thread::spawn(move || {
-            let mut message_buffer: VecDeque<(String, ServerData)> = VecDeque::new();
-
-            loop {
-                // Drain the receiver without blocking
-                while let Ok(msg) = data_channel.try_recv() {
-                    if message_buffer.len() == mqtt_buffer_size {
-                        message_buffer.pop_front(); // drop oldest
-                    }
-                    message_buffer.push_back(msg);
-                }
-
-                // Process all messages currently in buffer
-                while let Some((topic, payload)) = message_buffer.pop_front() {
-                    if !self.is_connected() {
-                        println!(
+        tokio::spawn(async move || {
+            // Process all messages currently in buffer
+            while let Some(frame) = data_channel.lock().await.recv().await {
+                if !self.is_connected() {
+                    println!(
                         "[read_can] Unable to connect to client on {}, going into reconnection mode.",
                         port,
                     );
-                        if self.reconnect().is_err() {
-                            println!("Could not reconnect to client {}", port);
-                            break;
-                        }
-                    }
-
-                    if self
-                        .publish(
-                            topic,
-                            protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
-                                format!("failed to serialize {}", e).as_bytes().to_vec()
-                            }),
-                        )
-                        .is_err()
-                    {
-                        println!("[read_can] Failed to publish to port {}.", port);
+                    if self.reconnect().is_err() {
+                        println!("Could not reconnect to client {}", port);
+                        break;
                     }
                 }
 
-                thread::sleep(Duration::from_micros(10)); // Sleep to avoid tight loop
+                if self
+                    .publish(
+                        topic,
+                        protobuf::Message::write_to_bytes(&payload).unwrap_or_else(|e| {
+                            format!("failed to serialize {}", e).as_bytes().to_vec()
+                        }),
+                    )
+                    .is_err()
+                {
+                    println!("[read_can] Failed to publish to port {}.", port);
+                }
             }
         });
     }

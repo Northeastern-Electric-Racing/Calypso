@@ -1,7 +1,6 @@
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
-    // thread::{self, JoinHandle},
     time::{Duration, UNIX_EPOCH},
 };
 
@@ -84,9 +83,9 @@ async fn can_frame_consumer(
     clients: &HashMap<u16, mpsc::Sender<(String, ServerData)>>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
-        while let Ok(frame) = rx.lock().await.recv().await {
+        while let Some(frame) = rx.lock().await.recv().await {
             let decoded_data = match frame {
-                Some(Ok(CanFrame::Data(data_frame))) => {
+                Ok(CanFrame::Data(data_frame)) => {
                     let data = data_frame.data();
                     let id: u32 = match data_frame.id() {
                         socketcan::Id::Standard(std) => std.as_raw().into(),
@@ -103,7 +102,7 @@ async fn can_frame_consumer(
                     }
                 }
                 // CanRemoteFrame
-                Some(Ok(CanFrame::Remote(remote_frame))) => {
+                Ok(CanFrame::Remote(remote_frame)) => {
                     // Send frame ID for Remote
                     vec![DecodeData::new(
                         vec![remote_frame.raw_id() as f32],
@@ -113,7 +112,7 @@ async fn can_frame_consumer(
                     )]
                 }
                 // CanErrorFrame
-                Some(Ok(CanFrame::Error(error_frame))) => {
+                Ok(CanFrame::Error(error_frame)) => {
                     // Publish enum index of error onto CAN
                     // TODO: maybe look into better representation?
                     let error_index: f32 = match CanError::from(error_frame) {
@@ -137,12 +136,8 @@ async fn can_frame_consumer(
                     )]
                 }
                 // Socket failure
-                Some(Err(err)) => {
+                Err(err) => {
                     println!("CAN Socket failure: {}", err);
-                    continue;
-                }
-                None => {
-                    println!("No next frame from CAN socket");
                     continue;
                 }
             };
@@ -195,9 +190,12 @@ fn read_can(
 ) -> Vec<JoinHandle<()>> {
     // TODO: Look into channel size, just mirroring broadcast size from scylla
     let (siren_send, siren_recv) = mpsc::channel::<(String, ServerData)>(10000);
+    siren_recv = Arc::new(Mutex::new(can_rx));
     for i in 0..num_mqtt_senders {
+        let mut rx = siren_recv.clone();
+
         MqttClient::new(pub_path, format!("calypso-decoder-{}", i).as_str()).sending_loop(
-            siren_recv,
+            rx,
             1883,
             mqtt_buffer,
         );
@@ -222,14 +220,14 @@ fn read_can(
         .set_error_filter_accept_all()
         .expect("Failed to configure CAN socket!");
 
-    let (can_tx, mut can_rx) = mpsc::channel(100);
+    let (can_tx, can_rx) = mpsc::channel(100);
     let mut handles: Vec<JoinHandle<()>> = Vec::new();
 
     let read_handle = tokio::spawn(async move {
         while let Some(frame) = socket.next().await {
             match frame {
                 Ok(f) => can_tx
-                    .send(frame)
+                    .send(f)
                     .await
                     .expect("Failed to send can frame to processor"),
                 Err(e) => eprintln!("Error reading CAN frame: {}", e),
@@ -240,10 +238,11 @@ fn read_can(
 
     let can_rx = Arc::new(Mutex::new(can_rx));
 
-    for i in 0..num_can_consumers {
-        let mut rx = can_rx.clone();
+    for _i in 0..num_can_consumers {
+        let rx = can_rx.clone();
+        let client_ref = &clients;
         let handle = tokio::spawn(async move {
-            can_frame_consumer(rx, &clients).await;
+            can_frame_consumer(rx, client_ref).await;
         });
         handles.push(handle);
     }
