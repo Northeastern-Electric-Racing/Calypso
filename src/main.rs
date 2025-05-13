@@ -189,7 +189,7 @@ fn read_can(
     let (siren_send, siren_recv) = mpsc::channel::<(String, ServerData)>(10000);
     let siren_mut = Arc::new(Mutex::new(siren_recv));
     for i in 0..num_mqtt_senders {
-        let mut rx = siren_mut.clone();
+        let rx = siren_mut.clone();
 
         let handle = MqttClient::new(pub_path, format!("calypso-decoder-{}", i).as_str())
             .sending_loop(rx, 1883);
@@ -229,8 +229,9 @@ fn read_can(
 
     for _i in 0..num_can_consumers {
         let rx = can_rx.clone();
+        let clients = clients.clone();
         let handle = tokio::spawn(async move {
-            can_frame_consumer(rx, clients.clone()).await;
+            can_frame_consumer(rx, clients).await;
         });
         handles.push(handle);
     }
