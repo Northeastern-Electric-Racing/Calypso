@@ -391,7 +391,7 @@ fn send_out(
 #[tokio::main]
 async fn main() {
     let cli = CalypsoArgs::parse();
-    let can_handle = read_can(
+    let can_handles = read_can(
         &cli.siren_host_url,
         &cli.priority_host_url,
         &cli.socketcan_iface,
@@ -416,6 +416,8 @@ async fn main() {
         println!("Sender ended");
     }
 
-    can_handle.await.expect("Decoder failed with ");
+    for handle in can_handles {
+        handle.await.expect("Decoder Thread Failed");
+    }
     println!("Decoder ended");
 }
