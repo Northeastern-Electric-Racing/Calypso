@@ -16,14 +16,12 @@ use calypso::{
     },
 };
 use clap::Parser;
-use protobuf::Message;
-use socketcan::{tokio::CanSocket, CanError, CanFrame, EmbeddedFrame, Frame, Id, Socket, SocketOptions};
-use tokio::{
-    sync::{mpsc},
-    task::{JoinHandle},
-    time::{sleep},
-};
 use futures_util::StreamExt;
+use protobuf::Message;
+use socketcan::{
+    tokio::CanSocket, CanError, CanFrame, EmbeddedFrame, Frame, Id, Socket, SocketOptions,
+};
+use tokio::{sync::mpsc, task::JoinHandle, time::sleep};
 
 const ENCODER_MAP_SUB: &str = "Calypso/Bidir/Command/#";
 
@@ -44,6 +42,15 @@ struct CalypsoArgs {
     )]
     siren_host_url: String,
 
+    /// The priorty url to use for critical messages that cannot be buffered, including port and excluding protocol prefix
+    #[arg(
+        short = 'u',
+        long,
+        env = "CALYPSO_PRIORITY_HOST_URL",
+        default_value = "localhost:1882"
+    )]
+    priority_host_url: String,
+
     /// The SocketCAN interface port
     #[arg(
         short = 'c',
@@ -60,6 +67,116 @@ struct CalypsoArgs {
     // The size of queued messages from calypso to actually send out to mqtt to prevent overloading
     #[arg(short = 'b', long, env = "CALYPSO_MQTT_BUFFER")]
     mqtt_buffer: usize,
+
+    // The number of consumers to receive can messages from the can line reader
+    #[arg(short = 'n', long, env = "CALYPSO_NUM_CAN_CONSUMERS")]
+    num_can_consumers: usize,
+
+    // The number of mqtt clients to send to siren to publish decoded data
+    #[arg(short = 's', long, env = "CALYPSO_NUM_SIREN_SENDERS")]
+    num_siren_senders: usize,
+}
+
+async fn can_frame_consumer(
+    rx: Receiver<CanFrame>,
+    clients: &HashMap<u16, mpsc::Sender<(String, ServerData)>>,
+) {
+    while let Ok(frame) = rx.recv() {
+        let decoded_data = match frame {
+            Some(Ok(CanFrame::Data(data_frame))) => {
+                time = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
+                let data = data_frame.data();
+                let id: u32 = match data_frame.id() {
+                    socketcan::Id::Standard(std) => std.as_raw().into(),
+                    socketcan::Id::Extended(ext) => ext.as_raw(),
+                };
+                match DECODE_FUNCTION_MAP.get(&id) {
+                    Some(func) => func(data),
+                    None => vec![DecodeData::new(
+                        vec![id as f32],
+                        "Calypso/Unknown",
+                        "ID",
+                        None,
+                    )],
+                }
+            }
+            // CanRemoteFrame
+            Some(Ok(CanFrame::Remote(remote_frame))) => {
+                // Send frame ID for Remote
+                vec![DecodeData::new(
+                    vec![remote_frame.raw_id() as f32],
+                    "Calypso/Events/RemoteFrame",
+                    "id",
+                    None,
+                )]
+            }
+            // CanErrorFrame
+            Some(Ok(CanFrame::Error(error_frame))) => {
+                // Publish enum index of error onto CAN
+                // TODO: maybe look into better representation?
+                let error_index: f32 = match CanError::from(error_frame) {
+                    CanError::TransmitTimeout => 0.0,
+                    CanError::LostArbitration(_) => 1.0,
+                    CanError::ControllerProblem(_) => 2.0,
+                    CanError::ProtocolViolation { .. } => 3.0,
+                    CanError::TransceiverError => 4.0,
+                    CanError::NoAck => 5.0,
+                    CanError::BusOff => 6.0,
+                    CanError::BusError => 7.0,
+                    CanError::Restarted => 8.0,
+                    CanError::DecodingFailure(_) => 9.0,
+                    CanError::Unknown(_) => 10.0,
+                };
+                vec![DecodeData::new(
+                    vec![error_index],
+                    "Calypso/Events/ErrorFrame",
+                    "CanError enum",
+                    None,
+                )]
+            }
+            // Socket failure
+            Some(Err(err)) => {
+                println!("CAN Socket failure: {}", err);
+                continue;
+            }
+            None => {
+                println!("No next frame from CAN socket");
+                continue;
+            }
+        };
+
+        let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
+
+        // Convert decoded CAN to Protobuf and publish over MQTT
+        for data in decoded_data.iter() {
+            let mut payload = serverdata::ServerData::new();
+            payload.unit = data.unit.to_string();
+            payload.values = data.value.clone();
+            payload.time_us = timestamp;
+
+            if let Some(additional_clients) = &data.clients {
+                for port in additional_clients.iter() {
+                    if let Some(client) = clients.get_mut(port) {
+                        let current_time = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
+                        if client
+                            .send((data.topic.clone(), payload.clone()))
+                            .await
+                            .is_err()
+                        {
+                            println!("Failed to send to client, {}", port);
+                        }
+                    }
+                }
+            }
+
+            // Publish to Siren.
+            if let Some(client) = clients.get_mut(&1883) {
+                if client.send((data.topic.clone(), payload)).await.is_err() {
+                    println!("Failed to send to siren");
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -67,19 +184,30 @@ struct CalypsoArgs {
  */
 fn read_can(
     pub_path: &str,
+    priority_path: &str,
     can_interface: &str,
     mqtt_multiclient: bool,
     mqtt_buffer: usize,
+    num_can_consumers: usize,
+    num_mqtt_senders: usize,
 ) -> JoinHandle<()> {
     // TODO: Look into channel size, just mirroring broadcast size from scylla
     let (siren_send, siren_recv) = mpsc::channel::<(String, ServerData)>(10000);
-    MqttClient::new(pub_path, "calypso-decoder").sending_loop(siren_recv, 1883, mqtt_buffer);
+    for i in 0..num_mqtt_senders {
+        MqttClient::new(pub_path, format!("calypso-decoder-{}", i).as_str()).sending_loop(
+            siren_recv,
+            1883,
+            mqtt_buffer,
+        );
+    }
+
     let mut clients: HashMap<u16, mpsc::Sender<(String, ServerData)>> =
         HashMap::from([(1883, siren_send)]);
+
     // Add 1882 client if multi-client is enabled
     if mqtt_multiclient {
-        let (priority_send, priority_recv) = mpsc::channel::<(String, ServerData)>(10000);
-        MqttClient::new("localhost:1882", "calypso-priority").sending_loop(
+        let (priority_send, priority_recv) = mpsc::channel::<(String, ServerData)>(1000);
+        MqttClient::new(priority_path, "calypso-priority").sending_loop(
             priority_recv,
             1882,
             mqtt_buffer,
@@ -90,113 +218,30 @@ fn read_can(
     let mut socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
     socket
         .set_error_filter_accept_all()
-        .expect("Failed to set error mask on CAN socket!");
+        .expect("Failed to set error mask on CAN socket!")
+        .set_nonblocking(true)
+        .expect("Failed to set non blocking on CAN Socket!");
+    let async_socket = AsyncFd::new(socket)?;
+
+    let (can_tx, mut can_rx) = mpsc::channel(100);
 
     tokio::spawn(async move {
         loop {
             let mut time = 0;
             // Read from CAN socket
-            let decoded_data = match socket.next().await {
-                // CanDataFrame
-                Some(Ok(CanFrame::Data(data_frame))) => {
-                    time = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
-                    let data = data_frame.data();
-                    let id: u32 = match data_frame.id() {
-                        socketcan::Id::Standard(std) => std.as_raw().into(),
-                        socketcan::Id::Extended(ext) => ext.as_raw(),
-                    };
-                    match DECODE_FUNCTION_MAP.get(&id) {
-                        Some(func) => func(data),
-                        None => vec![DecodeData::new(
-                            vec![id as f32],
-                            "Calypso/Unknown",
-                            "ID",
-                            None,
-                        )],
-                    }
+            let mut guard = async_socket.readable().await.unwrap();
+            if let Ok(frame) = guard.get_inner().read_frame() {
+                if let Err(_) = tx.send(frame).await {
+                    break; // All receivers dropped
                 }
-                // CanRemoteFrame
-                Some(Ok(CanFrame::Remote(remote_frame))) => {
-                    // Send frame ID for Remote
-                    vec![DecodeData::new(
-                        vec![remote_frame.raw_id() as f32],
-                        "Calypso/Events/RemoteFrame",
-                        "id",
-                        None,
-                    )]
-                }
-                // CanErrorFrame
-                Some(Ok(CanFrame::Error(error_frame))) => {
-                    // Publish enum index of error onto CAN
-                    // TODO: maybe look into better representation?
-                    let error_index: f32 = match CanError::from(error_frame) {
-                        CanError::TransmitTimeout => 0.0,
-                        CanError::LostArbitration(_) => 1.0,
-                        CanError::ControllerProblem(_) => 2.0,
-                        CanError::ProtocolViolation { .. } => 3.0,
-                        CanError::TransceiverError => 4.0,
-                        CanError::NoAck => 5.0,
-                        CanError::BusOff => 6.0,
-                        CanError::BusError => 7.0,
-                        CanError::Restarted => 8.0,
-                        CanError::DecodingFailure(_) => 9.0,
-                        CanError::Unknown(_) => 10.0,
-                    };
-                    vec![DecodeData::new(
-                        vec![error_index],
-                        "Calypso/Events/ErrorFrame",
-                        "CanError enum",
-                        None,
-                    )]
-                }
-                // Socket failure
-                Some(Err(err)) => {
-                    println!("CAN Socket failure: {}", err);
-                    continue;
-                }
-                None => {
-                    println!("No next frame from CAN socket");
-                    continue;
-                }
-            };
-            let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
-
-            // Convert decoded CAN to Protobuf and publish over MQTT
-            for data in decoded_data.iter() {
-                let mut payload = serverdata::ServerData::new();
-                payload.unit = data.unit.to_string();
-                payload.values = data.value.clone();
-                payload.time_us = timestamp;
-
-                // TODO: Publish to other MQTT clients, if necessary.
-                if let Some(additional_clients) = &data.clients {
-                    println!("ADDITIONAL CLIENTS: {}", additional_clients.len());
-                    for port in additional_clients.iter() {
-                        println!("CLIENT: {}", port);
-                        if let Some(client) = clients.get_mut(port) {
-                            let current_time = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
-                            println!(
-                                "PUBLISHING PRIORITY MESSAGE, TIME TAKEN: {}",
-                                (current_time - time) / 1000
-                            );
-                            if client.send((data.topic.clone(), payload.clone())).await.is_err() {
-                                println!("Failed to send to client, {}", port);
-                            }
-                        }
-                    }
-                }
-
-                // Publish to Siren.
-                if let Some(client) = clients.get_mut(&1883) {
-                    if client.send((data.topic.clone(), payload)).await.is_err() {
-                        println!("Failed to send to siren");
-                    }
-                }
-
-                sleep(Duration::from_micros(100)).await;
             }
         }
-    })
+    });
+
+    for i in 0..num_can_consumers {
+        let mut rx = rx.clone();
+        can_frame_consumer(rx, &clients)
+    }
 }
 
 /**
@@ -296,7 +341,7 @@ fn send_out(
 ) -> JoinHandle<()> {
     let socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
 
-    tokio::spawn(async move { 
+    tokio::spawn(async move {
         loop {
             sleep(Duration::from_millis(750)).await;
             let sender = send_map.read().expect("Cannot read map of sendables!");
@@ -344,9 +389,12 @@ async fn main() {
     let cli = CalypsoArgs::parse();
     let can_handle = read_can(
         &cli.siren_host_url,
+        &cli.priority_host_url,
         &cli.socketcan_iface,
         cli.mqtt_multiclient,
         cli.mqtt_buffer,
+        cli.num_can_consumers,
+        cli.num_siren_senders,
     );
 
     // use a arc for mutlithread, and a rwlock to enforce one writer
