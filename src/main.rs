@@ -16,7 +16,6 @@ use calypso::{
     },
 };
 use clap::Parser;
-use futures_util::StreamExt;
 use protobuf::Message;
 use socketcan::{tokio::CanSocket, CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions};
 use tokio::{io::unix::AsyncFd, sync::mpsc, task::JoinHandle, time::sleep};
@@ -76,11 +75,11 @@ struct CalypsoArgs {
 }
 
 async fn can_frame_consumer(
-    rx: mpsc::Receiver<CanFrame>,
+    rx: Arc<mpsc::Receiver<CanFrame>>,
     clients: &HashMap<u16, mpsc::Sender<(String, ServerData)>>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
-        while let Ok(frame) = rx.recv() {
+        while let Ok(frame) = rx.lock().unwrap().recv().await {
             let decoded_data = match frame {
                 Some(Ok(CanFrame::Data(data_frame))) => {
                     let data = data_frame.data();
@@ -216,27 +215,37 @@ fn read_can(
     let mut socket = CanSocket::open(can_interface).expect("Failed to open CAN socket!");
     socket
         .set_error_filter_accept_all()
-        .set_nonblocking(true)
         .expect("Failed to configure CAN socket!");
 
-    let async_socket = AsyncFd::new(socket)?;
+    let async_socket = AsyncFd::new(socket).expect("Could not open async socket!");
 
     let (can_tx, mut can_rx) = mpsc::channel(100);
     let mut handles: Vec<JoinHandle<()>> = Vec::new();
 
     let read_handle = tokio::spawn(async move {
         loop {
-            let mut time = 0;
-            // Read from CAN socket
-            let mut guard = async_socket.readable().await.unwrap();
-            if let Ok(frame) = guard.get_inner().read_frame() {
-                if let Err(_) = can_tx.send(frame).await {
-                    break; // All receivers dropped
+            let mut guard = async_socket.readable().await?;
+
+            match guard.get_inner().read_frame() {
+                Ok(frame) => {
+                    if let Err(_) = can_tx.send(frame).await {
+                        break; // All receivers dropped
+                    }
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    // Socket is not ready yet — retry
+                    continue;
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    break;
                 }
             }
         }
     });
     handles.push(read_handle);
+
+    let can_rx = Arc::new(Mutex::new(can_rx));
 
     for i in 0..num_can_consumers {
         let mut rx = can_rx.clone();
