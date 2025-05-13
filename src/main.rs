@@ -45,7 +45,7 @@ struct CalypsoArgs {
 
     /// The priorty url to use for critical messages that cannot be buffered, including port and excluding protocol prefix
     #[arg(
-        short = 'u',
+        short = 'p',
         long,
         env = "CALYPSO_PRIORITY_HOST_URL",
         default_value = "localhost:1882"
