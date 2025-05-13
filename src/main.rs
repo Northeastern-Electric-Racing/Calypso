@@ -18,7 +18,12 @@ use calypso::{
 use clap::Parser;
 use protobuf::Message;
 use socketcan::{tokio::CanSocket, CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions};
-use tokio::{io::unix::AsyncFd, sync::mpsc, task::JoinHandle, time::sleep};
+use tokio::{
+    io::unix::AsyncFd,
+    sync::{mpsc, Mutex},
+    task::JoinHandle,
+    time::sleep,
+};
 
 const ENCODER_MAP_SUB: &str = "Calypso/Bidir/Command/#";
 
@@ -75,7 +80,7 @@ struct CalypsoArgs {
 }
 
 async fn can_frame_consumer(
-    rx: Arc<mpsc::Receiver<CanFrame>>,
+    rx: Arc<Mutex<mpsc::Receiver<CanFrame>>>,
     clients: &HashMap<u16, mpsc::Sender<(String, ServerData)>>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
@@ -224,9 +229,12 @@ fn read_can(
 
     let read_handle = tokio::spawn(async move {
         loop {
-            let mut guard = async_socket.readable().await?;
+            let mut guard = async_socket
+                .readable()
+                .await
+                .expect("Could not wait for can socket");
 
-            match guard.get_inner().read_frame() {
+            match guard.try_io(|inner| inner.get_ref().read_frame()) {
                 Ok(frame) => {
                     if let Err(_) = can_tx.send(frame).await {
                         break; // All receivers dropped
