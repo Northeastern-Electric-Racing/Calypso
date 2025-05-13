@@ -76,7 +76,7 @@ struct CalypsoArgs {
 
 async fn can_frame_consumer(
     rx: Arc<Mutex<mpsc::Receiver<Result<CanFrame, socketcan::Error>>>>,
-    clients: &HashMap<u16, mpsc::Sender<(String, ServerData)>>,
+    clients: Arc<Mutex<HashMap<u16, mpsc::Sender<(String, ServerData)>>>>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         while let Some(frame) = rx.lock().await.recv().await {
@@ -149,7 +149,7 @@ async fn can_frame_consumer(
 
                 if let Some(additional_clients) = &data.clients {
                     for port in additional_clients.iter() {
-                        if let Some(client) = clients.get_mut(port) {
+                        if let Some(client) = clients.lock().await.get_mut(port) {
                             if client
                                 .send((data.topic.clone(), payload.clone()))
                                 .await
@@ -162,7 +162,7 @@ async fn can_frame_consumer(
                 }
 
                 // Publish to Siren.
-                if let Some(client) = clients.get_mut(&1883) {
+                if let Some(client) = clients.lock().await.get_mut(&1883) {
                     if client.send((data.topic.clone(), payload)).await.is_err() {
                         println!("Failed to send to siren");
                     }
@@ -187,7 +187,7 @@ fn read_can(
     let mut handles: Vec<JoinHandle<()>> = Vec::new();
 
     let (siren_send, siren_recv) = mpsc::channel::<(String, ServerData)>(10000);
-    siren_mut = Arc::new(Mutex::new(siren_recv));
+    let siren_mut = Arc::new(Mutex::new(siren_recv));
     for i in 0..num_mqtt_senders {
         let mut rx = siren_mut.clone();
 
@@ -225,12 +225,12 @@ fn read_can(
     handles.push(read_handle);
 
     let can_rx = Arc::new(Mutex::new(can_rx));
+    let clients = Arc::new(Mutex::new(clients));
 
     for _i in 0..num_can_consumers {
         let rx = can_rx.clone();
-        let client_ref = &clients;
         let handle = tokio::spawn(async move {
-            can_frame_consumer(rx, client_ref).await;
+            can_frame_consumer(rx, clients.clone()).await;
         });
         handles.push(handle);
     }
