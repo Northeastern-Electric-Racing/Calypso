@@ -20,7 +20,6 @@ use futures_util::stream::StreamExt;
 use protobuf::Message;
 use socketcan::{tokio::CanSocket, CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions};
 use tokio::{
-    io::unix::AsyncFd,
     sync::{mpsc, Mutex},
     task::JoinHandle,
     time::sleep,
@@ -81,7 +80,7 @@ struct CalypsoArgs {
 }
 
 async fn can_frame_consumer(
-    rx: Arc<Mutex<mpsc::Receiver<CanFrame>>>,
+    rx: Arc<Mutex<mpsc::Receiver<Result<CanFrame, socketcan::Error>>>>,
     clients: &HashMap<u16, mpsc::Sender<(String, ServerData)>>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
