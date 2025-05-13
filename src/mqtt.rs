@@ -111,7 +111,6 @@ impl MqttClient {
         mut self,
         data_channel: Arc<Mutex<mpsc::Receiver<(String, ServerData)>>>,
         port: u32,
-        mqtt_buffer_size: usize,
     ) -> JoinHandle<()> {
         if self.connect().is_err() {
             println!(

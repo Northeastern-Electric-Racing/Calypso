@@ -65,10 +65,6 @@ struct CalypsoArgs {
     #[arg(short = 'm', long, env = "CALYPSO_MQTT_MULTICLIENT")]
     mqtt_multiclient: bool,
 
-    // The size of queued messages from calypso to actually send out to mqtt to prevent overloading
-    #[arg(short = 'b', long, env = "CALYPSO_MQTT_BUFFER")]
-    mqtt_buffer: usize,
-
     // The number of consumers to receive can messages from the can line reader
     #[arg(short = 'n', long, env = "CALYPSO_NUM_CAN_CONSUMERS")]
     num_can_consumers: usize,
@@ -184,7 +180,6 @@ fn read_can(
     priority_path: &str,
     can_interface: &str,
     mqtt_multiclient: bool,
-    mqtt_buffer: usize,
     num_can_consumers: usize,
     num_mqtt_senders: usize,
 ) -> Vec<JoinHandle<()>> {
@@ -192,13 +187,13 @@ fn read_can(
     let mut handles: Vec<JoinHandle<()>> = Vec::new();
 
     let (siren_send, siren_recv) = mpsc::channel::<(String, ServerData)>(10000);
-    siren_recv = Arc::new(Mutex::new(can_rx));
+    siren_mut = Arc::new(Mutex::new(siren_recv));
     for i in 0..num_mqtt_senders {
-        let mut rx = siren_recv.clone();
+        let mut rx = siren_mut.clone();
 
         let handle = MqttClient::new(pub_path, format!("calypso-decoder-{}", i).as_str())
-            .sending_loop(rx, 1883, mqtt_buffer);
-        hanldes.push(handle);
+            .sending_loop(rx, 1883);
+        handles.push(handle);
     }
 
     let mut clients: HashMap<u16, mpsc::Sender<(String, ServerData)>> =
@@ -207,11 +202,8 @@ fn read_can(
     // Add 1882 client if multi-client is enabled
     if mqtt_multiclient {
         let (priority_send, priority_recv) = mpsc::channel::<(String, ServerData)>(1000);
-        MqttClient::new(priority_path, "calypso-priority").sending_loop(
-            priority_recv,
-            1882,
-            mqtt_buffer,
-        );
+        MqttClient::new(priority_path, "calypso-priority")
+            .sending_loop(Arc::new(Mutex::new(priority_recv)), 1882);
         clients.insert(1882, priority_send);
     }
 
@@ -224,13 +216,10 @@ fn read_can(
 
     let read_handle = tokio::spawn(async move {
         while let Some(frame) = socket.next().await {
-            match frame {
-                Ok(f) => can_tx
-                    .send(f)
-                    .await
-                    .expect("Failed to send can frame to processor"),
-                Err(e) => eprintln!("Error reading CAN frame: {}", e),
-            }
+            can_tx
+                .send(frame)
+                .await
+                .expect("Failed to send can frame to processor")
         }
     });
     handles.push(read_handle);
@@ -396,7 +385,6 @@ async fn main() {
         &cli.priority_host_url,
         &cli.socketcan_iface,
         cli.mqtt_multiclient,
-        cli.mqtt_buffer,
         cli.num_can_consumers,
         cli.num_siren_senders,
     );
