@@ -84,7 +84,7 @@ async fn can_frame_consumer(
     clients: &HashMap<u16, mpsc::Sender<(String, ServerData)>>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
-        while let Ok(frame) = rx.lock().unwrap().recv().await {
+        while let Ok(frame) = rx.lock().await.unwrap().recv().await {
             let decoded_data = match frame {
                 Some(Ok(CanFrame::Data(data_frame))) => {
                     let data = data_frame.data();
@@ -222,32 +222,13 @@ fn read_can(
         .set_error_filter_accept_all()
         .expect("Failed to configure CAN socket!");
 
-    let async_socket = AsyncFd::new(socket).expect("Could not open async socket!");
-
     let (can_tx, mut can_rx) = mpsc::channel(100);
     let mut handles: Vec<JoinHandle<()>> = Vec::new();
 
     let read_handle = tokio::spawn(async move {
         loop {
-            let mut guard = async_socket
-                .readable()
-                .await
-                .expect("Could not wait for can socket");
-
-            match guard.try_io(|inner| inner.get_ref().read_frame()) {
-                Ok(frame) => {
-                    if let Err(_) = can_tx.send(frame).await {
-                        break; // All receivers dropped
-                    }
-                }
-                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                    // Socket is not ready yet — retry
-                    continue;
-                }
-                Err(e) => {
-                    eprintln!("Error: {}", e);
-                    break;
-                }
+            for frame in socket {
+                can_tx.send(frame).await;
             }
         }
     });
