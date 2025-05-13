@@ -1,9 +1,9 @@
 extern crate paho_mqtt as mqtt;
+use crate::proto::serverdata::ServerData;
 use mqtt::ServerResponse;
 use paho_mqtt::{Message, Receiver};
 use std::{collections::VecDeque, thread, time::Duration};
 use tokio::sync::mpsc;
-use crate::proto::serverdata::ServerData;
 
 /**
  * MqttClient is a wrapper around the paho_mqtt::Client.
