@@ -16,6 +16,7 @@ use calypso::{
     },
 };
 use clap::Parser;
+use futures_util::stream::StreamExt;
 use protobuf::Message;
 use socketcan::{tokio::CanSocket, CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions};
 use tokio::{
@@ -84,7 +85,7 @@ async fn can_frame_consumer(
     clients: &HashMap<u16, mpsc::Sender<(String, ServerData)>>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
-        while let Ok(frame) = rx.lock().await.unwrap().recv().await {
+        while let Ok(frame) = rx.lock().await.recv().await {
             let decoded_data = match frame {
                 Some(Ok(CanFrame::Data(data_frame))) => {
                     let data = data_frame.data();
@@ -226,9 +227,13 @@ fn read_can(
     let mut handles: Vec<JoinHandle<()>> = Vec::new();
 
     let read_handle = tokio::spawn(async move {
-        loop {
-            for frame in socket {
-                can_tx.send(frame).await;
+        while let Some(frame) = socket.next().await {
+            match frame {
+                Ok(f) => can_tx
+                    .send(frame)
+                    .await
+                    .expect("Failed to send can frame to processor"),
+                Err(e) => eprintln!("Error reading CAN frame: {}", e),
             }
         }
     });
