@@ -2,8 +2,11 @@ extern crate paho_mqtt as mqtt;
 use crate::proto::serverdata::ServerData;
 use mqtt::ServerResponse;
 use paho_mqtt::{Message, Receiver};
-use std::{collections::VecDeque, time::Duration};
-use tokio::sync::mpsc;
+use std::{sync::Arc, time::Duration};
+use tokio::{
+    sync::{mpsc, Mutex},
+    task::JoinHandle,
+};
 
 /**
  * MqttClient is a wrapper around the paho_mqtt::Client.
@@ -104,7 +107,7 @@ impl MqttClient {
         self.client.disconnect(None)
     }
 
-    pub async fn sending_loop(
+    pub fn sending_loop(
         mut self,
         data_channel: Arc<Mutex<mpsc::Receiver<(String, ServerData)>>>,
         port: u32,
@@ -120,9 +123,9 @@ impl MqttClient {
             }
         }
 
-        tokio::spawn(async move || {
+        tokio::spawn(async move {
             // Process all messages currently in buffer
-            while let Some(frame) = data_channel.lock().await.recv().await {
+            while let Some((topic, payload)) = data_channel.lock().await.recv().await {
                 if !self.is_connected() {
                     println!(
                         "[read_can] Unable to connect to client on {}, going into reconnection mode.",
@@ -146,6 +149,6 @@ impl MqttClient {
                     println!("[read_can] Failed to publish to port {}.", port);
                 }
             }
-        });
+        })
     }
 }

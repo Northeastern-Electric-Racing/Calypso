@@ -189,16 +189,16 @@ fn read_can(
     num_mqtt_senders: usize,
 ) -> Vec<JoinHandle<()>> {
     // TODO: Look into channel size, just mirroring broadcast size from scylla
+    let mut handles: Vec<JoinHandle<()>> = Vec::new();
+
     let (siren_send, siren_recv) = mpsc::channel::<(String, ServerData)>(10000);
     siren_recv = Arc::new(Mutex::new(can_rx));
     for i in 0..num_mqtt_senders {
         let mut rx = siren_recv.clone();
 
-        MqttClient::new(pub_path, format!("calypso-decoder-{}", i).as_str()).sending_loop(
-            rx,
-            1883,
-            mqtt_buffer,
-        );
+        let handle = MqttClient::new(pub_path, format!("calypso-decoder-{}", i).as_str())
+            .sending_loop(rx, 1883, mqtt_buffer);
+        hanldes.push(handle);
     }
 
     let mut clients: HashMap<u16, mpsc::Sender<(String, ServerData)>> =
@@ -221,7 +221,6 @@ fn read_can(
         .expect("Failed to configure CAN socket!");
 
     let (can_tx, can_rx) = mpsc::channel(100);
-    let mut handles: Vec<JoinHandle<()>> = Vec::new();
 
     let read_handle = tokio::spawn(async move {
         while let Some(frame) = socket.next().await {
