@@ -17,7 +17,7 @@ use futures_util::StreamExt;
 use protobuf::Message;
 use rumqttc::v5::{
     mqttbytes::v5::{Packet, Publish},
-    AsyncClient, Event, MqttOptions,
+    AsyncClient, Event, EventLoop, MqttOptions,
 };
 use socketcan::{tokio::CanSocket, CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions};
 use tokio::{
@@ -63,9 +63,10 @@ struct CalypsoArgs {
 }
 
 /**
- * Reads the can socket and publishes the data to the given client.
+ * Reads the can socket and publishes the data to siren channel
  * can_interface: the socketcan interface to bind to
- * send: the channel to send protobuf messages to
+ * send_to_siren: the channel to send protobuf messages to
+ * send_over_can: can messages to be sent over CAN
  */
 async fn can_manager(
     token: CancellationToken,
@@ -105,6 +106,9 @@ async fn can_manager(
     }
 }
 
+/**
+ * Sends a frame over CAN
+ */
 async fn pub_frame(
     frame: Result<CanFrame, socketcan::Error>,
     send: &Sender<(String, Option<Vec<u16>>, ServerData)>,
@@ -188,14 +192,9 @@ async fn pub_frame(
 }
 
 /**
- * Manages siren
+ * Inits siren communication
  */
-async fn siren_manager(
-    token: CancellationToken,
-    pub_path: String,
-    mut recv_messages: Receiver<(String, Option<Vec<u16>>, ServerData)>,
-    send_to_manager: Sender<Publish>,
-) {
+async fn siren_creator(pub_path: String) -> (AsyncClient, EventLoop) {
     let mut mqtt_opts_main = MqttOptions::new(
         format!(
             "Calypso-Decoder-{}",
@@ -251,19 +250,56 @@ async fn siren_manager(
     {
         Ok(()) => (),
         Err(err) => warn!("Error subscribing: {}", err),
-    }
+    };
 
     // here we split into two threads, one owns the client the other owns the eventloop
 
+    (main_client, main_eventloop)
+}
+
+/**
+ * A thread to publish messages to a MQTT client
+ */
+async fn publish_stub(
+    token: CancellationToken,
+    client: AsyncClient,
+    mut recv_messages: Receiver<(String, Option<Vec<u16>>, ServerData)>,
+) {
+    loop {
+        tokio::select! {
+            _ = token.cancelled() => {
+                debug!("Shutting down PUB stub!");
+                break;
+            },
+             Some(new_msg) = recv_messages.recv() => {
+            if let Some(opts) = new_msg.1 {
+                if opts.first().unwrap_or(&0) == &1882u16 {
+                    // pub_msg(new_msg.0.clone(), new_msg.2.clone(), &alt_client).await;
+                }
+            }
+            pub_msg(new_msg.0, new_msg.2, &client).await;
+            }
+        }
+    }
+}
+
+/**
+ * A thread to poll MQTT broker status, and relay incoming subscribed messages
+ */
+async fn poll_stub(
+    token: CancellationToken,
+    mut eventloop: EventLoop,
+    send_to_manager: Sender<Publish>,
+) {
     loop {
         tokio::select! {
                 _ = token.cancelled() => {
                     debug!("Shutting down SIREN manager!");
                     break;
                 },
-                msg = main_eventloop.poll() => match msg {
+                msg = eventloop.poll() => match msg {
                     Ok(Event::Incoming(Packet::Publish(msg))) => {
-                            trace!("Received mqtt message: {:?}", msg);
+                            debug!("Received mqtt message: {:?}", msg);
                             match send_to_manager.send(msg).await {
                                 Ok(()) => (),
                                 Err(err) => warn!("Could not send MQTT message to bidir manager: {}", err),
@@ -273,18 +309,13 @@ async fn siren_manager(
                     _ => trace!("Received misc mqtt: {:?}", msg),
                 },
                 //_ = alt_eventloop.poll() => {},
-                Some(new_msg) = recv_messages.recv() => {
-                    if let Some(opts) = new_msg.1 {
-                        if opts.first().unwrap_or(&0) == &1882u16 {
-                            pub_msg(new_msg.0.clone(), new_msg.2.clone(), &alt_client).await;
-                        }
-                    }
-                    pub_msg(new_msg.0, new_msg.2, &main_client).await;
-                },
         }
     }
 }
 
+/**
+ * Helper function to generate bytes and publish a MQTT message
+ */
 async fn pub_msg(topic: String, data: ServerData, client: &AsyncClient) {
     let Ok(bytes) = data.write_to_bytes() else {
         warn!("Could not generate protobuf!");
@@ -304,6 +335,9 @@ async fn pub_msg(topic: String, data: ServerData, client: &AsyncClient) {
     };
 }
 
+/**
+ * Thread to manage bidirectionality, both sending can messages and receiving MQTT messages from respective channels
+ */
 async fn bidir_manager(
     token: CancellationToken,
     can_push_send: Sender<CanFrame>,
@@ -342,6 +376,9 @@ async fn bidir_manager(
     }
 }
 
+/**
+ * Helper function to dump the current bidir commands into CAN
+ */
 async fn release_commands(send_map: &HashMap<u32, EncodeData>, can_push_send: &Sender<CanFrame>) {
     for msg in send_map.iter() {
         // let id = u32::from_str_radix((msg.1.1).trim_start_matches("0x"), 16).expect("Invalid CAN ID!");
@@ -375,11 +412,14 @@ async fn release_commands(send_map: &HashMap<u32, EncodeData>, can_push_send: &S
     }
 }
 
+/**
+ * Helper function to parse a MQTT message to create the corresponding bidir update
+ */
 async fn parse_msg(msg: Publish, send_map: &mut HashMap<u32, EncodeData>) {
     let buf = match command_data::CommandData::parse_from_bytes(&msg.payload) {
         Ok(buf) => buf,
         Err(err) => {
-            println!("Could not decode command: {}", err);
+            warn!("Could not decode command: {}", err);
             return;
         }
     };
@@ -390,10 +430,12 @@ async fn parse_msg(msg: Publish, send_map: &mut HashMap<u32, EncodeData>) {
     let key = match topic.split('/').next_back() {
         Some(key) => key.to_owned(),
         None => {
-            println!("Could not parse the key value in {}", topic);
+            warn!("Could not parse the key value in {}", topic);
             return;
         }
     };
+
+    debug!("Parsing message with key {}", key);
 
     match ENCODE_FUNCTION_MAP.get(&key) {
         Some(func) => {
@@ -456,12 +498,10 @@ async fn main() {
     // a channel to give messages to the bidir manager
     let (siren_recv_send, siren_recv_recv) = mpsc::channel::<Publish>(100);
 
-    task_tracker.spawn(siren_manager(
-        token.clone(),
-        cli.siren_host_url,
-        decoder_recv,
-        siren_recv_send,
-    ));
+    let (client, eventloop) = siren_creator(cli.siren_host_url).await;
+
+    task_tracker.spawn(poll_stub(token.clone(), eventloop, siren_recv_send));
+    task_tracker.spawn(publish_stub(token.clone(), client, decoder_recv));
     task_tracker.spawn(can_manager(
         token.clone(),
         cli.socketcan_iface,
