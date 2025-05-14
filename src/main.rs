@@ -77,7 +77,9 @@ async fn can_manager(
     socket
         .set_error_filter_accept_all()
         .expect("Failed to set error mask on CAN socket!");
-    socket.set_recv_own_msgs(true).expect("Cant recv own messages");
+    socket
+        .set_recv_own_msgs(true)
+        .expect("Cant recv own messages");
     loop {
         // Read from CAN socket
         tokio::select! {
@@ -195,7 +197,7 @@ async fn siren_manager(
     send_to_manager: Sender<Publish>,
 ) {
     let mut mqtt_opts = MqttOptions::new(
-        format!("Calypso-Decoder"),
+        "Calypso-Decoder",
         pub_path.split_once(':').expect("Invalid Siren URL").0,
         pub_path
             .split_once(':')
