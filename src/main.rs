@@ -71,7 +71,8 @@ struct CalypsoArgs {
 async fn can_manager(
     token: CancellationToken,
     can_interface: String,
-    send_to_siren: Sender<(String, Option<Vec<u16>>, ServerData)>,
+    main_send_to_siren: Sender<(String, ServerData)>,
+    alt_send_to_siren: Sender<(String, ServerData)>,
     mut send_over_can: Receiver<CanFrame>,
 ) {
     let mut socket = CanSocket::open(&can_interface).expect("Failed to open CAN socket!");
@@ -89,7 +90,7 @@ async fn can_manager(
                 break;
             },
             Some(frame) = socket.next() => {
-                pub_frame(frame, &send_to_siren).await;
+                pub_frame(frame, &main_send_to_siren, &alt_send_to_siren).await;
             }
             Some(frame) = send_over_can.recv() => {
                 match socket.write_frame(frame) {
@@ -111,7 +112,8 @@ async fn can_manager(
  */
 async fn pub_frame(
     frame: Result<CanFrame, socketcan::Error>,
-    send: &Sender<(String, Option<Vec<u16>>, ServerData)>,
+    main_send: &Sender<(String, ServerData)>,
+    alt_send: &Sender<(String, ServerData)>,
 ) {
     let decoded_data = match frame {
         // CanDataFrame
@@ -181,10 +183,16 @@ async fn pub_frame(
         payload.values = data.value.clone();
         payload.time_us = timestamp;
 
-        match send
-            .send((data.topic.clone(), data.clients.clone(), payload))
-            .await
-        {
+        if let Some(clients) = &data.clients {
+            if clients.first().unwrap_or(&0) == &1882 {
+                match alt_send.send((data.topic.clone(), payload.clone())).await {
+                    Ok(()) => trace!("Sent a CAN message to SIREN manager alt"),
+                    Err(err) => warn!("Could not send CAN message to SIREN manager alt: {}", err),
+                }
+            }
+        }
+
+        match main_send.send((data.topic.clone(), payload)).await {
             Ok(()) => trace!("Sent a CAN message to SIREN manager"),
             Err(err) => warn!("Could not send CAN message to SIREN manager: {}", err),
         }
@@ -194,7 +202,7 @@ async fn pub_frame(
 /**
  * Inits siren communication
  */
-async fn siren_creator(pub_path: String) -> (AsyncClient, EventLoop) {
+async fn siren_creator(pub_path: String) -> [(AsyncClient, EventLoop); 2] {
     let mut mqtt_opts_main = MqttOptions::new(
         format!(
             "Calypso-Decoder-{}",
@@ -217,7 +225,7 @@ async fn siren_creator(pub_path: String) -> (AsyncClient, EventLoop) {
         .set_connection_timeout(3)
         .set_session_expiry_interval(Some(u32::MAX))
         .set_topic_alias_max(Some(600));
-    let (main_client, mut main_eventloop) = rumqttc::v5::AsyncClient::new(mqtt_opts_main, 600);
+    let (main_client, main_eventloop) = rumqttc::v5::AsyncClient::new(mqtt_opts_main, 600);
 
     let mut mqtt_opts_alt = MqttOptions::new(
         format!(
@@ -241,7 +249,7 @@ async fn siren_creator(pub_path: String) -> (AsyncClient, EventLoop) {
         .set_connection_timeout(3)
         .set_session_expiry_interval(Some(u32::MAX))
         .set_topic_alias_max(Some(600));
-    let (alt_client, mut alt_eventloop) = rumqttc::v5::AsyncClient::new(mqtt_opts_alt, 600);
+    let (alt_client, alt_eventloop) = rumqttc::v5::AsyncClient::new(mqtt_opts_alt, 600);
 
     // subscribe for bidirectionality
     match main_client
@@ -254,7 +262,7 @@ async fn siren_creator(pub_path: String) -> (AsyncClient, EventLoop) {
 
     // here we split into two threads, one owns the client the other owns the eventloop
 
-    (main_client, main_eventloop)
+    [(main_client, main_eventloop), (alt_client, alt_eventloop)]
 }
 
 /**
@@ -263,7 +271,7 @@ async fn siren_creator(pub_path: String) -> (AsyncClient, EventLoop) {
 async fn publish_stub(
     token: CancellationToken,
     client: AsyncClient,
-    mut recv_messages: Receiver<(String, Option<Vec<u16>>, ServerData)>,
+    mut recv_messages: Receiver<(String, ServerData)>,
 ) {
     loop {
         tokio::select! {
@@ -272,12 +280,7 @@ async fn publish_stub(
                 break;
             },
              Some(new_msg) = recv_messages.recv() => {
-            if let Some(opts) = new_msg.1 {
-                if opts.first().unwrap_or(&0) == &1882u16 {
-                    // pub_msg(new_msg.0.clone(), new_msg.2.clone(), &alt_client).await;
-                }
-            }
-            pub_msg(new_msg.0, new_msg.2, &client).await;
+                pub_msg(new_msg.0, new_msg.1, &client).await;
             }
         }
     }
@@ -289,28 +292,39 @@ async fn publish_stub(
 async fn poll_stub(
     token: CancellationToken,
     mut eventloop: EventLoop,
-    send_to_manager: Sender<Publish>,
+    send_to_manager: Option<Sender<Publish>>,
 ) {
-    loop {
-        tokio::select! {
-                _ = token.cancelled() => {
-                    debug!("Shutting down SIREN manager!");
-                    break;
-                },
-                msg = eventloop.poll() => match msg {
-                    Ok(Event::Incoming(Packet::Publish(msg))) => {
-                            debug!("Received mqtt message: {:?}", msg);
-                            match send_to_manager.send(msg).await {
-                                Ok(()) => (),
-                                Err(err) => warn!("Could not send MQTT message to bidir manager: {}", err),
-                            }
+    if let Some(send_to) = send_to_manager {
+        loop {
+            tokio::select! {
+                    _ = token.cancelled() => {
+                        debug!("Shutting down SIREN manager!");
+                        break;
                     },
-                    Err(msg) => trace!("Received mqtt error: {:?}", msg),
-                    _ => trace!("Received misc mqtt: {:?}", msg),
-                },
-                //_ = alt_eventloop.poll() => {},
+                    msg = eventloop.poll() => match msg {
+                        Ok(Event::Incoming(Packet::Publish(msg))) => {
+                                debug!("Received mqtt message: {:?}", msg);
+                                    match send_to.send(msg).await {
+                                        Ok(()) => (),
+                                        Err(err) => warn!("Could not send MQTT message to bidir manager: {}", err),
+                                    }
+                        },
+                        Err(msg) => trace!("Received mqtt error: {:?}", msg),
+                        _ => trace!("Received misc mqtt: {:?}", msg),
+                    },
+            }
         }
-    }
+    } else {
+        loop {
+            tokio::select! {
+            _ = token.cancelled() => {
+                debug!("Shutting down SIREN manager!");
+                break;
+            },
+            _ = eventloop.poll() => {}
+            }
+        }
+    };
 }
 
 /**
@@ -490,7 +504,9 @@ async fn main() {
     let token = CancellationToken::new();
 
     // a channel to give protobuf messages to be sent out over MQTT
-    let (decoder_send, decoder_recv) = mpsc::channel::<(String, Option<Vec<u16>>, ServerData)>(500);
+    let (decoder_send, decoder_recv) = mpsc::channel::<(String, ServerData)>(500);
+    // a channel to give protobuf messages to be sent out over MQTT
+    let (decoder_send_alt, decoder_recv_alt) = mpsc::channel::<(String, ServerData)>(500);
 
     // a channel to give CAN messages back out (car commands)
     let (can_push_send, can_push_recv) = mpsc::channel::<CanFrame>(100);
@@ -498,14 +514,21 @@ async fn main() {
     // a channel to give messages to the bidir manager
     let (siren_recv_send, siren_recv_recv) = mpsc::channel::<Publish>(100);
 
-    let (client, eventloop) = siren_creator(cli.siren_host_url).await;
+    let [main_broker, alt_broker] = siren_creator(cli.siren_host_url).await;
 
-    task_tracker.spawn(poll_stub(token.clone(), eventloop, siren_recv_send));
-    task_tracker.spawn(publish_stub(token.clone(), client, decoder_recv));
+    task_tracker.spawn(poll_stub(
+        token.clone(),
+        main_broker.1,
+        Some(siren_recv_send),
+    ));
+    task_tracker.spawn(publish_stub(token.clone(), main_broker.0, decoder_recv));
+    task_tracker.spawn(poll_stub(token.clone(), alt_broker.1, None));
+    task_tracker.spawn(publish_stub(token.clone(), alt_broker.0, decoder_recv_alt));
     task_tracker.spawn(can_manager(
         token.clone(),
         cli.socketcan_iface,
         decoder_send,
+        decoder_send_alt,
         can_push_recv,
     ));
     task_tracker.spawn(bidir_manager(
