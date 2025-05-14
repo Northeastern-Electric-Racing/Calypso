@@ -196,7 +196,7 @@ async fn siren_manager(
     mut recv_messages: Receiver<(String, Option<Vec<u16>>, ServerData)>,
     send_to_manager: Sender<Publish>,
 ) {
-    let mut mqtt_opts = MqttOptions::new(
+    let mut mqtt_opts_main = MqttOptions::new(
         "Calypso-Decoder",
         pub_path.split_once(':').expect("Invalid Siren URL").0,
         pub_path
@@ -206,16 +206,34 @@ async fn siren_manager(
             .parse::<u16>()
             .expect("Invalid Siren port"),
     );
-    mqtt_opts
+    mqtt_opts_main
         .set_keep_alive(Duration::from_secs(20))
         .set_clean_start(false)
         .set_connection_timeout(3)
         .set_session_expiry_interval(Some(u32::MAX))
         .set_topic_alias_max(Some(600));
-    let (client, mut eventloop) = rumqttc::v5::AsyncClient::new(mqtt_opts, 600);
+    let (main_client, mut main_eventloop) = rumqttc::v5::AsyncClient::new(mqtt_opts_main, 600);
+
+    let mut mqtt_opts_alt = MqttOptions::new(
+        "Calypso-Decoder",
+        pub_path.split_once(':').expect("Invalid Siren URL").0,
+        pub_path
+            .split_once(':')
+            .unwrap()
+            .1
+            .parse::<u16>()
+            .expect("Invalid Siren port"),
+    );
+    mqtt_opts_alt
+        .set_keep_alive(Duration::from_secs(20))
+        .set_clean_start(false)
+        .set_connection_timeout(3)
+        .set_session_expiry_interval(Some(u32::MAX))
+        .set_topic_alias_max(Some(600));
+    let (alt_client, mut alt_eventloop) = rumqttc::v5::AsyncClient::new(mqtt_opts_alt, 600);
 
     // subscribe for bidirectionality
-    match client
+    match main_client
         .subscribe(ENCODER_MAP_SUB, rumqttc::v5::mqttbytes::QoS::ExactlyOnce)
         .await
     {
@@ -229,7 +247,7 @@ async fn siren_manager(
                     debug!("Shutting down SIREN manager!");
                     break;
                 },
-                msg = eventloop.poll() => match msg {
+                msg = main_eventloop.poll() => match msg {
                     Ok(Event::Incoming(Packet::Publish(msg))) => {
                             trace!("Received mqtt message: {:?}", msg);
                             match send_to_manager.send(msg).await {
@@ -240,21 +258,27 @@ async fn siren_manager(
                     Err(msg) => trace!("Received mqtt error: {:?}", msg),
                     _ => trace!("Received misc mqtt: {:?}", msg),
                 },
+                _ = alt_eventloop.poll() => {},
                 Some(new_msg) = recv_messages.recv() => {
-                    pub_msg(new_msg, &client).await;
+                    if let Some(opts) = new_msg.1 {
+                        if opts.first().unwrap_or(&0) == &1882u16 {
+                            pub_msg(new_msg.0.clone(), new_msg.2.clone(), &alt_client).await;
+                        }
+                    }
+                    pub_msg(new_msg.0, new_msg.2, &main_client).await;
                 },
         }
     }
 }
 
-async fn pub_msg(msg: (String, Option<Vec<u16>>, ServerData), client: &AsyncClient) {
-    let Ok(bytes) = msg.2.write_to_bytes() else {
+async fn pub_msg(topic: String, data: ServerData, client: &AsyncClient) {
+    let Ok(bytes) = data.write_to_bytes() else {
         warn!("Could not generate protobuf!");
         return;
     };
     let Ok(()) = client
         .publish(
-            msg.0,
+            topic,
             rumqttc::v5::mqttbytes::QoS::ExactlyOnce,
             false,
             bytes,
@@ -270,6 +294,7 @@ async fn bidir_manager(
     token: CancellationToken,
     can_push_send: Sender<CanFrame>,
     mut siren_recv: Receiver<Publish>,
+    encode: bool,
 ) {
     let mut send_interval = tokio::time::interval(Duration::from_millis(750));
 
@@ -290,7 +315,11 @@ async fn bidir_manager(
                 break;
             },
             _ = send_interval.tick() => {
-                release_commands(&send_map, &can_push_send).await;
+                if encode {
+                    release_commands(&send_map, &can_push_send).await;
+                } else {
+                    trace!("Not releasing commands, upload disabled");
+                }
             }
             Some(msg) = siren_recv.recv() => {
                 parse_msg(msg, &mut send_map).await;
@@ -425,7 +454,12 @@ async fn main() {
         decoder_send,
         can_push_recv,
     ));
-    task_tracker.spawn(bidir_manager(token.clone(), can_push_send, siren_recv_recv));
+    task_tracker.spawn(bidir_manager(
+        token.clone(),
+        can_push_send,
+        siren_recv_recv,
+        cli.encode,
+    ));
 
     task_tracker.close();
 
