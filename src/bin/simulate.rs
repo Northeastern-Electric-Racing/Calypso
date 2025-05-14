@@ -3,6 +3,8 @@ use std::{
     time::{Duration, UNIX_EPOCH},
 };
 
+use clap::Parser;
+
 // use calypso::proto::serverdata;
 // use calypso::{
 //     mqtt::MqttClient, simulatable_message::SimComponent, simulate_data::create_simulated_components,
