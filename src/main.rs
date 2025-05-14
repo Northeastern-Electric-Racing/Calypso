@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    time::{Duration, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use calypso::{
@@ -197,7 +197,13 @@ async fn siren_manager(
     send_to_manager: Sender<Publish>,
 ) {
     let mut mqtt_opts_main = MqttOptions::new(
-        "Calypso-Decoder",
+        format!(
+            "Calypso-Decoder-{}",
+            SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .expect("Time went backwards")
+                .as_millis()
+        ),
         pub_path.split_once(':').expect("Invalid Siren URL").0,
         pub_path
             .split_once(':')
@@ -215,7 +221,13 @@ async fn siren_manager(
     let (main_client, mut main_eventloop) = rumqttc::v5::AsyncClient::new(mqtt_opts_main, 600);
 
     let mut mqtt_opts_alt = MqttOptions::new(
-        "Calypso-Decoder",
+        format!(
+            "Calypso-Decoder-{}",
+            SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .expect("Time went backwards")
+                .as_millis()
+        ),
         pub_path.split_once(':').expect("Invalid Siren URL").0,
         pub_path
             .split_once(':')
