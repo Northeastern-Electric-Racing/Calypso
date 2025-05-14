@@ -208,7 +208,7 @@ async fn siren_manager(
     );
     mqtt_opts_main
         .set_keep_alive(Duration::from_secs(20))
-        .set_clean_start(false)
+        .set_clean_start(true)
         .set_connection_timeout(3)
         .set_session_expiry_interval(Some(u32::MAX))
         .set_topic_alias_max(Some(600));
@@ -226,7 +226,7 @@ async fn siren_manager(
     );
     mqtt_opts_alt
         .set_keep_alive(Duration::from_secs(20))
-        .set_clean_start(false)
+        .set_clean_start(true)
         .set_connection_timeout(3)
         .set_session_expiry_interval(Some(u32::MAX))
         .set_topic_alias_max(Some(600));
@@ -240,6 +240,8 @@ async fn siren_manager(
         Ok(()) => (),
         Err(err) => warn!("Error subscribing: {}", err),
     }
+
+    // here we split into two threads, one owns the client the other owns the eventloop
 
     loop {
         tokio::select! {
