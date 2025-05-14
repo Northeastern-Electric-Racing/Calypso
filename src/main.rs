@@ -258,7 +258,7 @@ async fn siren_manager(
                     Err(msg) => trace!("Received mqtt error: {:?}", msg),
                     _ => trace!("Received misc mqtt: {:?}", msg),
                 },
-                _ = alt_eventloop.poll() => {},
+                //_ = alt_eventloop.poll() => {},
                 Some(new_msg) = recv_messages.recv() => {
                     if let Some(opts) = new_msg.1 {
                         if opts.first().unwrap_or(&0) == &1882u16 {
