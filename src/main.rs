@@ -77,6 +77,7 @@ async fn can_manager(
     socket
         .set_error_filter_accept_all()
         .expect("Failed to set error mask on CAN socket!");
+    socket.set_recv_own_msgs(true).expect("Cant recv own messages");
     loop {
         // Read from CAN socket
         tokio::select! {
@@ -114,6 +115,7 @@ async fn pub_frame(
                 socketcan::Id::Standard(std) => std.as_raw().into(),
                 socketcan::Id::Extended(ext) => ext.as_raw(),
             };
+            trace!("RECVED message with ID: {:#01x}", id);
             match DECODE_FUNCTION_MAP.get(&id) {
                 Some(func) => func(data),
                 None => vec![DecodeData::new(
