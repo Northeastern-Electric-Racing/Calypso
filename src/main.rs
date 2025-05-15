@@ -66,13 +66,14 @@ struct CalypsoArgs {
  * Reads the can socket and publishes the data to siren channel
  * can_interface: the socketcan interface to bind to
  * send_to_siren: the channel to send protobuf messages to
+ * alt_send_to_siren: the channel to send priority queue alt messages to
  * send_over_can: can messages to be sent over CAN
  */
 async fn can_manager(
     token: CancellationToken,
     can_interface: String,
     main_send_to_siren: Sender<(String, ServerData)>,
-    alt_send_to_siren: Sender<(String, ServerData)>,
+    alt_send_to_siren: Option<Sender<(String, ServerData)>>,
     mut send_over_can: Receiver<CanFrame>,
 ) {
     let mut socket = CanSocket::open(&can_interface).expect("Failed to open CAN socket!");
@@ -80,16 +81,16 @@ async fn can_manager(
         .set_error_filter_accept_all()
         .expect("Failed to set error mask on CAN socket!");
     socket
-        .set_recv_own_msgs(true)
+        .set_recv_own_msgs(true) // important to get the bidir messages
         .expect("Cant recv own messages");
 
+    // the rate variables, updated every 3 seconds to the user
     let mut mqtt_cnt: u64 = 0u64;
     let mut frame_cnt: u64 = 0u64;
     let mut disp_interval = tokio::time::interval(Duration::from_secs(3));
     let mut time_interval = tokio::time::Instant::now();
 
     loop {
-        // Read from CAN socket
         tokio::select! {
             _ = token.cancelled() => {
                 debug!("Shutting down CAN reader!");
@@ -123,12 +124,16 @@ async fn can_manager(
 }
 
 /**
- * Sends a frame over CAN
+ * Handles reception of a frame or error
+ * frame: the frame
+ * main_send: the siren receiver
+ * alt_send: the priority siren receiver
+ * cnt: a variable incremented per MQTT message sent over main_send
  */
 async fn pub_frame(
     frame: Result<CanFrame, socketcan::Error>,
     main_send: &Sender<(String, ServerData)>,
-    alt_send: &Sender<(String, ServerData)>,
+    alt_send: &Option<Sender<(String, ServerData)>>,
     cnt: &mut u64,
 ) {
     let decoded_data = match frame {
@@ -190,6 +195,7 @@ async fn pub_frame(
             return;
         }
     };
+    // TODO switch to hardware timestamps
     let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
 
     // Convert decoded CAN to Protobuf and publish over MQTT
@@ -200,11 +206,15 @@ async fn pub_frame(
         payload.values = data.value.clone();
         payload.time_us = timestamp;
 
-        if let Some(clients) = &data.clients {
-            if clients.first().unwrap_or(&0) == &1882 {
-                match alt_send.send((data.topic.clone(), payload.clone())).await {
-                    Ok(()) => trace!("Sent a CAN message to SIREN manager alt"),
-                    Err(err) => warn!("Could not send CAN message to SIREN manager alt: {}", err),
+        if let Some(alt_send) = alt_send {
+            if let Some(clients) = &data.clients {
+                if clients.first().unwrap_or(&0) == &1882 {
+                    match alt_send.send((data.topic.clone(), payload.clone())).await {
+                        Ok(()) => trace!("Sent a CAN message to SIREN manager alt"),
+                        Err(err) => {
+                            warn!("Could not send CAN message to SIREN manager alt: {}", err)
+                        }
+                    }
                 }
             }
         }
@@ -217,7 +227,8 @@ async fn pub_frame(
 }
 
 /**
- * Inits siren communication
+ * Inits siren communication, returning the main (1st) and priority (2nd) structs
+ * pub_path:  The base URL (and port for main)
  */
 async fn siren_creator(pub_path: String) -> [(AsyncClient, EventLoop); 2] {
     let mut mqtt_opts_main = MqttOptions::new(
@@ -279,6 +290,8 @@ async fn siren_creator(pub_path: String) -> [(AsyncClient, EventLoop); 2] {
 
 /**
  * A thread to publish messages to a MQTT client
+ * client: The client to publish to
+ * recv_messages: The channel to get the messages to publish
  */
 async fn publish_stub(
     token: CancellationToken,
@@ -300,6 +313,8 @@ async fn publish_stub(
 
 /**
  * A thread to poll MQTT broker status, and relay incoming subscribed messages
+ * eventloop: the eventloop to poll
+ * send_to_manager: the channel to send recieved MQTT messages from (optional)
  */
 async fn poll_stub(
     token: CancellationToken,
@@ -341,6 +356,9 @@ async fn poll_stub(
 
 /**
  * Helper function to generate bytes and publish a MQTT message
+ * topic: the topic to send
+ * data: the data protobuf to send
+ * client: the client to send data to
  */
 async fn pub_msg(topic: String, data: ServerData, client: &AsyncClient) {
     let Ok(bytes) = data.write_to_bytes() else {
@@ -363,6 +381,9 @@ async fn pub_msg(topic: String, data: ServerData, client: &AsyncClient) {
 
 /**
  * Thread to manage bidirectionality, both sending can messages and receiving MQTT messages from respective channels
+ * can_push_send: the channel to send out CAN messages
+ * siren_recv: the MQTT messages to receive
+ * encode: actually sends out the CAN messages
  */
 async fn bidir_manager(
     token: CancellationToken,
@@ -373,6 +394,7 @@ async fn bidir_manager(
     let mut send_interval = tokio::time::interval(Duration::from_millis(750));
 
     let mut send_map = HashMap::new();
+    // build an initial map
     for key in ENCODABLE_KEY_LIST {
         let encoder_func = match ENCODE_FUNCTION_MAP.get(key) {
             Some(func) => *func,
@@ -404,6 +426,8 @@ async fn bidir_manager(
 
 /**
  * Helper function to dump the current bidir commands into CAN
+ * send_map: A map of CAN IDs and data to be sent to the car
+ * can_push_send: A channel to send CAN messages
  */
 async fn release_commands(send_map: &HashMap<u32, EncodeData>, can_push_send: &Sender<CanFrame>) {
     for msg in send_map.iter() {
@@ -440,6 +464,8 @@ async fn release_commands(send_map: &HashMap<u32, EncodeData>, can_push_send: &S
 
 /**
  * Helper function to parse a MQTT message to create the corresponding bidir update
+ * msg: The raw MQTT message
+ * send_map: The map of CAN IDs and encodable data to modify
  */
 async fn parse_msg(msg: Publish, send_map: &mut HashMap<u32, EncodeData>) {
     let buf = match command_data::CommandData::parse_from_bytes(&msg.payload) {
@@ -517,8 +543,6 @@ async fn main() {
 
     // a channel to give protobuf messages to be sent out over MQTT
     let (decoder_send, decoder_recv) = mpsc::channel::<(String, ServerData)>(500);
-    // a channel to give protobuf messages to be sent out over MQTT
-    let (decoder_send_alt, decoder_recv_alt) = mpsc::channel::<(String, ServerData)>(500);
 
     // a channel to give CAN messages back out (car commands)
     let (can_push_send, can_push_recv) = mpsc::channel::<CanFrame>(100);
@@ -526,6 +550,7 @@ async fn main() {
     // a channel to give messages to the bidir manager
     let (siren_recv_send, siren_recv_recv) = mpsc::channel::<Publish>(100);
 
+    // the actual client and eventloop handlers
     let [main_broker, alt_broker] = siren_creator(cli.siren_host_url).await;
 
     task_tracker.spawn(poll_stub(
@@ -534,15 +559,31 @@ async fn main() {
         Some(siren_recv_send),
     ));
     task_tracker.spawn(publish_stub(token.clone(), main_broker.0, decoder_recv));
-    task_tracker.spawn(poll_stub(token.clone(), alt_broker.1, None));
-    task_tracker.spawn(publish_stub(token.clone(), alt_broker.0, decoder_recv_alt));
-    task_tracker.spawn(can_manager(
-        token.clone(),
-        cli.socketcan_iface,
-        decoder_send,
-        decoder_send_alt,
-        can_push_recv,
-    ));
+
+    // only poll the other client if we are set to do so
+    if cli.mqtt_multiclient {
+        // a channel to give protobuf messages to be sent out over MQTT
+        let (decoder_send_alt, decoder_recv_alt) = mpsc::channel::<(String, ServerData)>(500);
+
+        task_tracker.spawn(poll_stub(token.clone(), alt_broker.1, None));
+        task_tracker.spawn(publish_stub(token.clone(), alt_broker.0, decoder_recv_alt));
+        task_tracker.spawn(can_manager(
+            token.clone(),
+            cli.socketcan_iface,
+            decoder_send,
+            Some(decoder_send_alt),
+            can_push_recv,
+        ));
+    } else {
+        task_tracker.spawn(can_manager(
+            token.clone(),
+            cli.socketcan_iface,
+            decoder_send,
+            None,
+            can_push_recv,
+        ));
+    }
+
     task_tracker.spawn(bidir_manager(
         token.clone(),
         can_push_send,
