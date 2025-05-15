@@ -101,14 +101,9 @@ async fn can_manager(
                 pub_frame(frame, &main_send_to_siren, &alt_send_to_siren, &mut mqtt_cnt).await;
             }
             Some(frame) = send_over_can.recv() => {
-                match socket.write_frame(frame) {
-                    Ok(fut) => {
-                        match fut.await {
-                            Ok(()) => continue,
-                            Err(r) => warn!("Could not send CAN frame: {}", r),
-                        }
-                    },
-                    Err(r) => warn!("Could not process CAN frame: {}", r),
+                match socket.write_frame(frame).await {
+                    Ok(_) => (),
+                    Err(r) => warn!("Could not send CAN frame: {}", r),
                 }
             },
             _ = disp_interval.tick() => {
