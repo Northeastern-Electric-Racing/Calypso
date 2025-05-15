@@ -31,7 +31,7 @@ Process for testing:
     - `sudo ip link add dev vcan0 type vcan`
     - `sudo ip link set dev vcan0 up`
 
-run ```cargo run -- -u localhost:1883 -c vcan0 -b 10000```
+run ```cargo run -- -u localhost:1883 -c vcan0```
 
 To send a CAN message:
 - `cansend vcan0 <ID_IN_HEX>#<PAYLOAD_IN_HEX>`
