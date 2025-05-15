@@ -112,7 +112,7 @@ async fn can_manager(
             },
             _ = disp_interval.tick() => {
                 info!("{:.3} msgs/sec and {:.3} frames/sec", (mqtt_cnt as f64
-                / (tokio::time::Instant::now() - time_interval).as_millis() as f64) * 10000f64,
+                / (tokio::time::Instant::now() - time_interval).as_millis() as f64) * 1000f64,
                 (frame_cnt as f64 / (tokio::time::Instant::now() - time_interval).as_millis() as f64) * 1000f64);
                 time_interval = tokio::time::Instant::now();
                 frame_cnt = 0;
