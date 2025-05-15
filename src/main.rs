@@ -82,6 +82,12 @@ async fn can_manager(
     socket
         .set_recv_own_msgs(true)
         .expect("Cant recv own messages");
+
+    let mut mqtt_cnt: u64 = 0u64;
+    let mut frame_cnt: u64 = 0u64;
+    let mut disp_interval = tokio::time::interval(Duration::from_secs(3));
+    let mut time_interval = tokio::time::Instant::now();
+
     loop {
         // Read from CAN socket
         tokio::select! {
@@ -90,7 +96,8 @@ async fn can_manager(
                 break;
             },
             Some(frame) = socket.next() => {
-                pub_frame(frame, &main_send_to_siren, &alt_send_to_siren).await;
+                frame_cnt += 1;
+                pub_frame(frame, &main_send_to_siren, &alt_send_to_siren, &mut mqtt_cnt).await;
             }
             Some(frame) = send_over_can.recv() => {
                 match socket.write_frame(frame) {
@@ -103,6 +110,14 @@ async fn can_manager(
                     Err(r) => warn!("Could not process CAN frame: {}", r),
                 }
             },
+            _ = disp_interval.tick() => {
+                info!("{} msgs/sec and {} frames/sec", mqtt_cnt as f64
+                / (tokio::time::Instant::now() - time_interval).as_secs() as f64,
+                frame_cnt as f64 / (tokio::time::Instant::now() - time_interval).as_secs() as f64);
+                time_interval = tokio::time::Instant::now();
+                frame_cnt = 0;
+                mqtt_cnt = 0;
+            }
         }
     }
 }
@@ -114,6 +129,7 @@ async fn pub_frame(
     frame: Result<CanFrame, socketcan::Error>,
     main_send: &Sender<(String, ServerData)>,
     alt_send: &Sender<(String, ServerData)>,
+    cnt: &mut u64,
 ) {
     let decoded_data = match frame {
         // CanDataFrame
@@ -178,6 +194,7 @@ async fn pub_frame(
 
     // Convert decoded CAN to Protobuf and publish over MQTT
     for data in decoded_data.iter() {
+        *cnt += 1;
         let mut payload = serverdata::ServerData::new();
         payload.unit = data.unit.to_string();
         payload.values = data.value.clone();
