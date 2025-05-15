@@ -236,12 +236,7 @@ async fn siren_creator(pub_path: String) -> [(AsyncClient, EventLoop); 2] {
                 .as_millis()
         ),
         pub_path.split_once(':').expect("Invalid Siren URL").0,
-        pub_path
-            .split_once(':')
-            .unwrap()
-            .1
-            .parse::<u16>()
-            .expect("Invalid Siren port"),
+        1882,
     );
     mqtt_opts_alt
         .set_keep_alive(Duration::from_secs(20))
