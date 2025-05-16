@@ -144,4 +144,12 @@ impl FormatData {
     pub fn multiply5_e(value: f32) -> f32 {
         value / 5.0
     }
+
+    /* Scales the data by 39. Added for the Segment Total Volts CAN msg */
+    pub fn divide39_d(value: f32) -> f32 {
+        value / 39.0
+    }
+    pub fn divide39_e(value: f32) -> f32 {
+        value * 39.0
+    }
 }
