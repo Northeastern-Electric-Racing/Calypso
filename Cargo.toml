@@ -21,7 +21,7 @@ regex = "1.11.1"
 rumqttc = { git = "https://github.com/bytebeamio/rumqtt", branch = "main"}
 protobuf-codegen = "3.7.2"
 protobuf = "3.7.2"
-bitstream-io = "2.6.0"
+bitstream-io = "4.1.0"
 clap = { version = "4.5.38", features = ["derive", "env"] }
 rand = "0.9.1"
 regex = { workspace = true }
