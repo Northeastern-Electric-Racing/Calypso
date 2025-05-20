@@ -18,23 +18,28 @@ serde_json = "1.0.140"
 regex = "1.11.1"
 
 [dependencies]
-paho-mqtt = "0.13.2"
-protobuf-codegen = "3.5.1"
-protobuf = "3.5.1"
-bitstream-io = "3.1.0"
-clap = { version = "4.5.37", features = ["derive", "env"] }
-rand = "0.9"
+rumqttc = { git = "https://github.com/bytebeamio/rumqtt", branch = "main"}
+protobuf-codegen = "3.7.2"
+protobuf = "3.7.2"
+bitstream-io = "4.1.0"
+clap = { version = "4.5.38", features = ["derive", "env"] }
+rand = "0.9.1"
 regex = { workspace = true }
 phf = { version = "0.11.3", features = ["macros"] }
 calypso-cangen = { path = "./libs/calypso-cangen" }
 daedalus = { path = "./libs/daedalus" }
+tokio = { version = "1.45.0", features = ["full"] }
+futures-util = "0.3.31"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["ansi", "env-filter"] }
+tokio-util = { version = "0.7.15", features = ["full"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-socketcan = { version = "3.3.1" }
+socketcan = { version = "3.5.0", features = ["tokio"] }
 
 
 [build-dependencies]
-protobuf-codegen = "3.5.1"
+protobuf-codegen = "3.7.2"
 calypso-cangen = { path = "./libs/calypso-cangen" }
 
 [profile.release]
