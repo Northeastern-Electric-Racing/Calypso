@@ -119,12 +119,7 @@ async fn pub_msg(topic: String, data: ServerData, client: &AsyncClient) {
         return;
     };
     let Ok(()) = client
-        .publish(
-            topic,
-            rumqttc::v5::mqttbytes::QoS::AtMostOnce,
-            false,
-            bytes,
-        )
+        .publish(topic, rumqttc::v5::mqttbytes::QoS::AtMostOnce, false, bytes)
         .await
     else {
         warn!("Could not publish message");
