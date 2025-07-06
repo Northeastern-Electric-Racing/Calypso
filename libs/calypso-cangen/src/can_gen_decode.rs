@@ -206,9 +206,9 @@ fn gen_decoder_point(index: usize, point: &mut CANPoint) -> ProcMacro2TokenStrea
         }
         _ => match point.signed {
             Some(true) if point.ieee754_f32.is_none() => {
-                quote! { reader.read_signed_in::<#size_literal, i32>().unwrap() }
+                quote! { reader.read_signed::<#size_literal, i32>().unwrap() }
             }
-            _ => quote! { reader.read_in::<#size_literal, u32>().unwrap() },
+            _ => quote! { reader.read_unsigned::<#size_literal, u32>().unwrap() },
         },
     };
 
