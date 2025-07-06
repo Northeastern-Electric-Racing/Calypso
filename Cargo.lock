@@ -1075,7 +1075,7 @@ dependencies = [
 [[package]]
 name = "rumqttc"
 version = "0.24.0"
-source = "git+https://github.com/bytebeamio/rumqtt?branch=main#b1c3a201048f64a13373e2bf9bb28c9cd1aae680"
+source = "git+https://github.com/bytebeamio/rumqtt?branch=main#005f73caf0c2a808210fd73f2db6e1bc38652c5c"
 dependencies = [
  "bytes",
  "fixedbitset",
