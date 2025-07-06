@@ -43,10 +43,16 @@ pub struct CANPoint {
     pub parse: Option<bool>,
     pub signed: Option<bool>,
     pub endianness: Option<String>,
-    pub format: Option<String>,
+    pub formatter: Option<Formatter>,
     pub default: Option<f32>,
     pub ieee754_f32: Option<bool>,
     pub sim: Option<Sim>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Formatter {
+    pub key: String,
+    pub arg: f32,
 }
 
 #[derive(Deserialize, Debug)]

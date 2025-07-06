@@ -131,8 +131,8 @@ fn gen_decoder_field(
     // i.e. "Hello/{8}/World/{9}/" -> "Hello/{0}/World{1}/"
     let mut topic_format_string = field.name.clone();
     for (i, val) in topic_format_value_indexes.iter().enumerate() {
-        let pattern = format!("{{{}}}", val);
-        let replacement = format!("{{{}}}", i);
+        let pattern = format!("{{{val}}}");
+        let replacement = format!("{{{i}}}");
         topic_format_string = topic_format_string.replace(&pattern, &replacement);
     }
     let topic = quote! {
@@ -188,15 +188,6 @@ fn gen_decoder_point(index: usize, point: &mut CANPoint) -> ProcMacro2TokenStrea
         },
     };
 
-    // Prefix to call potential format function
-    let format_prefix = match &point.format {
-        Some(format) => {
-            let id = format_ident!("{}_d", format);
-            quote! { FormatData::#id }
-        }
-        _ => quote! {},
-    };
-
     // Endianness and signedness affect which read to use
     let read_func = match point.endianness {
         Some(ref s) if s == "little" => {
@@ -214,8 +205,18 @@ fn gen_decoder_point(index: usize, point: &mut CANPoint) -> ProcMacro2TokenStrea
 
     // Transmute if point is IEEE754 f32, else convert
     if let Some(true) = point.ieee754_f32 {
-        quote! { let #point_name = #format_prefix (f32::from_bits(#read_func)); }
+        if let Some(formatter) = &point.formatter {
+            let format_prefix = format_ident!("{}_d", formatter.key);
+            let arg = formatter.arg;
+            quote! { let #point_name = FormatData::#format_prefix (f32::from_bits(#read_func), #arg); }
+        } else {
+            quote! { let #point_name = f32::from_bits(#read_func); }
+        }
+    } else if let Some(format) = &point.formatter {
+        let format_prefix = format_ident!("{}_d", format.key);
+        let arg = format.arg;
+        quote! { let #point_name = FormatData::#format_prefix (#read_func as f32, #arg); }
     } else {
-        quote! { let #point_name = #format_prefix (#read_func as f32); }
+        quote! { let #point_name = #read_func as f32; }
     }
 }

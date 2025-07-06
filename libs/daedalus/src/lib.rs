@@ -44,7 +44,7 @@ pub fn gen_decode_data(_item: TokenStream) -> TokenStream {
                 __decode_map_entries.extend(gen_decode_mappings(__path.clone()));
             });
     } else {
-        eprintln!("Could not read from directory: {}", CANGEN_SPEC_PATH);
+        eprintln!("Could not read from directory: {CANGEN_SPEC_PATH}");
     }
 
     let __decode_expanded = quote! {
@@ -66,7 +66,7 @@ fn gen_decode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
     let _contents = match fs::read_to_string(&_path) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("Error opening file {:?}: {}", _path, e);
+            eprintln!("Error opening file {_path:?}: {e}");
             return quote! {};
         }
     };
@@ -100,7 +100,7 @@ fn gen_decode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
     let _contents = match fs::read_to_string(&_path) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("Error opening file {:?}: {}", _path, e);
+            eprintln!("Error opening file {_path:?}: {e}");
             return quote! {};
         }
     };
@@ -156,7 +156,7 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
                     .extend(gen_encode_keys(__path.clone(), &mut __encode_key_list_size));
             });
     } else {
-        eprintln!("Could not read from directory: {}", CANGEN_SPEC_PATH);
+        eprintln!("Could not read from directory: {CANGEN_SPEC_PATH}");
     }
 
     let __encode_expanded = quote! {
@@ -182,7 +182,7 @@ fn gen_encode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
     let _contents = match fs::read_to_string(&_path) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("Error opening file {:?}: {}", _path, e);
+            eprintln!("Error opening file {_path:?}: {e}");
             return quote! {};
         }
     };
@@ -211,7 +211,7 @@ fn gen_encode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
     let _contents = match fs::read_to_string(&_path) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("Error opening file {:?}: {}", _path, e);
+            eprintln!("Error opening file {_path:?}: {e}");
             return quote! {};
         }
     };
@@ -248,7 +248,7 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
     let _contents = match fs::read_to_string(&_path) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("Error opening file {:?}: {}", _path, e);
+            eprintln!("Error opening file {_path:?}: {e}");
             return quote! {};
         }
     };
@@ -298,7 +298,7 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
                 _simulate_obj_entries.extend(gen_simulate_file_to_objects(path.clone()));
             });
     } else {
-        eprintln!("Could not read from directory: {}", CANGEN_SPEC_PATH);
+        eprintln!("Could not read from directory: {CANGEN_SPEC_PATH}");
     }
 
     let _simulate_mainfunc = quote! {
@@ -325,7 +325,7 @@ fn gen_simulate_file_to_objects(_path: PathBuf) -> ProcMacro2TokenStream {
     let _contents = match fs::read_to_string(&_path) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("Error opening file {:?}: {}", _path, e);
+            eprintln!("Error opening file {_path:?}: {e}");
             return quote! {};
         }
     };

@@ -23,7 +23,7 @@ fn main() {
         Err(errors) => {
             for error in errors {
                 // The \x1b[...m is an ANSI escape sequence for colored terminal output
-                println!("\x1b[31;1mCAN spec error:\x1b[0m {}", error);
+                println!("\x1b[31;1mCAN spec error:\x1b[0m {error}");
             }
             process::exit(1);
         }
