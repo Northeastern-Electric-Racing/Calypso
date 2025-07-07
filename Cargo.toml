@@ -28,7 +28,7 @@ regex = { workspace = true }
 phf = { version = "0.12.1", features = ["macros"] }
 calypso-cangen = { path = "./libs/calypso-cangen" }
 daedalus = { path = "./libs/daedalus" }
-tokio = { version = "1.45.1", features = ["full"] }
+tokio = { version = "1.46.1", features = ["full"] }
 futures-util = "0.3.31"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["ansi", "env-filter"] }
