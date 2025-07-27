@@ -192,12 +192,6 @@ fn gen_sim_point(point: &CANPoint) -> ProcMacro2TokenStream {
         .map(|e| quote! { Some(#e.to_string()) })
         .unwrap_or_else(|| quote! { None });
 
-    let format_tokens = point
-        .format
-        .as_ref()
-        .map(|e| quote! { Some(#e.to_string()) })
-        .unwrap_or_else(|| quote! { None });
-
     let parse_tokens = point
         .parse
         .as_ref()
@@ -228,7 +222,6 @@ fn gen_sim_point(point: &CANPoint) -> ProcMacro2TokenStream {
             parse: #parse_tokens,
             signed: #signed_tokens,
             endianness: #endianness_tokens,
-            format: #format_tokens,
             default: #default_tokens,
             ieee754_f32: #ieee_tokens,
             value: __new_value,

@@ -93,63 +93,27 @@ impl EncodeData {
 pub struct FormatData {}
 
 impl FormatData {
-    pub fn divide10_d(value: f32) -> f32 {
-        value / 10.0
+    /* General divide function */
+    pub fn divide_d(value: f32, divisor: f32) -> f32 {
+        value / divisor
     }
-    pub fn divide10_e(value: f32) -> f32 {
-        value * 10.0
-    }
-
-    pub fn divide100_d(value: f32) -> f32 {
-        value / 100.0
-    }
-    pub fn divide100_e(value: f32) -> f32 {
-        value * 100.0
-    }
-
-    pub fn divide1000_d(value: f32) -> f32 {
-        value / 1000.0
-    }
-    pub fn divide1000_e(value: f32) -> f32 {
-        value * 1000.0
-    }
-
-    pub fn divide10000_d(value: f32) -> f32 {
-        value / 10000.0
-    }
-    pub fn divide10000_e(value: f32) -> f32 {
-        value * 10000.0
-    }
-
-    /* Acceleration values must be offset by 0.0029 according to datasheet */
-    pub fn acceleration_d(value: f32) -> f32 {
-        value * 0.0029
-    }
-    pub fn acceleration_e(value: f32) -> f32 {
-        value / 0.0029
+    pub fn divide_e(value: f32, multiplicand: f32) -> f32 {
+        value * multiplicand
     }
 
     /* Energy meter temperature is (degC = raw * 0.5) according to datasheet */
-    pub fn temperature_d(value: f32) -> f32 {
+    pub fn temperature_d(value: f32, _divisor: f32) -> f32 {
         value * 0.5
     }
-    pub fn temperature_e(value: f32) -> f32 {
+    pub fn temperature_e(value: f32, _multiplicand: f32) -> f32 {
         value * 2.0
     }
 
     /* Energy meter temperature indices are determined by multiplexor signal */
-    pub fn multiply5_d(value: f32) -> f32 {
-        value * 5.0
+    pub fn multiply_d(value: f32, multiplicand: f32) -> f32 {
+        value * multiplicand
     }
-    pub fn multiply5_e(value: f32) -> f32 {
-        value / 5.0
-    }
-
-    /* Scales the data by 39. Added for the Segment Total Volts CAN msg */
-    pub fn divide39_d(value: f32) -> f32 {
-        value / 39.0
-    }
-    pub fn divide39_e(value: f32) -> f32 {
-        value * 39.0
+    pub fn multiply_e(value: f32, divisor: f32) -> f32 {
+        value / divisor
     }
 }

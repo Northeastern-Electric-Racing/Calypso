@@ -31,7 +31,6 @@ pub struct SimPoint {
     pub parse: Option<bool>,
     pub signed: Option<bool>,
     pub endianness: Option<String>,
-    pub format: Option<String>,
     pub default: Option<f32>,
     pub ieee754_f32: Option<bool>,
     pub value: SimValue,

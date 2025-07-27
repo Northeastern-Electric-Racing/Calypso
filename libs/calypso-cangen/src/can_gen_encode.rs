@@ -62,19 +62,18 @@ fn gen_encoder_point(point: &mut CANPoint) -> ProcMacro2TokenStream {
             _ => quote! { u32 },
         },
     };
-    let format_prefix = match &point.format {
-        Some(format) => {
-            let id = format_ident!("{}_e", format);
-            quote! {  FormatData::#id }
+    let default_value: f32 = point.default.unwrap_or(0f32);
+    let float_final = if let Some(formatter) = &point.formatter {
+        let id = format_ident!("{}_e", formatter.key);
+        let arg = formatter.arg;
+        let format_prefix = quote! { FormatData::#id };
+        quote! {
+            #format_prefix ( *data.get(pt_index).unwrap_or(&(#default_value)), #arg )
         }
-        _ => quote! {},
-    };
-    let default_value: f32 = match point.default {
-        Some(default) => default,
-        _ => 0f32,
-    };
-    let float_final = quote! {
-        #format_prefix ( *data.get(pt_index).unwrap_or(&(#default_value)) )
+    } else {
+        quote! {
+            ( *data.get(pt_index).unwrap_or(&(#default_value)) )
+        }
     };
 
     let write_line = match point.endianness {
