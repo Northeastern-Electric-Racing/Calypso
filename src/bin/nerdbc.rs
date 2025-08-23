@@ -19,6 +19,12 @@ fn main() {
 
     let mut can_msgs = Vec::new();
     for message in dbc.messages() {
+        let node_name = match message.transmitter() {
+            can_dbc::Transmitter::NodeName(n) => n,
+            can_dbc::Transmitter::VectorXXX => args
+                .get(2)
+                .expect("Must provide node name as one isnt found"),
+        };
         let mut idex = 0;
         let mut points = Vec::new();
         let mut fields = Vec::new();
@@ -53,7 +59,7 @@ fn main() {
             });
 
             fields.push(NetField {
-                name: format!("{}/{}", message.message_name(), signal.name()),
+                name: format!("{node_name}/{}/{}", message.message_name(), signal.name()),
                 unit: signal.unit().to_string(),
                 values: vec![idex],
             });
@@ -61,7 +67,7 @@ fn main() {
 
         can_msgs.push(CANMsg {
             id: message.message_id().raw().to_string(),
-            desc: message.message_name().to_string(),
+            desc: format!("{node_name}_{}", message.message_name()),
             points,
             fields,
             key: None,
