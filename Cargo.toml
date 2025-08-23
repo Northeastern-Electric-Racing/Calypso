@@ -14,25 +14,25 @@ members = ["libs/daedalus", "libs/calypso-cangen"]
 proc-macro2 = "1.0.95"
 quote = "1.0.40"
 serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.141"
+serde_json = "1.0.142"
 regex = "1.11.1"
 
 [dependencies]
 rumqttc = { git = "https://github.com/bytebeamio/rumqtt", branch = "main"}
 protobuf-codegen = "3.7.2"
 protobuf = "3.7.2"
-bitstream-io = "4.3.0"
-clap = { version = "4.5.41", features = ["derive", "env"] }
-rand = "0.9.1"
+bitstream-io = "4.5.0"
+clap = { version = "4.5.42", features = ["derive", "env"] }
+rand = "0.9.2"
 regex = { workspace = true }
 phf = { version = "0.12.1", features = ["macros"] }
 calypso-cangen = { path = "./libs/calypso-cangen" }
 daedalus = { path = "./libs/daedalus" }
-tokio = { version = "1.46.1", features = ["full"] }
+tokio = { version = "1.47.1", features = ["full"] }
 futures-util = "0.3.31"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["ansi", "env-filter"] }
-tokio-util = { version = "0.7.15", features = ["full"] }
+tokio-util = { version = "0.7.16", features = ["full"] }
 can-dbc = "6.0.0"
 serde_json.workspace = true
 
