@@ -7,7 +7,7 @@ RUN git submodule update --init
 RUN apt-get update && apt-get install -y libssl-dev build-essential cmake 
 RUN cargo install --path .
 
-FROM debian:bookworm-slim
+FROM debian:slim-bookworm
 RUN apt update
 RUN apt install openssl -y
 
