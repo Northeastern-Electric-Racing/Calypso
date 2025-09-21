@@ -1,4 +1,4 @@
-FROM rust:bookworm-slim AS builder
+FROM rust:slim-bookworm AS builder
 
 WORKDIR /usr/src/calypso
 COPY . .
@@ -7,7 +7,7 @@ RUN git submodule update --init
 RUN apt-get update && apt-get install -y libssl-dev build-essential cmake 
 RUN cargo install --path .
 
-FROM debian:slim-bookworm
+FROM debian:bookworm-slim
 RUN apt update
 RUN apt install openssl -y
 
