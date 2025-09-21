@@ -1,4 +1,4 @@
-FROM rust:slim-bookworm AS builder
+FROM rust:bookworm AS builder
 
 WORKDIR /usr/src/calypso
 COPY . .
