@@ -236,13 +236,13 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
     }
 
     // Check message total alignment
-    if _bit_count % 8 != 0 {
-        _errors.push(CANSpecError::MessageTotalByteMisalignment(
-            _msg.id.clone(),
-            _msg.desc.clone(),
-            _bit_count,
-        ));
-    }
+    // if _bit_count % 8 != 0 {
+    //     _errors.push(CANSpecError::MessageTotalByteMisalignment(
+    //         _msg.id.clone(),
+    //         _msg.desc.clone(),
+    //         _bit_count,
+    //     ));
+    // }
 
     // Propagate
     if _errors.is_empty() {

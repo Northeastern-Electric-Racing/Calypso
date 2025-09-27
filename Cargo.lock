@@ -187,6 +187,7 @@ version = "0.1.0"
 dependencies = [
  "bitstream-io",
  "calypso-cangen",
+ "can-dbc",
  "clap",
  "daedalus",
  "futures-util",
@@ -196,6 +197,7 @@ dependencies = [
  "rand",
  "regex",
  "rumqttc",
+ "serde_json",
  "socketcan",
  "tokio",
  "tokio-util",
@@ -213,6 +215,16 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.16",
+]
+
+[[package]]
+name = "can-dbc"
+version = "6.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cbe0d033ec316c3bb50e2e53d7ef3d8805e65c5f976d49daea65a12f7e0f9ce8"
+dependencies = [
+ "derive-getters",
+ "nom",
 ]
 
 [[package]]
@@ -346,6 +358,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "serde_json",
+]
+
+[[package]]
+name = "derive-getters"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a2c35ab6e03642397cdda1dd58abbc05d418aef8e36297f336d5aba060fe8df"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]

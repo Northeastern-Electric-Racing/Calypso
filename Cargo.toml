@@ -33,6 +33,8 @@ futures-util = "0.3.31"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["ansi", "env-filter"] }
 tokio-util = { version = "0.7.16", features = ["full"] }
+can-dbc = "6.0.0"
+serde_json.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 socketcan = { version = "3.5.0", features = ["tokio"] }
