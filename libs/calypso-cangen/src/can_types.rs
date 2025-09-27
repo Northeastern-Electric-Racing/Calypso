@@ -1,3 +1,5 @@
+use proc_macro2::TokenStream;
+use quote::quote;
 use serde::{Deserialize, Serialize};
 
 // TODO: Implement MsgType
@@ -20,10 +22,31 @@ pub struct CANMsg {
     pub key: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_ext: Option<bool>,
+    #[serde(default)]
+    pub bidir_mode: BidirMode,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sim_freq: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub clients: Option<Vec<u16>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Copy, Clone)]
+#[serde(rename_all(deserialize = "lowercase", serialize = "PascalCase"))]
+#[derive(Default)]
+pub enum BidirMode {
+    Oneshot,
+    #[default]
+    Broadcast,
+}
+
+impl quote::ToTokens for BidirMode {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let path: TokenStream = match self {
+            BidirMode::Broadcast => quote!(::calypso_cangen::can_types::BidirMode::Broadcast),
+            BidirMode::Oneshot => quote!(::calypso_cangen::can_types::BidirMode::Oneshot),
+        };
+        tokens.extend(path);
+    }
 }
 
 /**
