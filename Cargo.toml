@@ -18,7 +18,7 @@ serde_json = "1.0.145"
 regex = "1.11.2"
 
 [dependencies]
-rumqttc = { git = "https://github.com/bytebeamio/rumqtt", branch = "main"}
+rumqttc = "0.25.0"
 protobuf-codegen = "3.7.2"
 protobuf = "3.7.2"
 bitstream-io = "4.5.0"

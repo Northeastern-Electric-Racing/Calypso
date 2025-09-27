@@ -1098,8 +1098,9 @@ dependencies = [
 
 [[package]]
 name = "rumqttc"
-version = "0.24.0"
-source = "git+https://github.com/bytebeamio/rumqtt?branch=main#005f73caf0c2a808210fd73f2db6e1bc38652c5c"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "128f632072dc89ced3359668399026d90eadc06c65c807c298d15ff3d1eacf63"
 dependencies = [
  "bytes",
  "fixedbitset",
