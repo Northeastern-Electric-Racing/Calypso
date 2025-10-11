@@ -1,5 +1,5 @@
 # Calypso
-Custom CAN decoder to translate CAN messages to MQTT protobuf encoded packets with low latency and a YAML configuration structure.
+Custom CAN decoder to translate CAN messages to MQTT protobuf encoded packets with low latency and a JSON configuration structure.
 
 Usage: run `-h` to see the full usage options and defaults.
 
