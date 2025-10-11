@@ -164,7 +164,7 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
 
         #__encode_functions
 
-        pub static ENCODE_FUNCTION_MAP: phf::Map<&'static str, fn(data: Vec<f32>) -> EncodeData> = phf_map! {
+        pub static ENCODE_FUNCTION_MAP: phf::Map<&'static str, (fn(data: Vec<f32>) -> EncodeData, BidirMode)> = phf_map! {
             #__encode_map_entries
         };
 
@@ -226,7 +226,8 @@ fn gen_encode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
                     "encode_{}",
                     _m.desc.clone().to_lowercase().replace(' ', "_")
                 );
-                quote! { #key => #fn_name, }
+                let bidir_mode = _m.bidir_mode;
+                quote! { #key => (#fn_name,  #bidir_mode),}
             } else {
                 quote! {}
             }
@@ -258,8 +259,13 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
         .iter_mut()
         .map(|_m| {
             if let Some(key) = &_m.key {
-                *_key_list_size += 1;
-                quote! { #key, }
+                // dont add to list if oneshot
+                if _m.bidir_mode == BidirMode::Oneshot {
+                    quote! {}
+                } else {
+                    *_key_list_size += 1;
+                    quote! { #key, }
+                }
             } else {
                 quote! {}
             }

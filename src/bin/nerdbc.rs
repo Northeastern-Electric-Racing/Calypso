@@ -74,6 +74,7 @@ fn main() {
             is_ext: None,
             sim_freq: None,
             clients: None,
+            bidir_mode: calypso_cangen::can_types::BidirMode::Broadcast,
         });
     }
 

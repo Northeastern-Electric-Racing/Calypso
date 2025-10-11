@@ -12,6 +12,7 @@ use calypso::{
         serverdata::{self, ServerData},
     },
 };
+use calypso_cangen::can_types::BidirMode;
 use clap::Parser;
 use futures_util::StreamExt;
 use protobuf::Message;
@@ -392,7 +393,7 @@ async fn bidir_manager(
     // build an initial map
     for key in ENCODABLE_KEY_LIST {
         let encoder_func = match ENCODE_FUNCTION_MAP.get(key) {
-            Some(func) => *func,
+            Some(func) => func.0,
             None => panic!("An unknown message was initialized!"),
         };
         let ret = encoder_func(Vec::new());
@@ -413,10 +414,36 @@ async fn bidir_manager(
                 }
             }
             Some(msg) = siren_recv.recv() => {
-                parse_msg(msg, &mut send_map).await;
+                if let Some(packet) = parse_msg(msg, &mut send_map).await { match can_push_send.send(packet).await {
+                Ok(_) => (),
+                Err(err) => warn!("Error sending can command to can manager {}", err),
+                } }
             },
         }
     }
+}
+
+/**
+ * Helper function to create a CanFrame
+ * msg: (id, EncodeData), the message to send
+ */
+fn create_frame(msg: (&u32, &EncodeData)) -> Option<CanFrame> {
+    let id: Id = if !msg.1.is_ext {
+        socketcan::StandardId::new(
+            msg.1
+                .id
+                .try_into()
+                .unwrap_or_else(|_| panic!("Invalid standard ID: {}", msg.1.id)),
+        )
+        .unwrap_or_else(|| panic!("Invalid standard ID: {}", msg.1.id))
+        .into()
+    } else {
+        socketcan::ExtendedId::new(msg.1.id)
+            .unwrap_or_else(|| panic!("Invalid extended ID: {}", msg.1.id))
+            .into()
+    };
+
+    CanFrame::new(id, &msg.1.value)
 }
 
 /**
@@ -428,22 +455,7 @@ async fn release_commands(send_map: &HashMap<u32, EncodeData>, can_push_send: &S
     for msg in send_map.iter() {
         // let id = u32::from_str_radix((msg.1.1).trim_start_matches("0x"), 16).expect("Invalid CAN ID!");
 
-        let id: Id = if !msg.1.is_ext {
-            socketcan::StandardId::new(
-                msg.1
-                    .id
-                    .try_into()
-                    .unwrap_or_else(|_| panic!("Invalid standard ID: {}", msg.1.id)),
-            )
-            .unwrap_or_else(|| panic!("Invalid standard ID: {}", msg.1.id))
-            .into()
-        } else {
-            socketcan::ExtendedId::new(msg.1.id)
-                .unwrap_or_else(|| panic!("Invalid extended ID: {}", msg.1.id))
-                .into()
-        };
-
-        match CanFrame::new(id, &msg.1.value) {
+        match create_frame(msg) {
             Some(packet) => {
                 match can_push_send.send(packet).await {
                     Ok(_) => (),
@@ -461,24 +473,26 @@ async fn release_commands(send_map: &HashMap<u32, EncodeData>, can_push_send: &S
  * Helper function to parse a MQTT message to create the corresponding bidir update
  * msg: The raw MQTT message
  * send_map: The map of CAN IDs and encodable data to modify
+ *
+ * Will return the can frame to send immediately, if available
  */
-async fn parse_msg(msg: Publish, send_map: &mut HashMap<u32, EncodeData>) {
+async fn parse_msg(msg: Publish, send_map: &mut HashMap<u32, EncodeData>) -> Option<CanFrame> {
     let buf = match command_data::CommandData::parse_from_bytes(&msg.payload) {
         Ok(buf) => buf,
         Err(err) => {
             warn!("Could not decode command: {}", err);
-            return;
+            return None;
         }
     };
     let Ok(topic) = std::str::from_utf8(&msg.topic) else {
         warn!("Could not parse topic, topic: {:?}", msg.topic);
-        return;
+        return None;
     };
     let key = match topic.split('/').next_back() {
         Some(key) => key.to_owned(),
         None => {
             warn!("Could not parse the key value in {}", topic);
-            return;
+            return None;
         }
     };
 
@@ -486,8 +500,19 @@ async fn parse_msg(msg: Publish, send_map: &mut HashMap<u32, EncodeData>) {
 
     match ENCODE_FUNCTION_MAP.get(&key) {
         Some(func) => {
-            let ret = func(buf.data);
-            send_map.insert(ret.id, ret);
+            let ret = func.0(buf.data);
+            if func.1 == BidirMode::Broadcast {
+                send_map.insert(ret.id, ret);
+                None
+            } else {
+                match create_frame((&ret.id, &ret)) {
+                    Some(packet) => Some(packet),
+                    None => {
+                        warn!("Oneshot encodable packet is too long: {}", ret.id);
+                        None
+                    }
+                }
+            }
         }
         None => {
             let id: u32 = 0x7FF;
@@ -501,6 +526,7 @@ async fn parse_msg(msg: Publish, send_map: &mut HashMap<u32, EncodeData>) {
                 is_ext: false,
             };
             send_map.insert(ret.id, ret);
+            None
         }
     }
 }
