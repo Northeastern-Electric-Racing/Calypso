@@ -43,6 +43,9 @@ pub enum CANSpecError {
     #[error("IEEE754 float point {0} of Message {1} is {2} bits, instead of 32 bits.")]
     PointFloatBitCount(usize, String, usize),
 
+    #[error("Point {0} of Message {1} specifies a default value, but the message is not a bidirectional broadcast message.")]
+    BidirDefaultValueButOneshot(usize, String),
+
     #[error(transparent)] // Pass-through for IO error
     IOError(#[from] std::io::Error),
 }
@@ -203,6 +206,17 @@ fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
                     _msg.id.clone(),
                     _point.size,
                 ));
+            }
+        }
+
+        // Check that a user isnt using the default value it is useless
+        if _point.default.is_some() {
+            match _msg.bidir_mode {
+                BidirMode::Broadcast => (),
+                BidirMode::Oneshot => _errors.push(CANSpecError::BidirDefaultValueButOneshot(
+                    _i,
+                    _msg.id.clone(),
+                )),
             }
         }
     }
