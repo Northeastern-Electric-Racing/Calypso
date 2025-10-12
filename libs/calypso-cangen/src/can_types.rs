@@ -1,5 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::quote;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 // TODO: Implement MsgType
@@ -11,7 +12,7 @@ use serde::{Deserialize, Serialize};
 /**
  *  Class representing a CAN message
  */
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(JsonSchema, Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct CANMsg {
     pub id: String,
@@ -30,7 +31,7 @@ pub struct CANMsg {
     pub clients: Option<Vec<u16>>,
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, Copy, Clone)]
+#[derive(JsonSchema, Debug, Deserialize, Serialize, PartialEq, Copy, Clone)]
 #[serde(rename_all(deserialize = "lowercase", serialize = "PascalCase"))]
 #[derive(Default)]
 pub enum BidirMode {
@@ -52,7 +53,7 @@ impl quote::ToTokens for BidirMode {
 /**
  *  Class representing a NetField of a CAN message
  */
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(JsonSchema, Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct NetField {
     pub name: String,
@@ -63,7 +64,7 @@ pub struct NetField {
 /**
  *  Class representing a CAN point of a NetField
  */
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(JsonSchema, Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct CANPoint {
     pub size: usize,
@@ -83,13 +84,13 @@ pub struct CANPoint {
     pub sim: Option<Sim>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(JsonSchema, Deserialize, Serialize, Debug)]
 pub struct Formatter {
     pub key: String,
     pub arg: f32,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(JsonSchema, Deserialize, Serialize, Debug)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum Sim {
     SimRange {

@@ -1,4 +1,3 @@
-[submodule "Embedded-Base"]
-	path = Embedded-Base
-	url = https://github.com/Northeastern-Electric-Racing/Embedded-Base.git
-	branch = main
+[submodule "Odyssey-Definitions"]
+	path = Odyssey-Definitions
+	url = git@github.com:Northeastern-Electric-Racing/Odyssey-Definitions.git
