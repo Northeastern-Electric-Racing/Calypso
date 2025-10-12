@@ -94,7 +94,8 @@ fn validate_spec_file(_path: PathBuf) -> Result<(), Vec<CANSpecError>> {
         Ok(mut _file) => {
             let mut _contents = String::new();
             let _ = _file.read_to_string(&mut _contents);
-            let _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).expect(&format!("Could not parse {:?}", _path));
+            let _msgs: Vec<CANMsg> = serde_json::from_str(&_contents)
+                .unwrap_or_else(|_| panic!("Could not parse {:?}", _path));
             for _msg in _msgs {
                 match validate_msg(_msg) {
                     Ok(()) => {}
