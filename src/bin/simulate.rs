@@ -105,13 +105,13 @@ async fn simulate_out(
     // todo: a way to turn individual components on and off
     // note: components are pre-initialized within the function
     let all_components = create_simulated_components();
-    
+
     // Filter components based on filter mode
     let mut simulated_components: Vec<SimComponent> = all_components
         .into_iter()
         .filter(|component| should_publish(&component.name, &filter_mode))
         .collect();
-    
+
     if simulated_components.is_empty() {
         info!("No components to simulate after filtering. All topics filtered out.");
     } else {
