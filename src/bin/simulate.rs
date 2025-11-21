@@ -1,3 +1,4 @@
+use std::process::exit;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use calypso::{
@@ -7,6 +8,7 @@ use calypso::{
 };
 use clap::Parser;
 use protobuf::Message;
+use regex::Regex;
 use rumqttc::v5::{AsyncClient, EventLoop, MqttOptions};
 use tokio::{signal, sync::mpsc};
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
@@ -27,12 +29,94 @@ struct CalypsoArgs {
         default_value = "localhost:1883"
     )]
     siren_host_url: String,
+
+    /// Disable topics matching regex patterns (blacklist mode)
+    #[arg(long = "disable-topic", conflicts_with = "enabled_topics")]
+    disabled_topics: Vec<String>,
+
+    /// Enable ONLY topics matching regex patterns (whitelist mode)
+    #[arg(long = "enable-topic", conflicts_with = "disabled_topics")]
+    enabled_topics: Vec<String>,
 }
 
-async fn simulate_out(token: CancellationToken, pub_channel: mpsc::Sender<(String, ServerData)>) {
+/**
+ * Filter mode for topic filtering
+ */
+#[derive(Debug, Clone)]
+enum FilterMode {
+    /// Publish all topics except those matching patterns (blacklist)
+    Blacklist(Vec<Regex>),
+    /// Publish only topics matching patterns (whitelist)
+    Whitelist(Vec<Regex>),
+    /// No filtering, publish all topics
+    Disabled,
+}
+
+/**
+ * Build FilterMode from CLI arguments, validating regex patterns
+ * Returns Err(String) if any regex pattern is invalid
+ */
+fn build_filter_mode(args: &CalypsoArgs) -> Result<FilterMode, String> {
+    if !args.disabled_topics.is_empty() {
+        let mut regexes = Vec::new();
+        for pattern in &args.disabled_topics {
+            match Regex::new(pattern) {
+                Ok(re) => regexes.push(re),
+                Err(e) => return Err(format!("Invalid regex pattern '{}': {}", pattern, e)),
+            }
+        }
+        Ok(FilterMode::Blacklist(regexes))
+    } else if !args.enabled_topics.is_empty() {
+        let mut regexes = Vec::new();
+        for pattern in &args.enabled_topics {
+            match Regex::new(pattern) {
+                Ok(re) => regexes.push(re),
+                Err(e) => return Err(format!("Invalid regex pattern '{}': {}", pattern, e)),
+            }
+        }
+        Ok(FilterMode::Whitelist(regexes))
+    } else {
+        Ok(FilterMode::Disabled)
+    }
+}
+
+/**
+ * Check if a topic should be published based on the filter mode
+ */
+fn should_publish(topic: &str, filter: &FilterMode) -> bool {
+    match filter {
+        FilterMode::Disabled => true,
+        FilterMode::Blacklist(patterns) => {
+            // Publish if topic does NOT match any blacklist pattern
+            !patterns.iter().any(|re| re.is_match(topic))
+        }
+        FilterMode::Whitelist(patterns) => {
+            // Publish if topic matches at least one whitelist pattern
+            patterns.iter().any(|re| re.is_match(topic))
+        }
+    }
+}
+
+async fn simulate_out(
+    token: CancellationToken,
+    pub_channel: mpsc::Sender<(String, ServerData)>,
+    filter_mode: FilterMode,
+) {
     // todo: a way to turn individual components on and off
     // note: components are pre-initialized within the function
-    let mut simulated_components: Vec<SimComponent> = create_simulated_components();
+    let all_components = create_simulated_components();
+
+    // Filter components based on filter mode
+    let mut simulated_components: Vec<SimComponent> = all_components
+        .into_iter()
+        .filter(|component| should_publish(&component.name, &filter_mode))
+        .collect();
+
+    if simulated_components.is_empty() {
+        info!("No components to simulate after filtering. All topics filtered out.");
+    } else {
+        info!("Simulating {} components", simulated_components.len());
+    }
 
     let mut interval = tokio::time::interval(Duration::from_millis(5));
 
@@ -157,6 +241,15 @@ async fn main() {
     let task_tracker = TaskTracker::new();
     let token = CancellationToken::new();
 
+    // Build filter mode and validate regex patterns
+    let filter_mode = match build_filter_mode(&cli) {
+        Ok(mode) => mode,
+        Err(err) => {
+            eprintln!("Error: {}", err);
+            exit(1);
+        }
+    };
+
     // a channel to give protobuf messages to be sent out over MQTT
     let (decoder_send, decoder_recv) = mpsc::channel::<(String, ServerData)>(500);
 
@@ -191,7 +284,7 @@ async fn main() {
 
     task_tracker.spawn(publish_stub(token.clone(), client, decoder_recv));
 
-    task_tracker.spawn(simulate_out(token.clone(), decoder_send));
+    task_tracker.spawn(simulate_out(token.clone(), decoder_send, filter_mode));
 
     task_tracker.close();
 
