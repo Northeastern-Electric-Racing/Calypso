@@ -37,6 +37,7 @@ tokio-util = { version = "0.7.16", features = ["full"] }
 can-dbc = "6.0.0"
 serde_json.workspace = true
 schemars.workspace = true
+num_enum = "0.7.5"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 socketcan = { version = "3.5.0", features = ["tokio"] }
