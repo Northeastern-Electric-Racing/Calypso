@@ -293,10 +293,10 @@ enum IntefaceCanIdOpts {
 #[derive(ValueEnum, IntoPrimitive, Clone)]
 #[repr(u8)]
 enum InterfacePeriodicCycleTimeOpts {
-    ImdInfoGeneral = 0x00,
-    ImdInfoIsoDetail = 0x01,
-    ImdInfoVoltage = 0x02,
-    ImdInfoItSystem = 0x03,
+    General = 0x00,
+    IsoDetail = 0x01,
+    Voltage = 0x02,
+    ItSystem = 0x03,
 }
 
 #[derive(ValueEnum, IntoPrimitive, Clone)]
@@ -385,10 +385,10 @@ enum GetCommands {
     /// see SET
     VoltageThresholdUnderVolts = 0x66,
     /**
-     * 0: Initialization
-    1: Normal operation
-    2: Self test
-     */
+    * 0: Initialization
+      1: Normal operation
+      2: Self test
+    */
     StatusDeviceActivity = 0x68,
     /// see SET
     StatusLock = 0x6A,
