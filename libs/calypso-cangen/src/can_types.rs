@@ -58,6 +58,8 @@ impl quote::ToTokens for BidirMode {
 pub struct NetField {
     pub name: String,
     pub unit: String,
+    pub doc: String,
+    pub desc: Option<String>,
     pub values: Vec<usize>,
 }
 
@@ -68,6 +70,10 @@ pub struct NetField {
 #[serde(deny_unknown_fields)]
 pub struct CANPoint {
     pub size: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub c_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parse: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
