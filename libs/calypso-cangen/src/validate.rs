@@ -1,4 +1,4 @@
-use crate::can_types::*;
+use crate::can_types::{BidirMode, CANMsg, Sim};
 use crate::CANGEN_SPEC_PATH;
 use regex::Regex;
 use std::fs;
@@ -51,7 +51,7 @@ pub enum CANSpecError {
 }
 
 /**
- *  Validate all CAN spec files in CANGEN_SPEC_PATH
+ *  Validate all CAN spec files in `CANGEN_SPEC_PATH`
  */
 pub fn validate_all_spec() -> Result<(), Vec<CANSpecError>> {
     let mut __all_errors = Vec::new();
@@ -65,7 +65,7 @@ pub fn validate_all_spec() -> Result<(), Vec<CANSpecError>> {
                             match validate_spec_file(__path.clone()) {
                                 Ok(()) => {}
                                 Err(__file_errors) => __all_errors.extend(__file_errors),
-                            };
+                            }
                         }
                     }
                     Err(__err) => __all_errors.push(__err.into()),
@@ -95,12 +95,12 @@ fn validate_spec_file(_path: PathBuf) -> Result<(), Vec<CANSpecError>> {
             let mut _contents = String::new();
             let _ = _file.read_to_string(&mut _contents);
             let _msgs: Vec<CANMsg> = serde_json::from_str(&_contents)
-                .unwrap_or_else(|_| panic!("Could not parse {:?}", _path));
+                .unwrap_or_else(|_| panic!("Could not parse {_path:?}"));
             for _msg in _msgs {
                 match validate_msg(_msg) {
                     Ok(()) => {}
                     Err(_msg_errors) => _errors.extend(_msg_errors),
-                };
+                }
             }
 
             if _errors.is_empty() {
@@ -117,7 +117,7 @@ fn validate_spec_file(_path: PathBuf) -> Result<(), Vec<CANSpecError>> {
 }
 
 /**
- *  Validate a CANMsg
+ *  Validate a `CANMsg`
  */
 fn validate_msg(_msg: CANMsg) -> Result<(), Vec<CANSpecError>> {
     let mut _errors = Vec::new();

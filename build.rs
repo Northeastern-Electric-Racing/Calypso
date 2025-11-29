@@ -1,4 +1,4 @@
-use calypso_cangen::validate::*;
+use calypso_cangen::validate::validate_all_spec;
 use std::process;
 
 /* Prebuild script */

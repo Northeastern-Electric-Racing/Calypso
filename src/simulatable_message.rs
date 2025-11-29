@@ -6,7 +6,7 @@ use std::time::Instant;
 /********************* SIMULATE_MESSAGE.H *********************/
 
 /**
- * A SimComponent roughly corresponds to a NetField with properties inherited from CANMsg
+ * A `SimComponent` roughly corresponds to a `NetField` with properties inherited from `CANMsg`
  */
 #[derive(Debug)]
 pub struct SimComponent {
@@ -23,7 +23,7 @@ pub struct SimComponent {
 }
 
 /**
- * Corresponds to CANPoint of a NetField
+ * Corresponds to `CANPoint` of a `NetField`
  */
 #[derive(Debug)]
 pub struct SimPoint {
@@ -37,7 +37,7 @@ pub struct SimPoint {
 }
 
 /**
- * The mode of simulation and the real-time value of the CANPoint
+ * The mode of simulation and the real-time value of the `CANPoint`
  */
 #[derive(Debug)]
 pub enum SimValue {
@@ -61,20 +61,22 @@ pub enum SimValue {
 
 impl SimComponent {
     pub fn initialize(&mut self) {
-        self.points.iter_mut().for_each(|p| p.initialize());
+        self.points.iter_mut().for_each(SimPoint::initialize);
         if let Some(points_intopic) = &mut self.points_intopic {
-            points_intopic.iter_mut().for_each(|p| p.initialize());
+            points_intopic.iter_mut().for_each(SimPoint::initialize);
         }
     }
 
+    #[must_use]
     pub fn should_update(&self) -> bool {
         self.last_update.elapsed().as_millis() > self.sim_freq as u128
     }
 
+    #[must_use]
     pub fn get_decode_data(&self) -> DecodeData {
         let topic_name = topic_values_inject(self);
         DecodeData::new(
-            self.points.iter().map(|p| p.get_value()).collect(),
+            self.points.iter().map(SimPoint::get_value).collect(),
             &topic_name,
             &self.unit,
             None,
@@ -83,9 +85,9 @@ impl SimComponent {
 
     pub fn update(&mut self) {
         self.last_update = Instant::now();
-        self.points.iter_mut().for_each(|p| p.update());
+        self.points.iter_mut().for_each(SimPoint::update);
         if let Some(points_intopic) = &mut self.points_intopic {
-            points_intopic.iter_mut().for_each(|p| p.update());
+            points_intopic.iter_mut().for_each(SimPoint::update);
         }
     }
 }
@@ -94,13 +96,15 @@ impl SimPoint {
     fn initialize(&mut self) {
         match self.default {
             Some(default_val) => match &mut self.value {
-                SimValue::Range { current, .. } => *current = default_val,
-                SimValue::Discrete { current, .. } => *current = default_val,
+                SimValue::Range { current, .. } | SimValue::Discrete { current, .. } => {
+                    *current = default_val;
+                }
             },
             None => self.value.initialize(),
         }
     }
 
+    #[must_use]
     pub fn get_value(&self) -> f32 {
         self.value.get_value()
     }
@@ -137,30 +141,30 @@ impl SimValue {
         }
     }
 
+    #[must_use]
     pub fn get_value(&self) -> f32 {
         match self {
-            SimValue::Range { current, .. } => *current,
-            SimValue::Discrete { current, .. } => *current,
+            SimValue::Range { current, .. } | SimValue::Discrete { current, .. } => *current,
         }
     }
 
     /**  
-     * Get a random offset within the range of sim_inc_min and sim_inc_max with a random sign.
-     * Use sim_inc_min as the offset if sim_inc_min == sim_inc_max.
-     * Rounds the offset to the nearest sim_inc_min if sim_inc_min is not 0.
+     * Get a random offset within the range of `sim_inc_min` and `sim_inc_max` with a random sign.
+     * Use `sim_inc_min` as the offset if `sim_inc_min` == `sim_inc_max`.
+     * Rounds the offset to the nearest `sim_inc_min` if `sim_inc_min` is not 0.
      */
     fn get_rand_offset(inc_min: f32, inc_max: f32) -> f32 {
         let mut rng = rand::rng();
         let sign = if rng.random_bool(0.5) { 1.0 } else { -1.0 };
 
-        let offset: f32 = if inc_min == inc_max {
+        let offset: f32 = if (inc_min - inc_max).abs() < 0.0001 {
             inc_min
         } else {
             let rand_offset = rng.random_range(inc_min..inc_max);
-            if inc_min != 0.0 {
-                (rand_offset / inc_min).round() * inc_min
-            } else {
+            if inc_min == 0.0 {
                 rand_offset
+            } else {
+                (rand_offset / inc_min).round() * inc_min
             }
         };
         offset * sign
@@ -229,9 +233,14 @@ impl SimValue {
 }
 
 /**
- * This helper function takes a SimComponent, injects the associated CANPoint values into the topic string
+ * This helper function takes a `SimComponent`, injects the associated `CANPoint` values into the topic string
  * e.g. "Hello/{}/World/{}" -> "Hello/{4}/World{5}"
+ *
+ * # Panics
+ *  Panics if Regex compilation fails.
+ *
  */
+#[must_use]
 pub fn topic_values_inject(component: &SimComponent) -> String {
     if let Some(points_intopic) = &component.points_intopic {
         let component_name = &component.name;
@@ -241,7 +250,7 @@ pub fn topic_values_inject(component: &SimComponent) -> String {
             eprintln!(
                 "[error] in-topic points vector length does not line up with placeholder count"
             );
-            return component_name.to_string();
+            return component_name.clone();
         }
         let in_topic_values: Vec<u32> = points_intopic
             .iter()
@@ -253,10 +262,10 @@ pub fn topic_values_inject(component: &SimComponent) -> String {
         re.replace_all(component_name, |_: &regex::Captures| {
             value_iter
                 .next()
-                .map_or("{}".to_string(), |val| val.to_string())
+                .map_or("{}".to_string(), std::string::ToString::to_string)
         })
         .into_owned()
     } else {
-        component.name.to_string()
+        component.name.clone()
     }
 }

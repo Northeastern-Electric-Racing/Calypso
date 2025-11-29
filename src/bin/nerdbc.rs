@@ -32,20 +32,20 @@ fn main() {
         for signal in message.signals() {
             // idex 1 indexed
             idex += 1;
-            let formatter = if signal.factor != 1.0 {
+            let formatter = if (signal.factor - 1.0).abs() < 0.001 {
+                None
+            } else {
                 Some(Formatter {
                     key: "divide".to_owned(),
                     arg: signal.factor as f32,
                 })
-            } else {
-                None
             };
 
             points.push(CANPoint {
                 size: signal.signal_size as usize,
                 parse: None,
                 signed: Some(signal.min < 0.0),
-                endianness: map_endianness(signal.byte_order()),
+                endianness: map_endianness(*signal.byte_order()),
                 formatter,
                 default: None,
                 ieee754_f32: None,
@@ -60,7 +60,7 @@ fn main() {
 
             fields.push(NetField {
                 name: format!("{node_name}/{}/{}", message.message_name(), signal.name()),
-                unit: signal.unit().to_string(),
+                unit: signal.unit().clone(),
                 values: vec![idex],
             });
         }
@@ -83,7 +83,7 @@ fn main() {
     println!("{res}");
 }
 
-fn map_endianness(bo: &ByteOrder) -> Option<String> {
+fn map_endianness(bo: ByteOrder) -> Option<String> {
     match bo {
         ByteOrder::LittleEndian => Some("little".to_owned()),
         ByteOrder::BigEndian => None,

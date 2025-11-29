@@ -14,7 +14,7 @@ use tracing::{debug, error};
 #[derive(Parser)]
 #[command(version, about = "Control the ISO175c")]
 struct NerImdArgs {
-    /// The SocketCAN interface port
+    /// The `SocketCAN` interface port
     #[arg(
         short = 'c',
         long,
@@ -52,7 +52,7 @@ enum CtrlCommands {
         #[arg(default_value = "51", hide = true)]
         id: u8,
     },
-    /// Selftest can only be triggered in R_iso_status = 0xFE
+    /// Selftest can only be triggered in `R_iso_status` = 0xFE
     TriggerSelfTest {
         option: TriggerSelfTestOpts,
         #[arg(default_value = "87", hide = true)]
@@ -344,9 +344,9 @@ enum GetCommands {
     IsoPowerOnProfile = 0x3A,
     /// 0...100: Quality [%]
     IsoQuality = 0x3E,
-    /// 0…50000: Isolation resistance on HV_neg [kΩ]
+    /// 0…50000: Isolation resistance on `HV_neg` [kΩ]
     IsoRIsoNeg = 0x40,
-    /// 0…50000: Isolation resistance on HV_pos [kΩ]
+    /// 0…50000: Isolation resistance on `HV_pos` [kΩ]
     IsoRIsoPos = 0x42,
     /**
     * 0xFC: estimated isolation value during startup
@@ -376,9 +376,9 @@ enum GetCommands {
     VoltageMeasurementCounter = 0x5C,
     /// 0…64255: HV system voltage [0.05 V] Offset: 32128 (1606.4 V) valid range: -1606.4 V...+1606.35 V
     VoltageHVSystem = 0x5E,
-    /// 0… 64255: HV_neg to Earth voltage [0.05 V] Offset: 32128 (1606.4 V) valid range: -1606.4 V...+1606.35 V
+    /// 0… 64255: `HV_neg` to Earth voltage [0.05 V] Offset: 32128 (1606.4 V) valid range: -1606.4 V...+1606.35 V
     VoltageHvNegToEarth = 0x60,
-    /// 0… 64255: HV_pos to MarinaEarth voltage [0.05 V] Offset: 32128 (1606.4 V) valid range: -1606.4 V...+1606.35 V
+    /// 0… 64255: `HV_pos` to `MarinaEarth` voltage [0.05 V] Offset: 32128 (1606.4 V) valid range: -1606.4 V...+1606.35 V
     VoltageHvPosToEarth = 0x62,
     /// see SET
     VoltageMode = 0x64,
@@ -394,8 +394,8 @@ enum GetCommands {
     StatusLock = 0x6A,
     /**
          * Bit 0: true = Device error active
-    Bit 1: true = HV_pos connection failure
-    Bit 2: true = HV_neg connection failure
+    Bit 1: true = `HV_pos` connection failure
+    Bit 2: true = `HV_neg` connection failure
     Bit 3: true = Earth connection failure
     Bit 4: true = Iso alarm (iso value below threshold error)
     Bit 5: true = Iso warning (iso value below threshold warning)
@@ -444,11 +444,12 @@ async fn write_ctrl_or_set(
         ))
         .await
     {
-        Ok(_) => {
+        Ok(()) => {
             debug!("Successfully sent message {}", index);
-            match read_back_index {
-                Some(idex) => read_or_readback(socket, idex).await,
-                None => debug!("Skipping readback for {}", index),
+            if let Some(idex) = read_back_index {
+                read_or_readback(socket, idex).await;
+            } else {
+                debug!("Skipping readback for {}", index);
             }
         }
         Err(e) => error!("Could not send message {} for reason: {}", index, e),
@@ -466,7 +467,7 @@ async fn read_or_readback(socket: &mut CanSocket, index: u8) {
         ))
         .await
     {
-        Ok(_) => debug!("Successfully sent message {}", index),
+        Ok(()) => debug!("Successfully sent message {}", index),
         Err(e) => error!("Could not send message {} for reason: {}", index, e),
     }
 
@@ -474,19 +475,19 @@ async fn read_or_readback(socket: &mut CanSocket, index: u8) {
     loop {
         tokio::select! {
             _ = timeout.tick() => {
-                error!("Did not recieve data within timeout!")
+                error!("Did not recieve data within timeout!");
             }
             Some(Ok(frame)) = socket.next() => {
                 match frame.id() {
                     socketcan::Id::Standard(standard_id) => if standard_id.as_raw() == 0x23 {
                         debug!("Found message!");
                         if frame.data()[0] == 0xFF {
-                            println!("Data failure: {:?}", ErrorMessage::try_from_primitive(frame.data()[1]).expect("Invalid error code!"))
+                            println!("Data failure: {:?}", ErrorMessage::try_from_primitive(frame.data()[1]).expect("Invalid error code!"));
                         } else {
                             println!("Data returned: {:?}", frame.data());
                         }
                     },
-                    socketcan::Id::Extended(_) => continue,
+                    socketcan::Id::Extended(_) => (),
                 }
             }
         }
@@ -504,14 +505,11 @@ async fn main() {
 
     match args.command {
         Commands::Control { cmd } => match cmd {
-            CtrlCommands::ResetAlarm { id } => {
-                write_ctrl_or_set(&mut socket, id, vec![0x01], None).await
+            CtrlCommands::ResetAlarm { id } | CtrlCommands::FactoryReset { id } => {
+                write_ctrl_or_set(&mut socket, id, vec![0x01], None).await;
             }
             CtrlCommands::TriggerSelfTest { option, id } => {
-                write_ctrl_or_set(&mut socket, id, vec![option as u8], None).await
-            }
-            CtrlCommands::FactoryReset { id } => {
-                write_ctrl_or_set(&mut socket, id, vec![0x01], None).await
+                write_ctrl_or_set(&mut socket, id, vec![option as u8], None).await;
             }
             CtrlCommands::EarthLiftStatus {
                 option,
@@ -534,8 +532,8 @@ async fn main() {
                 opts,
                 id,
                 read_back_id,
-            } => write_ctrl_or_set(&mut socket, id, vec![opts as u8], Some(read_back_id)).await,
-            SetCommands::IsoPowerOnProfile {
+            }
+            | SetCommands::IsoPowerOnProfile {
                 opts,
                 id,
                 read_back_id,
@@ -544,29 +542,23 @@ async fn main() {
                 threshold,
                 id,
                 read_back_id,
-            } => {
-                write_ctrl_or_set(
-                    &mut socket,
-                    id,
-                    threshold.to_le_bytes().to_vec(),
-                    Some(read_back_id),
-                )
-                .await
             }
-            SetCommands::IsoThresholdTimeout {
-                time,
+            | SetCommands::IsoThresholdWarning {
+                threshold,
                 id,
                 read_back_id,
-            } => {
-                write_ctrl_or_set(
-                    &mut socket,
-                    id,
-                    time.to_le_bytes().to_vec(),
-                    Some(read_back_id),
-                )
-                .await
             }
-            SetCommands::IsoThresholdWarning {
+            | SetCommands::VoltageThresholdUnderVolts {
+                threshold,
+                id,
+                read_back_id,
+            }
+            | SetCommands::IsoThresholdFirstRefEstimate {
+                threshold,
+                id,
+                read_back_id,
+            }
+            | SetCommands::IsoPreEstimateMaxDiff {
                 threshold,
                 id,
                 read_back_id,
@@ -577,9 +569,14 @@ async fn main() {
                     threshold.to_le_bytes().to_vec(),
                     Some(read_back_id),
                 )
-                .await
+                .await;
             }
             SetCommands::SelfTestPeriod {
+                time,
+                id,
+                read_back_id,
+            }
+            | SetCommands::IsoThresholdTimeout {
                 time,
                 id,
                 read_back_id,
@@ -590,76 +587,28 @@ async fn main() {
                     time.to_le_bytes().to_vec(),
                     Some(read_back_id),
                 )
-                .await
+                .await;
             }
             SetCommands::VoltageMode {
                 opts,
                 id,
                 read_back_id,
             } => write_ctrl_or_set(&mut socket, id, vec![opts as u8], Some(read_back_id)).await,
-            SetCommands::VoltageThresholdUnderVolts {
-                threshold,
-                id,
-                read_back_id,
-            } => {
-                write_ctrl_or_set(
-                    &mut socket,
-                    id,
-                    threshold.to_le_bytes().to_vec(),
-                    Some(read_back_id),
-                )
-                .await
-            }
             SetCommands::StatusLock {
                 opts,
                 id,
                 read_back_id,
             } => write_ctrl_or_set(&mut socket, id, vec![opts as u8], Some(read_back_id)).await,
-            SetCommands::IsoThresholdFirstRefEstimate {
-                threshold,
-                id,
-                read_back_id,
-            } => {
-                write_ctrl_or_set(
-                    &mut socket,
-                    id,
-                    threshold.to_le_bytes().to_vec(),
-                    Some(read_back_id),
-                )
-                .await
-            }
-            SetCommands::IsoPreEstimateMaxDiff {
-                threshold,
-                id,
-                read_back_id,
-            } => {
-                write_ctrl_or_set(
-                    &mut socket,
-                    id,
-                    threshold.to_le_bytes().to_vec(),
-                    Some(read_back_id),
-                )
-                .await
-            }
-            SetCommands::InterfaceCanId {
-                msg,
-                new_id,
-                id,
-                read_back_id,
-            } => {
-                write_ctrl_or_set(&mut socket, id, vec![msg as u8, new_id], Some(read_back_id))
-                    .await
-            }
             SetCommands::InterfacePeriodicCycleTime {
                 msg,
                 time,
                 id,
                 read_back_id,
             } => {
-                write_ctrl_or_set(&mut socket, id, vec![msg as u8, time], Some(read_back_id)).await
+                write_ctrl_or_set(&mut socket, id, vec![msg as u8, time], Some(read_back_id)).await;
             }
             SetCommands::InterfaceBaudrate { rate, id } => {
-                write_ctrl_or_set(&mut socket, id, vec![rate as u8], None).await
+                write_ctrl_or_set(&mut socket, id, vec![rate as u8], None).await;
             }
             SetCommands::IsoIsoInit {
                 value,
@@ -672,7 +621,16 @@ async fn main() {
                     value.to_le_bytes().to_vec(),
                     Some(read_back_id),
                 )
-                .await
+                .await;
+            }
+            SetCommands::InterfaceCanId {
+                msg,
+                new_id,
+                id,
+                read_back_id,
+            } => {
+                write_ctrl_or_set(&mut socket, id, vec![msg as u8, new_id], Some(read_back_id))
+                    .await;
             }
         },
         Commands::Get { cmd } => read_or_readback(&mut socket, cmd as u8).await,

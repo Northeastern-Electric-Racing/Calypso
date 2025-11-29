@@ -26,7 +26,7 @@ impl fmt::Display for DecodeData {
 }
 
 /**
- * Implementation fo the DecodeData methods
+ * Implementation fo the `DecodeData` methods
  */
 impl DecodeData {
     /**
@@ -36,6 +36,7 @@ impl DecodeData {
      * @param topic: the topic of the data
      * @param clients: additional MQTT clients
      */
+    #[must_use]
     pub fn new(value: Vec<f32>, topic: &str, unit: &str, clients: Option<Vec<u16>>) -> Self {
         Self {
             value,
@@ -71,17 +72,18 @@ impl fmt::Display for EncodeData {
 }
 
 /**
- * Implementation fo the DecodeData methods
+ * Implementation fo the `DecodeData` methods
  */
 impl EncodeData {
     /**
      * Constructor
      * @param id: the id of the can message
      * @param value: the can message payload
-     * @param is_ext: whether the can message is extended format ID
+     * @param `is_ext`: whether the can message is extended format ID
      */
+    #[must_use]
     pub fn new(id: u32, value: Vec<u8>, is_ext: bool) -> Self {
-        Self { id, value, is_ext }
+        Self { value, id, is_ext }
     }
 }
 
@@ -94,25 +96,31 @@ pub struct FormatData {}
 
 impl FormatData {
     /* General divide function */
+    #[must_use]
     pub fn divide_d(value: f32, divisor: f32) -> f32 {
         value / divisor
     }
+    #[must_use]
     pub fn divide_e(value: f32, multiplicand: f32) -> f32 {
         value * multiplicand
     }
 
     /* Energy meter temperature is (degC = raw * 0.5) according to datasheet */
+    #[must_use]
     pub fn temperature_d(value: f32, _divisor: f32) -> f32 {
         value * 0.5
     }
+    #[must_use]
     pub fn temperature_e(value: f32, _multiplicand: f32) -> f32 {
         value * 2.0
     }
 
     /* Energy meter temperature indices are determined by multiplexor signal */
+    #[must_use]
     pub fn multiply_d(value: f32, multiplicand: f32) -> f32 {
         value * multiplicand
     }
+    #[must_use]
     pub fn multiply_e(value: f32, divisor: f32) -> f32 {
         value / divisor
     }

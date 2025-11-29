@@ -1,11 +1,11 @@
-use crate::can_types::*;
+use crate::can_types::{CANMsg, CANPoint};
 use proc_macro2::Literal;
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
 use quote::{format_ident, quote};
 
 /**
- *  Function to generate encoder function for CANMsg
- *  Generates nothing if the CANMsg is not Encodable (i.e. no key)
+ *  Function to generate encoder function for `CANMsg`
+ *  Generates nothing if the `CANMsg` is not Encodable (i.e. no key)
  */
 pub fn gen_encoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
     match &msg.key {
@@ -46,7 +46,7 @@ pub fn gen_encoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
 }
 
 /**
- *  Function to generate encoder line for CANPoint
+ *  Function to generate encoder line for `CANPoint`
  */
 fn gen_encoder_point(point: &mut CANPoint) -> ProcMacro2TokenStream {
     let size_literal = Literal::usize_unsuffixed(point.size);

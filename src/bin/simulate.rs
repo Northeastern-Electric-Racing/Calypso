@@ -53,7 +53,7 @@ enum FilterMode {
 }
 
 /**
- * Build FilterMode from CLI arguments, validating regex patterns
+ * Build `FilterMode` from CLI arguments, validating regex patterns
  * Returns Err(String) if any regex pattern is invalid
  */
 fn build_filter_mode(args: &CalypsoArgs) -> Result<FilterMode, String> {
@@ -62,7 +62,7 @@ fn build_filter_mode(args: &CalypsoArgs) -> Result<FilterMode, String> {
         for pattern in &args.disabled_topics {
             match Regex::new(pattern) {
                 Ok(re) => regexes.push(re),
-                Err(e) => return Err(format!("Invalid regex pattern '{}': {}", pattern, e)),
+                Err(e) => return Err(format!("Invalid regex pattern '{pattern}': {e}")),
             }
         }
         Ok(FilterMode::Blacklist(regexes))
@@ -71,7 +71,7 @@ fn build_filter_mode(args: &CalypsoArgs) -> Result<FilterMode, String> {
         for pattern in &args.enabled_topics {
             match Regex::new(pattern) {
                 Ok(re) => regexes.push(re),
-                Err(e) => return Err(format!("Invalid regex pattern '{}': {}", pattern, e)),
+                Err(e) => return Err(format!("Invalid regex pattern '{pattern}': {e}")),
             }
         }
         Ok(FilterMode::Whitelist(regexes))
@@ -122,24 +122,24 @@ async fn simulate_out(
 
     loop {
         tokio::select! {
-           _ = token.cancelled() => {
+           () = token.cancelled() => {
                 debug!("Shutting down sim gen!");
                 break;
             },
             _ = interval.tick() => {
-                for component in simulated_components.iter_mut() {
+                for component in &mut simulated_components {
             if component.should_update() {
                 component.update();
                 let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
                 let data: calypso::data::DecodeData = component.get_decode_data();
                 let mut payload = serverdata::ServerData::new();
-                payload.unit = data.unit.to_string();
+                payload.unit.clone_from(&data.unit);
                 payload.values = data.value;
                 payload.time_us = timestamp;
 
                 pub_channel
                     .send((
-                        data.topic.to_string(),
+                        data.topic.clone(),
                         payload
                     ))
                     .await
@@ -154,7 +154,7 @@ async fn simulate_out(
 /**
  * A thread to publish messages to a MQTT client
  * client: The client to publish to
- * recv_messages: The channel to get the messages to publish
+ * `recv_messages`: The channel to get the messages to publish
  */
 async fn publish_stub(
     token: CancellationToken,
@@ -163,7 +163,7 @@ async fn publish_stub(
 ) {
     loop {
         tokio::select! {
-            _ = token.cancelled() => {
+            () = token.cancelled() => {
                 debug!("Shutting down PUB stub!");
                 break;
             },
@@ -177,12 +177,12 @@ async fn publish_stub(
 /**
  * A thread to poll MQTT broker status, and relay incoming subscribed messages
  * eventloop: the eventloop to poll
- * send_to_manager: the channel to send recieved MQTT messages from (optional)
+ * `send_to_manager`: the channel to send recieved MQTT messages from (optional)
  */
 async fn poll_stub(token: CancellationToken, mut eventloop: EventLoop) {
     loop {
         tokio::select! {
-        _ = token.cancelled() => {
+        () = token.cancelled() => {
             debug!("Shutting down SIREN manager!");
             break;
         },
@@ -245,7 +245,7 @@ async fn main() {
     let filter_mode = match build_filter_mode(&cli) {
         Ok(mode) => mode,
         Err(err) => {
-            eprintln!("Error: {}", err);
+            eprintln!("Error: {err}");
             exit(1);
         }
     };

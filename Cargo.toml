@@ -7,6 +7,13 @@ default-run = "calypso"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+cast_possible_truncation = "allow"
+too_many_lines = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"
+
 [workspace]
 members = ["libs/daedalus", "libs/calypso-cangen"]
 
