@@ -3,7 +3,7 @@ use std::process;
 
 /* Prebuild script */
 fn main() {
-    println!("cargo:rerun-if-changed=Odyssey-Definitions);
+    println!("cargo:rerun-if-changed=Odyssey-Definitions");
     println!("cargo:rerun-if-changed=src/proto");
 
     protobuf_codegen::Codegen::new()
