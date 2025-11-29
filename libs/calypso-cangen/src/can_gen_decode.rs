@@ -1,11 +1,11 @@
-use crate::can_types::*;
+use crate::can_types::{CANMsg, CANPoint, NetField};
 use proc_macro2::Literal;
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
 use quote::{format_ident, quote};
 use regex::Regex;
 
 /**
- *  Function to generate decoder function for a CANMsg
+ *  Function to generate decoder function for a `CANMsg`
  */
 pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
     let fn_name = format_ident!(
@@ -60,7 +60,7 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
 }
 
 /**
- *  Function to generate DecodeData struct for decoding a NetField
+ *  Function to generate `DecodeData` struct for decoding a `NetField`
  */
 fn gen_decoder_field(
     field: &mut NetField,
@@ -140,9 +140,10 @@ fn gen_decoder_field(
     };
 
     // Add any additional clients to DecodeData struct
-    let add_clients = match clients {
-        Some(cl) => quote! { Some(vec![#(#cl),*])},
-        None => quote! { None },
+    let add_clients = if let Some(cl) = clients {
+        quote! { Some(vec![#(#cl),*])}
+    } else {
+        quote! { None }
     };
 
     quote! {
@@ -156,7 +157,7 @@ fn gen_decoder_field(
 }
 
 /**
- *  Function to generate formatted reader line for decoding a CANPoint
+ *  Function to generate formatted reader line for decoding a `CANPoint`
  *  i.e. `let point_X = ...;`, where X is index
  */
 fn gen_decoder_point(index: usize, point: &mut CANPoint) -> ProcMacro2TokenStream {

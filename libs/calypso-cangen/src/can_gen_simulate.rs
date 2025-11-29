@@ -1,11 +1,12 @@
-use crate::can_types::*;
+use crate::can_types::{CANMsg, CANPoint, NetField, Sim};
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
 use quote::quote;
 use regex::Regex;
 
 /**
- * Function to turn a CANMsg into multiple SimComponents
+ * Function to turn a `CANMsg` into multiple `SimComponents`
  */
+#[must_use]
 pub fn gen_simulate_canmsg(msg: &CANMsg) -> ProcMacro2TokenStream {
     let Some(_sim_freq) = msg.sim_freq else {
         return quote! {};
@@ -23,7 +24,7 @@ pub fn gen_simulate_canmsg(msg: &CANMsg) -> ProcMacro2TokenStream {
 }
 
 /**
- * Return a list of indices of in-topic CANPoints
+ * Return a list of indices of in-topic `CANPoints`
  * BMS/Pack/PerCell/Cell-{5}/Attr/{4} ==> vec![5, 4]
  */
 fn get_intopic_point_idx(field: &NetField) -> Vec<usize> {
@@ -45,8 +46,9 @@ fn prep_intopic_fields(name: &str) -> String {
 }
 
 /**
- * Convert a NetField to a SimComponent
+ * Convert a `NetField` to a `SimComponent`
  */
+#[must_use]
 pub fn gen_simulate_netfield(
     field: &NetField,
     points: &[CANPoint],
@@ -66,12 +68,12 @@ pub fn gen_simulate_netfield(
     #[allow(unused_doc_comments)]
     /**
      * forEach(NetField)
-     *      if (NetField has in-topic values)
+     *      if (`NetField` has in-topic values)
      *          ( create vec<SimPoint> )
      *          forEach(in-topic values)
-     *             ( create SimValue )
-     *              ( create SimPoint, embedding the SimValue )
-     *          ( add SimPoint to vec<SimPoint> )
+     *             ( create `SimValue` )
+     *              ( create `SimPoint`, embedding the `SimValue` )
+     *          ( add `SimPoint` to vec<SimPoint> )
      *
      *      ( create vec<SimPoint> )
      *      forEach(normal canpoint values)
@@ -106,21 +108,20 @@ pub fn gen_simulate_netfield(
     let token_simfreq = &msg.sim_freq;
     let token_desc = &msg.desc;
     let token_name = prep_intopic_fields(&field.name);
-    let token_vec_points_intopic = match points_idx_intopic.len() {
-        0 => quote! { None },
-        _ => quote! { Some(vec_points_in_topic) },
+    let token_vec_points_intopic = if points_idx_intopic.is_empty() {
+        quote! { None }
+    } else {
+        quote! { Some(vec_points_in_topic) }
     };
     let token_unit = &field.unit;
     let token_key = msg
         .key
         .as_ref()
-        .map(|e| quote! { Some(#e.to_string()) })
-        .unwrap_or_else(|| quote! { None });
+        .map_or_else(|| quote! { None }, |e| quote! { Some(#e.to_string()) });
     let token_isext = msg
         .is_ext
         .as_ref()
-        .map(|e| quote! { Some(#e) })
-        .unwrap_or_else(|| quote! { None });
+        .map_or_else(|| quote! { None }, |e| quote! { Some(#e) });
 
     quote! {
         #token_pts_val_buffer
@@ -142,7 +143,7 @@ pub fn gen_simulate_netfield(
 }
 
 /**
- * Function to generate SimPoint (and the SimValue inside it) for a CANPoint
+ * Function to generate `SimPoint` (and the `SimValue` inside it) for a `CANPoint`
  */
 fn gen_sim_point(point: &CANPoint) -> ProcMacro2TokenStream {
     let mut ret_stream = ProcMacro2TokenStream::new();
@@ -189,32 +190,27 @@ fn gen_sim_point(point: &CANPoint) -> ProcMacro2TokenStream {
     let endianness_tokens = point
         .endianness
         .as_ref()
-        .map(|e| quote! { Some(#e.to_string()) })
-        .unwrap_or_else(|| quote! { None });
+        .map_or_else(|| quote! { None }, |e| quote! { Some(#e.to_string()) });
 
     let parse_tokens = point
         .parse
         .as_ref()
-        .map(|e| quote! { Some(#e) })
-        .unwrap_or_else(|| quote! { None });
+        .map_or_else(|| quote! { None }, |e| quote! { Some(#e) });
 
     let signed_tokens = point
         .signed
         .as_ref()
-        .map(|e| quote! { Some(#e) })
-        .unwrap_or_else(|| quote! { None });
+        .map_or_else(|| quote! { None }, |e| quote! { Some(#e) });
 
     let default_tokens = point
         .default
         .as_ref()
-        .map(|e| quote! { Some(#e) })
-        .unwrap_or_else(|| quote! { None });
+        .map_or_else(|| quote! { None }, |e| quote! { Some(#e) });
 
     let ieee_tokens = point
         .ieee754_f32
         .as_ref()
-        .map(|e| quote! { Some(#e) })
-        .unwrap_or_else(|| quote! { None });
+        .map_or_else(|| quote! { None }, |e| quote! { Some(#e) });
 
     ret_stream.extend(quote! {
         let __new_point = SimPoint {

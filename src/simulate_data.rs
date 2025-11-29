@@ -1,3 +1,3 @@
-#![allow(clippy::all)]
+#![allow(clippy::all, clippy::pedantic)]
 use daedalus::gen_simulate_data;
 gen_simulate_data!();

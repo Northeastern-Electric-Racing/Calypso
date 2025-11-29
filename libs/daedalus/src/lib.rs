@@ -1,11 +1,10 @@
-// #![allow(clippy::all)]
 extern crate calypso_cangen;
 extern crate proc_macro;
 extern crate serde_json;
-use calypso_cangen::can_gen_decode::*;
-use calypso_cangen::can_gen_encode::*;
-use calypso_cangen::can_gen_simulate::*;
-use calypso_cangen::can_types::*;
+use calypso_cangen::can_gen_decode::gen_decoder_fn;
+use calypso_cangen::can_gen_encode::gen_encoder_fn;
+use calypso_cangen::can_gen_simulate::gen_simulate_canmsg;
+use calypso_cangen::can_types::{BidirMode, CANMsg};
 use calypso_cangen::CANGEN_SPEC_PATH;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
@@ -15,7 +14,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 /**
- *  Macro to generate all the code for decode_data.rs
+ *  Macro to generate all the code for `decode_data.rs`
  *  - Generates prelude, phf map, and all decode functions
  */
 #[proc_macro]
@@ -124,7 +123,7 @@ fn gen_decode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
 }
 
 /**
- *  Macro to generate all the code for encode_data.rs
+ *  Macro to generate all the code for `encode_data.rs`
  *  - Generates prelude, phf map, and all encode functions
  */
 #[proc_macro]
@@ -281,7 +280,7 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
 }
 
 /**
- *  Macro to generate all the code for simulate_data.rs
+ *  Macro to generate all the code for `simulate_data.rs`
  *  - Generates prelude, main function, and all components
  */
 #[proc_macro]
@@ -297,9 +296,7 @@ pub fn gen_simulate_data(_item: TokenStream) -> TokenStream {
         entries
             .filter_map(Result::ok)
             .map(|_entry| _entry.path())
-            .filter(|_path| {
-                _path.is_file() && _path.extension().map(|ext| ext == "json").unwrap_or(false)
-            })
+            .filter(|_path| _path.is_file() && _path.extension().is_some_and(|ext| ext == "json"))
             .for_each(|path| {
                 _simulate_obj_entries.extend(gen_simulate_file_to_objects(path.clone()));
             });

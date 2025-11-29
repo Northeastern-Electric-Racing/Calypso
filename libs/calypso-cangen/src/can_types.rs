@@ -51,7 +51,7 @@ impl quote::ToTokens for BidirMode {
 }
 
 /**
- *  Class representing a NetField of a CAN message
+ *  Class representing a `NetField` of a CAN message
  */
 #[derive(JsonSchema, Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -62,7 +62,7 @@ pub struct NetField {
 }
 
 /**
- *  Class representing a CAN point of a NetField
+ *  Class representing a CAN point of a `NetField`
  */
 #[derive(JsonSchema, Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]

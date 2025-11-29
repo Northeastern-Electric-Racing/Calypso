@@ -5,8 +5,8 @@ use std::{
 
 use calypso::{
     data::{DecodeData, EncodeData},
-    decode_data::*,
-    encode_data::*,
+    decode_data::DECODE_FUNCTION_MAP,
+    encode_data::{ENCODABLE_KEY_LIST, ENCODE_FUNCTION_MAP},
     proto::{
         command_data,
         serverdata::{self, ServerData},
@@ -17,10 +17,10 @@ use clap::Parser;
 use futures_util::StreamExt;
 use protobuf::Message;
 use rumqttc::v5::{
-    mqttbytes::v5::{Packet, Publish},
     AsyncClient, Event, EventLoop, MqttOptions,
+    mqttbytes::v5::{Packet, Publish},
 };
-use socketcan::{tokio::CanSocket, CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions};
+use socketcan::{CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions, tokio::CanSocket};
 use tokio::{
     signal,
     sync::mpsc::{self, Receiver, Sender},
@@ -28,7 +28,7 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 use tracing::{debug, info, level_filters::LevelFilter, trace, warn};
-use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
 const ENCODER_MAP_SUB: &str = "Calypso/Bidir/Command/#";
 
@@ -49,7 +49,7 @@ struct CalypsoArgs {
     )]
     siren_host_url: String,
 
-    /// The SocketCAN interface port
+    /// The `SocketCAN` interface port
     #[arg(
         short = 'c',
         long,
@@ -65,10 +65,10 @@ struct CalypsoArgs {
 
 /**
  * Reads the can socket and publishes the data to siren channel
- * can_interface: the socketcan interface to bind to
- * send_to_siren: the channel to send protobuf messages to
- * alt_send_to_siren: the channel to send priority queue alt messages to
- * send_over_can: can messages to be sent over CAN
+ * `can_interface`: the socketcan interface to bind to
+ * `send_to_siren`: the channel to send protobuf messages to
+ * `alt_send_to_siren`: the channel to send priority queue alt messages to
+ * `send_over_can`: can messages to be sent over CAN
  */
 async fn can_manager(
     token: CancellationToken,
@@ -93,17 +93,17 @@ async fn can_manager(
 
     loop {
         tokio::select! {
-            _ = token.cancelled() => {
+            () = token.cancelled() => {
                 debug!("Shutting down CAN reader!");
                 break;
             },
             Some(frame) = socket.next() => {
                 frame_cnt += 1;
-                pub_frame(frame, &main_send_to_siren, &alt_send_to_siren, &mut mqtt_cnt).await;
+                pub_frame(frame, &main_send_to_siren, alt_send_to_siren.as_ref(), &mut mqtt_cnt).await;
             }
             Some(frame) = send_over_can.recv() => {
                 match socket.write_frame(frame).await {
-                    Ok(_) => (),
+                    Ok(()) => (),
                     Err(r) => warn!("Could not send CAN frame: {}", r),
                 }
             },
@@ -122,14 +122,14 @@ async fn can_manager(
 /**
  * Handles reception of a frame or error
  * frame: the frame
- * main_send: the siren receiver
- * alt_send: the priority siren receiver
- * cnt: a variable incremented per MQTT message sent over main_send
+ * `main_send`: the siren receiver
+ * `alt_send`: the priority siren receiver
+ * cnt: a variable incremented per MQTT message sent over `main_send`
  */
 async fn pub_frame(
     frame: Result<CanFrame, socketcan::Error>,
     main_send: &Sender<(String, ServerData)>,
-    alt_send: &Option<Sender<(String, ServerData)>>,
+    alt_send: Option<&Sender<(String, ServerData)>>,
     cnt: &mut u64,
 ) {
     let decoded_data = match frame {
@@ -195,22 +195,21 @@ async fn pub_frame(
     let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
 
     // Convert decoded CAN to Protobuf and publish over MQTT
-    for data in decoded_data.iter() {
+    for data in &decoded_data {
         *cnt += 1;
         let mut payload = serverdata::ServerData::new();
-        payload.unit = data.unit.to_string();
-        payload.values = data.value.clone();
+        payload.unit.clone_from(&data.unit);
+        payload.values.clone_from(&data.value);
         payload.time_us = timestamp;
 
-        if let Some(alt_send) = alt_send {
-            if let Some(clients) = &data.clients {
-                if clients.first().unwrap_or(&0) == &1882 {
-                    match alt_send.send((data.topic.clone(), payload.clone())).await {
-                        Ok(()) => trace!("Sent a CAN message to SIREN manager alt"),
-                        Err(err) => {
-                            warn!("Could not send CAN message to SIREN manager alt: {}", err)
-                        }
-                    }
+        if let Some(alt_send) = alt_send
+            && let Some(clients) = &data.clients
+            && clients.first().unwrap_or(&0) == &1882
+        {
+            match alt_send.send((data.topic.clone(), payload.clone())).await {
+                Ok(()) => trace!("Sent a CAN message to SIREN manager alt"),
+                Err(err) => {
+                    warn!("Could not send CAN message to SIREN manager alt: {}", err);
                 }
             }
         }
@@ -224,7 +223,7 @@ async fn pub_frame(
 
 /**
  * Inits siren communication, returning the main (1st) and priority (2nd) structs
- * pub_path:  The base URL (and port for main)
+ * `pub_path`:  The base URL (and port for main)
  */
 async fn siren_creator(pub_path: String) -> [(AsyncClient, EventLoop); 2] {
     let mut mqtt_opts_main = MqttOptions::new(
@@ -277,7 +276,7 @@ async fn siren_creator(pub_path: String) -> [(AsyncClient, EventLoop); 2] {
     {
         Ok(()) => (),
         Err(err) => warn!("Error subscribing: {}", err),
-    };
+    }
 
     // here we split into two threads, one owns the client the other owns the eventloop
 
@@ -287,7 +286,7 @@ async fn siren_creator(pub_path: String) -> [(AsyncClient, EventLoop); 2] {
 /**
  * A thread to publish messages to a MQTT client
  * client: The client to publish to
- * recv_messages: The channel to get the messages to publish
+ * `recv_messages`: The channel to get the messages to publish
  */
 async fn publish_stub(
     token: CancellationToken,
@@ -296,7 +295,7 @@ async fn publish_stub(
 ) {
     loop {
         tokio::select! {
-            _ = token.cancelled() => {
+            () = token.cancelled() => {
                 debug!("Shutting down PUB stub!");
                 break;
             },
@@ -310,7 +309,7 @@ async fn publish_stub(
 /**
  * A thread to poll MQTT broker status, and relay incoming subscribed messages
  * eventloop: the eventloop to poll
- * send_to_manager: the channel to send recieved MQTT messages from (optional)
+ * `send_to_manager`: the channel to send recieved MQTT messages from (optional)
  */
 async fn poll_stub(
     token: CancellationToken,
@@ -320,7 +319,7 @@ async fn poll_stub(
     if let Some(send_to) = send_to_manager {
         loop {
             tokio::select! {
-                    _ = token.cancelled() => {
+                    () = token.cancelled() => {
                         debug!("Shutting down SIREN manager!");
                         break;
                     },
@@ -340,14 +339,14 @@ async fn poll_stub(
     } else {
         loop {
             tokio::select! {
-            _ = token.cancelled() => {
+            () = token.cancelled() => {
                 debug!("Shutting down SIREN manager!");
                 break;
             },
             _ = eventloop.poll() => {}
             }
         }
-    };
+    }
 }
 
 /**
@@ -377,8 +376,8 @@ async fn pub_msg(topic: String, data: ServerData, client: &AsyncClient) {
 
 /**
  * Thread to manage bidirectionality, both sending can messages and receiving MQTT messages from respective channels
- * can_push_send: the channel to send out CAN messages
- * siren_recv: the MQTT messages to receive
+ * `can_push_send`: the channel to send out CAN messages
+ * `siren_recv`: the MQTT messages to receive
  * encode: actually sends out the CAN messages
  */
 async fn bidir_manager(
@@ -402,7 +401,7 @@ async fn bidir_manager(
 
     loop {
         tokio::select! {
-            _ = token.cancelled() => {
+            () = token.cancelled() => {
                 debug!("Shutting down BIDIR manager!");
                 break;
             },
@@ -414,8 +413,8 @@ async fn bidir_manager(
                 }
             }
             Some(msg) = siren_recv.recv() => {
-                if let Some(packet) = parse_msg(msg, &mut send_map).await { match can_push_send.send(packet).await {
-                Ok(_) => (),
+                if let Some(packet) = parse_msg(&msg, &mut send_map) { match can_push_send.send(packet).await {
+                Ok(()) => (),
                 Err(err) => warn!("Error sending can command to can manager {}", err),
                 } }
             },
@@ -424,11 +423,15 @@ async fn bidir_manager(
 }
 
 /**
- * Helper function to create a CanFrame
- * msg: (id, EncodeData), the message to send
+ * Helper function to create a `CanFrame`
+ * msg: (id, `EncodeData`), the message to send
  */
 fn create_frame(msg: (&u32, &EncodeData)) -> Option<CanFrame> {
-    let id: Id = if !msg.1.is_ext {
+    let id: Id = if msg.1.is_ext {
+        socketcan::ExtendedId::new(msg.1.id)
+            .unwrap_or_else(|| panic!("Invalid extended ID: {}", msg.1.id))
+            .into()
+    } else {
         socketcan::StandardId::new(
             msg.1
                 .id
@@ -437,10 +440,6 @@ fn create_frame(msg: (&u32, &EncodeData)) -> Option<CanFrame> {
         )
         .unwrap_or_else(|| panic!("Invalid standard ID: {}", msg.1.id))
         .into()
-    } else {
-        socketcan::ExtendedId::new(msg.1.id)
-            .unwrap_or_else(|| panic!("Invalid extended ID: {}", msg.1.id))
-            .into()
     };
 
     CanFrame::new(id, &msg.1.value)
@@ -448,20 +447,18 @@ fn create_frame(msg: (&u32, &EncodeData)) -> Option<CanFrame> {
 
 /**
  * Helper function to dump the current bidir commands into CAN
- * send_map: A map of CAN IDs and data to be sent to the car
- * can_push_send: A channel to send CAN messages
+ * `send_map`: A map of CAN IDs and data to be sent to the car
+ * `can_push_send`: A channel to send CAN messages
  */
 async fn release_commands(send_map: &HashMap<u32, EncodeData>, can_push_send: &Sender<CanFrame>) {
-    for msg in send_map.iter() {
+    for msg in send_map {
         // let id = u32::from_str_radix((msg.1.1).trim_start_matches("0x"), 16).expect("Invalid CAN ID!");
 
         match create_frame(msg) {
-            Some(packet) => {
-                match can_push_send.send(packet).await {
-                    Ok(_) => (),
-                    Err(err) => warn!("Error sending can command to can manager {}", err),
-                };
-            }
+            Some(packet) => match can_push_send.send(packet).await {
+                Ok(()) => (),
+                Err(err) => warn!("Error sending can command to can manager {}", err),
+            },
             None => {
                 warn!("Packet is too long: {}", msg.1);
             }
@@ -472,11 +469,11 @@ async fn release_commands(send_map: &HashMap<u32, EncodeData>, can_push_send: &S
 /**
  * Helper function to parse a MQTT message to create the corresponding bidir update
  * msg: The raw MQTT message
- * send_map: The map of CAN IDs and encodable data to modify
+ * `send_map`: The map of CAN IDs and encodable data to modify
  *
  * Will return the can frame to send immediately, if available
  */
-async fn parse_msg(msg: Publish, send_map: &mut HashMap<u32, EncodeData>) -> Option<CanFrame> {
+fn parse_msg(msg: &Publish, send_map: &mut HashMap<u32, EncodeData>) -> Option<CanFrame> {
     let buf = match command_data::CommandData::parse_from_bytes(&msg.payload) {
         Ok(buf) => buf,
         Err(err) => {
@@ -488,46 +485,39 @@ async fn parse_msg(msg: Publish, send_map: &mut HashMap<u32, EncodeData>) -> Opt
         warn!("Could not parse topic, topic: {:?}", msg.topic);
         return None;
     };
-    let key = match topic.split('/').next_back() {
-        Some(key) => key.to_owned(),
-        None => {
-            warn!("Could not parse the key value in {}", topic);
-            return None;
-        }
+    let key = if let Some(key) = topic.split('/').next_back() {
+        key.to_owned()
+    } else {
+        warn!("Could not parse the key value in {}", topic);
+        return None;
     };
 
     debug!("Parsing message with key {}", key);
 
-    match ENCODE_FUNCTION_MAP.get(&key) {
-        Some(func) => {
-            let ret = func.0(buf.data);
-            if func.1 == BidirMode::Broadcast {
-                send_map.insert(ret.id, ret);
-                None
-            } else {
-                match create_frame((&ret.id, &ret)) {
-                    Some(packet) => Some(packet),
-                    None => {
-                        warn!("Oneshot encodable packet is too long: {}", ret.id);
-                        None
-                    }
-                }
-            }
-        }
-        None => {
-            let id: u32 = 0x7FF;
-            let cnt = match send_map.get(&id) {
-                Some(item) => item.value.first().unwrap_or(&0) + 1,
-                None => 1,
-            };
-            let ret = EncodeData {
-                value: vec![cnt],
-                id,
-                is_ext: false,
-            };
+    if let Some(func) = ENCODE_FUNCTION_MAP.get(&key) {
+        let ret = func.0(buf.data);
+        if func.1 == BidirMode::Broadcast {
             send_map.insert(ret.id, ret);
             None
+        } else if let Some(packet) = create_frame((&ret.id, &ret)) {
+            Some(packet)
+        } else {
+            warn!("Oneshot encodable packet is too long: {}", ret.id);
+            None
         }
+    } else {
+        let id: u32 = 0x7FF;
+        let cnt = match send_map.get(&id) {
+            Some(item) => item.value.first().unwrap_or(&0) + 1,
+            None => 1,
+        };
+        let ret = EncodeData {
+            value: vec![cnt],
+            id,
+            is_ext: false,
+        };
+        send_map.insert(ret.id, ret);
+        None
     }
 }
 
