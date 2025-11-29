@@ -64,7 +64,7 @@ fn main() {
                 name: format!("{node_name}/{}/{}", message.message_name(), signal.name()),
                 unit: signal.unit().clone(),
                 values: vec![idex],
-                doc: "",
+                doc: "".to_string(),
                 desc: None
             });
         }
