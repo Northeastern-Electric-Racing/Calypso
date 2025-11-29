@@ -43,6 +43,8 @@ fn main() {
 
             points.push(CANPoint {
                 size: signal.signal_size as usize,
+                name: None,
+                c_type: None,
                 parse: None,
                 signed: Some(signal.min < 0.0),
                 endianness: map_endianness(*signal.byte_order()),
@@ -62,6 +64,8 @@ fn main() {
                 name: format!("{node_name}/{}/{}", message.message_name(), signal.name()),
                 unit: signal.unit().clone(),
                 values: vec![idex],
+                doc: "",
+                desc: None
             });
         }
 
