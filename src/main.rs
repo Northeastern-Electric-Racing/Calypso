@@ -1,3 +1,6 @@
+#![warn(clippy::pedantic)]
+#![allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+
 use std::{
     collections::HashMap,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -17,10 +20,10 @@ use clap::Parser;
 use futures_util::StreamExt;
 use protobuf::Message;
 use rumqttc::v5::{
-    mqttbytes::v5::{Packet, Publish},
     AsyncClient, Event, EventLoop, MqttOptions,
+    mqttbytes::v5::{Packet, Publish},
 };
-use socketcan::{tokio::CanSocket, CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions};
+use socketcan::{CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions, tokio::CanSocket};
 use tokio::{
     signal,
     sync::mpsc::{self, Receiver, Sender},
@@ -28,7 +31,7 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 use tracing::{debug, info, level_filters::LevelFilter, trace, warn};
-use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
 const ENCODER_MAP_SUB: &str = "Calypso/Bidir/Command/#";
 
@@ -202,9 +205,9 @@ async fn pub_frame(
         payload.values = data.value.clone();
         payload.time_us = timestamp;
 
-        if let Some(alt_send) = alt_send {
-            if let Some(clients) = &data.clients {
-                if clients.first().unwrap_or(&0) == &1882 {
+        if let Some(alt_send) = alt_send
+            && let Some(clients) = &data.clients
+                && clients.first().unwrap_or(&0) == &1882 {
                     match alt_send.send((data.topic.clone(), payload.clone())).await {
                         Ok(()) => trace!("Sent a CAN message to SIREN manager alt"),
                         Err(err) => {
@@ -212,8 +215,6 @@ async fn pub_frame(
                         }
                     }
                 }
-            }
-        }
 
         match main_send.send((data.topic.clone(), payload)).await {
             Ok(()) => trace!("Sent a CAN message to SIREN manager"),

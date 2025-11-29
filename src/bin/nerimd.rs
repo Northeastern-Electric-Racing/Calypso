@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use clap::{Parser, Subcommand, ValueEnum};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use socketcan::{tokio::CanSocket, CanDataFrame, CanId, EmbeddedFrame, SocketOptions, StandardId};
+use socketcan::{CanDataFrame, CanId, EmbeddedFrame, SocketOptions, StandardId, tokio::CanSocket};
 use tracing::{debug, error};
 
 #[derive(Parser)]

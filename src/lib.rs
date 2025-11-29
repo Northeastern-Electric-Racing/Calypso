@@ -1,3 +1,6 @@
+#![warn(clippy::pedantic)]
+#![allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+
 pub mod data;
 pub mod decode_data;
 pub mod encode_data;

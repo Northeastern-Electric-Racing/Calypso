@@ -13,7 +13,7 @@ use rumqttc::v5::{AsyncClient, EventLoop, MqttOptions};
 use tokio::{signal, sync::mpsc};
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
 use tracing::{debug, info, level_filters::LevelFilter, warn};
-use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
 /**
 * The command line arguments for the simulator.
