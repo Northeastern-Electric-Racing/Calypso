@@ -17,8 +17,6 @@ pub struct SimComponent {
     pub name: String,
     pub last_update: Instant,
     pub desc: String,
-    pub key: Option<String>, // the "FirstOff" and "SecondOff" thing
-    pub is_ext: Option<bool>,
     pub sim_freq: f32,
 }
 
@@ -148,7 +146,7 @@ impl SimValue {
         }
     }
 
-    /**  
+    /**
      * Get a random offset within the range of `sim_inc_min` and `sim_inc_max` with a random sign.
      * Use `sim_inc_min` as the offset if `sim_inc_min` == `sim_inc_max`.
      * Rounds the offset to the nearest `sim_inc_min` if `sim_inc_min` is not 0.

@@ -114,14 +114,6 @@ pub fn gen_simulate_netfield(
         quote! { Some(vec_points_in_topic) }
     };
     let token_unit = &field.unit;
-    let token_key = msg
-        .key
-        .as_ref()
-        .map_or_else(|| quote! { None }, |e| quote! { Some(#e.to_string()) });
-    let token_isext = msg
-        .is_ext
-        .as_ref()
-        .map_or_else(|| quote! { None }, |e| quote! { Some(#e) });
 
     quote! {
         #token_pts_val_buffer
@@ -134,8 +126,6 @@ pub fn gen_simulate_netfield(
             name: #token_name.to_string(),
             last_update: Instant::now(),
             desc: #token_desc.to_string(),
-            key: #token_key,
-            is_ext: #token_isext,
             sim_freq: #token_simfreq,
         };
         __all_sim_components.push(__new_component);
