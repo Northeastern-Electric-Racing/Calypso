@@ -1,11 +1,11 @@
 extern crate calypso_cangen;
 extern crate proc_macro;
 extern crate serde_json;
+use calypso_cangen::CANGEN_SPEC_PATH;
 use calypso_cangen::can_gen_decode::gen_decoder_fn;
 use calypso_cangen::can_gen_encode::gen_encoder_fn;
 use calypso_cangen::can_gen_simulate::gen_simulate_canmsg;
 use calypso_cangen::can_types::{BidirMode, OdysseyMsg};
-use calypso_cangen::CANGEN_SPEC_PATH;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
 use quote::{format_ident, quote};
