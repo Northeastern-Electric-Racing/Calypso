@@ -3,11 +3,24 @@ use quote::quote;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-// TODO: Implement MsgType
-
 // Classes to represent levels of the CAN hierarchy
 // For more specific descriptions, refer to the README
 // in Embedded-Base/cangen
+
+// See https://nerdocs.atlassian.net/wiki/spaces/NER/pages/1162018881/Odyssey+Car+Configuration+Framework
+#[derive(Serialize, Deserialize)]
+#[serde(untagged, expecting = "CANMsg")]
+pub enum OdysseyMsg {
+    Can(CANMsg),
+    Meta(MetaMsg), // to be indexed, but not recieved - MUST GO LAST
+}
+
+#[derive(JsonSchema, Deserialize, Serialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct MetaMsg {
+    pub desc: String,
+    pub fields: Vec<DumbNetField>,
+}
 
 /**
  *  Class representing a CAN message
@@ -38,13 +51,19 @@ pub enum BidirMode {
     Oneshot,
     #[default]
     Broadcast,
+    Configuration,
 }
 
 impl quote::ToTokens for BidirMode {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let path: TokenStream = match self {
-            BidirMode::Broadcast => quote!(::calypso_cangen::can_types::BidirMode::Broadcast),
+            BidirMode::Broadcast => {
+                quote!(::calypso_cangen::can_types::BidirMode::Broadcast)
+            }
             BidirMode::Oneshot => quote!(::calypso_cangen::can_types::BidirMode::Oneshot),
+            BidirMode::Configuration => {
+                panic!("Configuration sendable message is not available yet")
+            }
         };
         tokens.extend(path);
     }
@@ -61,6 +80,18 @@ pub struct NetField {
     pub doc: String,
     pub desc: Option<String>,
     pub values: Vec<usize>,
+}
+
+/**
+ *  Class representing a `NetField` of a Meta message (there are no values)
+ */
+#[derive(JsonSchema, Deserialize, Serialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct DumbNetField {
+    pub name: String,
+    pub unit: String,
+    pub doc: String,
+    pub desc: Option<String>,
 }
 
 /**

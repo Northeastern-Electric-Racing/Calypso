@@ -1,11 +1,11 @@
 extern crate calypso_cangen;
 extern crate proc_macro;
 extern crate serde_json;
+use calypso_cangen::CANGEN_SPEC_PATH;
 use calypso_cangen::can_gen_decode::gen_decoder_fn;
 use calypso_cangen::can_gen_encode::gen_encoder_fn;
 use calypso_cangen::can_gen_simulate::gen_simulate_canmsg;
-use calypso_cangen::can_types::{BidirMode, CANMsg};
-use calypso_cangen::CANGEN_SPEC_PATH;
+use calypso_cangen::can_types::{BidirMode, OdysseyMsg};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
 use quote::{format_ident, quote};
@@ -71,9 +71,13 @@ fn gen_decode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
     };
 
     // Iterate through CANMsg list and generate decode mapping for each
-    let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
+    let mut _msgs: Vec<OdysseyMsg> = serde_json::from_str(&_contents).unwrap();
     let _entries: ProcMacro2TokenStream = _msgs
         .iter_mut()
+        .filter_map(|_m| match _m {
+            OdysseyMsg::Can(can) => Some(can),
+            OdysseyMsg::Meta(_) => None,
+        })
         .map(|_m| {
             let _id_int = u32::from_str_radix(_m.id.clone().trim_start_matches("0x"), 16).unwrap();
             let _fn_name = format_ident!(
@@ -105,9 +109,13 @@ fn gen_decode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
     };
 
     // Iterate through CANMsg list and generate decode function for each
-    let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
+    let mut _msgs: Vec<OdysseyMsg> = serde_json::from_str(&_contents).unwrap();
     let _fns = _msgs
         .iter_mut()
+        .filter_map(|_m| match _m {
+            OdysseyMsg::Can(can) => Some(can),
+            OdysseyMsg::Meta(_) => None,
+        })
         .map(gen_decoder_fn)
         .collect::<Vec<ProcMacro2TokenStream>>()
         .into_iter()
@@ -187,9 +195,13 @@ fn gen_encode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
     };
 
     // Iterate through CANMsg list and generate encode function for each
-    let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
+    let mut _msgs: Vec<OdysseyMsg> = serde_json::from_str(&_contents).unwrap();
     let _fns = _msgs
         .iter_mut()
+        .filter_map(|e| match e {
+            OdysseyMsg::Can(group) => Some(group),
+            _ => None,
+        })
         .map(gen_encoder_fn)
         .collect::<Vec<ProcMacro2TokenStream>>()
         .into_iter()
@@ -216,9 +228,13 @@ fn gen_encode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
     };
 
     // Only create encode mappings for CANMsgs with key field
-    let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
+    let mut _msgs: Vec<OdysseyMsg> = serde_json::from_str(&_contents).unwrap();
     let _entries = _msgs
         .iter_mut()
+        .filter_map(|_m| match _m {
+            OdysseyMsg::Can(send_canmsg) => Some(send_canmsg),
+            OdysseyMsg::Meta(_) => None,
+        })
         .map(|_m| {
             if let Some(key) = &_m.key {
                 let fn_name = format_ident!(
@@ -253,9 +269,13 @@ fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2Toke
         }
     };
 
-    let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
+    let mut _msgs: Vec<OdysseyMsg> = serde_json::from_str(&_contents).unwrap();
     let _entries = _msgs
         .iter_mut()
+        .filter_map(|_m| match _m {
+            OdysseyMsg::Can(send_canmsg) => Some(send_canmsg),
+            OdysseyMsg::Meta(_) => None,
+        })
         .map(|_m| {
             if let Some(key) = &_m.key {
                 // dont add to list if oneshot
@@ -333,15 +353,19 @@ fn gen_simulate_file_to_objects(_path: PathBuf) -> ProcMacro2TokenStream {
         }
     };
 
-    let mut _msgs: Vec<CANMsg> = serde_json::from_str(&_contents).unwrap();
-    let _objects: ProcMacro2TokenStream = _msgs.iter_mut().map(|_m| gen_simulate_canmsg(_m)).fold(
-        ProcMacro2TokenStream::new(),
-        |mut acc, ts| {
+    let mut _msgs: Vec<OdysseyMsg> = serde_json::from_str(&_contents).unwrap();
+    let _objects: ProcMacro2TokenStream = _msgs
+        .iter_mut()
+        .filter_map(|_m| match _m {
+            OdysseyMsg::Can(canmsg) => Some(canmsg),
+            OdysseyMsg::Meta(_) => None, // meta messages cannot be simulated yet
+        })
+        .map(|_m| gen_simulate_canmsg(_m))
+        .fold(ProcMacro2TokenStream::new(), |mut acc, ts| {
             acc.extend(ts);
             acc.extend(ProcMacro2TokenStream::from_str("\n"));
             acc
-        },
-    );
+        });
 
     quote! {
         #_objects
