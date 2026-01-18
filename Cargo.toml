@@ -18,7 +18,7 @@ cast_sign_loss = "allow"
 members = ["libs/daedalus", "libs/calypso-cangen"]
 
 [workspace.dependencies]
-proc-macro2 = "1.0.104"
+proc-macro2 = "1.0.105"
 quote = "1.0.43"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
