@@ -51,6 +51,11 @@ pub enum CANSpecError {
     PointLittleEndianBitCount(usize, String, usize),
 
     #[error(
+        "Message {0} contains both little endian points and points that are not byte aligned.  This is disallowed."
+    )]
+    MessageLittleEndianAndMisaligned(String),
+
+    #[error(
         "Point {0} of Message {1} specifies endianness and is {2} bits. Points with <=8 bits should not specify endianness."
     )]
     PointSmallSizeEndianness(usize, String, usize),
@@ -188,6 +193,9 @@ fn validate_msg(
                 ));
             }
 
+            let mut _is_byte_aligned = true; // if the whole message has only byte aligned points
+            let mut _contains_little_endians = false; // if the message contains any little endian points
+
             for (_i, _point) in _msg.points.iter().enumerate() {
                 _bit_count += _point.size;
                 let _parse = !matches!(_point.parse, Some(false));
@@ -206,18 +214,16 @@ fn validate_msg(
                         ));
                     }
                 }
-
-                // Check signed point bit count
-                if let Some(true) = _point.signed
-                    && _point.size != 8
-                    && _point.size != 16
-                    && _point.size != 32
-                {
-                    _errors.push(CANSpecError::PointSignedBitCount(
-                        _i,
-                        _msg.id.clone(),
-                        _point.size,
-                    ));
+                // if we arent byte aligned
+                if _point.size != 8 && _point.size != 16 && _point.size != 32 {
+                    _is_byte_aligned = false;
+                    if let Some(true) = _point.signed {
+                        _errors.push(CANSpecError::PointSignedBitCount(
+                            _i,
+                            _msg.id.clone(),
+                            _point.size,
+                        ));
+                    }
                 }
 
                 // Check that point size is at most 32 bits
@@ -240,16 +246,15 @@ fn validate_msg(
                         ));
                     }
                     // Check little endian point bit count
-                    else if s == "little"
-                        && _point.size != 8
-                        && _point.size != 16
-                        && _point.size != 32
-                    {
-                        _errors.push(CANSpecError::PointLittleEndianBitCount(
-                            _i,
-                            _msg.id.clone(),
-                            _point.size,
-                        ));
+                    else if s == "little" {
+                        _contains_little_endians = true;
+                        if _point.size != 8 && _point.size != 16 && _point.size != 32 {
+                            _errors.push(CANSpecError::PointLittleEndianBitCount(
+                                _i,
+                                _msg.id.clone(),
+                                _point.size,
+                            ));
+                        }
                     }
                 }
 
@@ -312,13 +317,21 @@ fn validate_msg(
                 _topics.insert(_field.name.clone());
             }
 
-            // Check message total alignment
-            if !_bit_count.is_multiple_of(8) {
+            // Check message total alfloatfloatignment
+            if !_bit_count.is_multiple_of(8) || _bit_count == 0 {
                 _errors.push(CANSpecError::MessageTotalByteMisalignment(
                     _msg.id.clone(),
                     _msg.desc.clone(),
                     _bit_count,
                 ));
+            }
+
+            // check the little endian cannot be mixed with non-byte-alignment
+            if !_is_byte_aligned && _contains_little_endians {
+                // _errors.push(CANSpecError::MessageLittleEndianAndMisaligned(
+                //     _msg.desc.clone(),
+                // ))
+                // TODO re-enable this check with the extra condition that this message has C GEN intended for it
             }
         }
         OdysseyMsg::Meta(_msg) => {
