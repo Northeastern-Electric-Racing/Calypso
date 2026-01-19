@@ -9,6 +9,6 @@ quote = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-thiserror = "2.0.17"
+thiserror = "2.0.18"
 schemars = { workspace = true }
 serde_path_to_error = "0.1.20"
