@@ -445,7 +445,8 @@ async fn write_ctrl_or_set(
         .await
     {
         Ok(()) => {
-            debug!("Successfully sent message {}", index);
+            debug!("Successfully sent message {}, waiting", index);
+            tokio::time::sleep(Duration::from_secs(1)).await;
             if let Some(idex) = read_back_index {
                 read_or_readback(socket, idex).await;
             } else {
@@ -484,8 +485,9 @@ async fn read_or_readback(socket: &mut CanSocket, index: u8) {
                         if frame.data()[0] == 0xFF {
                             println!("Data failure: {:?}", ErrorMessage::try_from_primitive(frame.data()[1]).expect("Invalid error code!"));
                         } else {
-                            println!("Data returned: {:?}", frame.data());
+                            println!("Data returned: {:02X?}", frame.data());
                         }
+                        break;
                     },
                     socketcan::Id::Extended(_) => (),
                 }
