@@ -134,8 +134,8 @@ pub async fn imd_poll_main(
     // pre-compute starter ID
     let id: Id = socketcan::StandardId::new(0x22).expect("Tf").into();
 
-    // we cannot exceed 10Hz.  This missed tick burst will guarrantee we send at the next available moment after 100ms has passed
-    let mut min_time: tokio::time::Interval = tokio::time::interval(Duration::from_millis(100));
+    // we cannot exceed 10Hz.  Some extra leeway here. This missed tick burst will guarrantee we send at the next available moment after 100ms has passed
+    let mut min_time: tokio::time::Interval = tokio::time::interval(Duration::from_millis(120));
 
     let mut lock: bool = false;
     let mut curr_idex: usize = 0;
