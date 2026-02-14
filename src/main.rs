@@ -7,6 +7,7 @@ use calypso::{
     data::{DecodeData, EncodeData},
     decode_data::DECODE_FUNCTION_MAP,
     encode_data::{ENCODABLE_KEY_LIST, ENCODE_FUNCTION_MAP},
+    imd_poll::imd_poll_main,
     proto::{
         command_data,
         serverdata::{self, ServerData},
@@ -20,7 +21,9 @@ use rumqttc::v5::{
     AsyncClient, Event, EventLoop, MqttOptions,
     mqttbytes::v5::{Packet, Publish},
 };
-use socketcan::{CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions, tokio::CanSocket};
+use socketcan::{
+    CanDataFrame, CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions, tokio::CanSocket,
+};
 use tokio::{
     signal,
     sync::mpsc::{self, Receiver, Sender},
@@ -58,9 +61,13 @@ struct CalypsoArgs {
     )]
     socketcan_iface: String,
 
-    // Whether to enable MQTT multi-client
+    /// Whether to enable MQTT multi-client
     #[arg(short = 'm', long, env = "CALYPSO_MQTT_MULTICLIENT")]
     mqtt_multiclient: bool,
+
+    /// Whether to enable cyclic IMD polling
+    #[arg(long, env = "CALYPSO_CAN_ENCODE")]
+    imd: bool,
 }
 
 /**
@@ -75,6 +82,7 @@ async fn can_manager(
     can_interface: String,
     main_send_to_siren: Sender<(String, ServerData)>,
     alt_send_to_siren: Option<Sender<(String, ServerData)>>,
+    send_raw_can: Option<Sender<CanDataFrame>>,
     mut send_over_can: Receiver<CanFrame>,
 ) {
     let mut socket = CanSocket::open(&can_interface).expect("Failed to open CAN socket!");
@@ -99,7 +107,7 @@ async fn can_manager(
             },
             Some(frame) = socket.next() => {
                 frame_cnt += 1;
-                pub_frame(frame, &main_send_to_siren, alt_send_to_siren.as_ref(), &mut mqtt_cnt).await;
+                pub_frame(frame, &main_send_to_siren, alt_send_to_siren.as_ref(), send_raw_can.as_ref(), &mut mqtt_cnt, ).await;
             }
             Some(frame) = send_over_can.recv() => {
                 match socket.write_frame(frame).await {
@@ -130,6 +138,7 @@ async fn pub_frame(
     frame: Result<CanFrame, socketcan::Error>,
     main_send: &Sender<(String, ServerData)>,
     alt_send: Option<&Sender<(String, ServerData)>>,
+    raw_send: Option<&Sender<CanDataFrame>>,
     cnt: &mut u64,
 ) {
     let decoded_data = match frame {
@@ -140,6 +149,14 @@ async fn pub_frame(
                 socketcan::Id::Standard(std) => std.as_raw().into(),
                 socketcan::Id::Extended(ext) => ext.as_raw(),
             };
+            if let Some(send) = raw_send {
+                // for now just hardcode IMD
+                if id == 0x23
+                    && let Err(err) = send.send(data_frame).await
+                {
+                    warn!("Could not send IMD code the response! {}", err);
+                }
+            }
             trace!("RECVED message with ID: {:#01x}", id);
             match DECODE_FUNCTION_MAP.get(&id) {
                 Some(func) => func(data),
@@ -555,6 +572,14 @@ async fn main() {
     // a channel to give protobuf messages to be sent out over MQTT
     let (decoder_send, decoder_recv) = mpsc::channel::<(String, ServerData)>(500);
 
+    // a channel to hijack certain raw CAN messages, right now only used for IMD
+    let (can_decoder_send, can_decoder_recv) = if cli.imd {
+        let ch = mpsc::channel::<CanDataFrame>(50);
+        (Some(ch.0), Some(ch.1))
+    } else {
+        (None, None)
+    };
+
     // a channel to give CAN messages back out (car commands)
     let (can_push_send, can_push_recv) = mpsc::channel::<CanFrame>(100);
 
@@ -581,26 +606,37 @@ async fn main() {
         task_tracker.spawn(can_manager(
             token.clone(),
             cli.socketcan_iface,
-            decoder_send,
+            decoder_send.clone(),
             Some(decoder_send_alt),
+            can_decoder_send,
             can_push_recv,
         ));
     } else {
         task_tracker.spawn(can_manager(
             token.clone(),
             cli.socketcan_iface,
-            decoder_send,
+            decoder_send.clone(),
             None,
+            can_decoder_send,
             can_push_recv,
         ));
     }
 
     task_tracker.spawn(bidir_manager(
         token.clone(),
-        can_push_send,
+        can_push_send.clone(),
         siren_recv_recv,
         cli.encode,
     ));
+
+    if let Some(can_decoder_recv) = can_decoder_recv {
+        task_tracker.spawn(imd_poll_main(
+            token.clone(),
+            can_push_send,
+            can_decoder_recv,
+            decoder_send,
+        ));
+    }
 
     task_tracker.close();
 
