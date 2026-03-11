@@ -8,6 +8,7 @@ use calypso::{
     encode_data::{ENCODABLE_KEY_LIST, ENCODE_FUNCTION_MAP},
     imd_poll::imd_poll_main,
     proto::{command_data, serverdata::ServerData},
+    udp::eth_manager,
 };
 use calypso_cangen::can_types::BidirMode;
 use clap::Parser;
@@ -55,6 +56,10 @@ struct CalypsoArgs {
         default_value = "vcan0"
     )]
     socketcan_iface: String,
+
+    /// The `UDP` interface IP
+    #[arg(short = 'i', long, env = "CALYPSO_ETH_IP", default_value = "224.0.0.1")]
+    eth_ip: Option<String>,
 
     /// Whether to enable MQTT multi-client
     #[arg(short = 'm', long, env = "CALYPSO_MQTT_MULTICLIENT")]
@@ -403,6 +408,10 @@ async fn main() {
             can_decoder_send,
             can_push_recv,
         ));
+    }
+
+    if let Some(eth_ip) = cli.eth_ip {
+        task_tracker.spawn(eth_manager(token.clone(), eth_ip, decoder_send.clone()));
     }
 
     task_tracker.spawn(bidir_manager(
