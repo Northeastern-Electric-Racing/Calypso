@@ -7,3 +7,6 @@ pub mod simulatable_message;
 pub mod simulate_data;
 
 pub mod imd_poll;
+
+pub mod can;
+pub mod udp;

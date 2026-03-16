@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package firmwaredata.v1;
+
+message FirmwareData {
+  string unit = 1;
+  // time since unix epoch in MICROSECONDS
+  uint64 time_us = 2;
+  repeated float values = 3;
+  string topic = 4;
+}

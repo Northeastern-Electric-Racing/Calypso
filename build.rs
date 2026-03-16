@@ -13,6 +13,7 @@ fn main() {
         // Inputs must reside in some of include paths.
         .input("src/proto/command_data.proto")
         .input("src/proto/serverdata.proto")
+        .input("src/proto/firmware_data.proto")
         // Specify output directory relative to Cargo output directory.
         .out_dir("src/proto")
         .run_from_script();

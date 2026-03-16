@@ -20,8 +20,7 @@ logs/
 
 # protobuf
 mod.rs
-command_data.rs
-serverdata.rs
+/src/proto/*.rs
 
-# private testing 
+# private testing
 /privatetest/
