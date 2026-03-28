@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 use std::process::exit;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -37,6 +38,14 @@ struct CalypsoArgs {
     /// Enable ONLY topics matching regex patterns (whitelist mode)
     #[arg(long = "enable-topic", conflicts_with = "disabled_topics")]
     enabled_topics: Vec<String>,
+
+    /// Inject specific topics with custom intervals in ms (e.g. "BMS/Pack/Voltage=30000")
+    #[arg(
+        long = "topic",
+        conflicts_with_all = ["disabled_topics", "enabled_topics"],
+        value_name = "TOPIC=INTERVAL_MS"
+    )]
+    inject_topics: Vec<String>,
 }
 
 /**
@@ -48,33 +57,62 @@ enum FilterMode {
     Blacklist(Vec<Regex>),
     /// Publish only topics matching patterns (whitelist)
     Whitelist(Vec<Regex>),
+    /// Inject specific topics with custom per-topic intervals
+    Inject(HashMap<String, f32>),
     /// No filtering, publish all topics
     Disabled,
+}
+
+/**
+ * Parse a `TOPIC=INTERVAL_MS` string into (`topic_name`, `interval_ms`)
+ */
+fn parse_inject_topic(input: &str) -> Result<(String, f32), String> {
+    let (name, interval_str) = input
+        .rsplit_once('=')
+        .ok_or_else(|| format!("Invalid format '{input}': expected TOPIC=INTERVAL_MS"))?;
+    if name.is_empty() {
+        return Err(format!("Empty topic name in '{input}'"));
+    }
+    let interval: f32 = interval_str
+        .parse()
+        .map_err(|e| format!("Invalid interval '{interval_str}' for topic '{name}': {e}"))?;
+    if interval <= 0.0 {
+        return Err(format!(
+            "Interval must be positive for topic '{name}', got {interval}"
+        ));
+    }
+    Ok((name.to_string(), interval))
 }
 
 /**
  * Build `FilterMode` from CLI arguments, validating regex patterns
  * Returns Err(String) if any regex pattern is invalid
  */
+fn compile_regex_patterns(patterns: &[String]) -> Result<Vec<Regex>, String> {
+    patterns
+        .iter()
+        .map(|pattern| {
+            Regex::new(pattern).map_err(|e| format!("Invalid regex pattern '{pattern}': {e}"))
+        })
+        .collect()
+}
+
 fn build_filter_mode(args: &CalypsoArgs) -> Result<FilterMode, String> {
-    if !args.disabled_topics.is_empty() {
-        let mut regexes = Vec::new();
-        for pattern in &args.disabled_topics {
-            match Regex::new(pattern) {
-                Ok(re) => regexes.push(re),
-                Err(e) => return Err(format!("Invalid regex pattern '{pattern}': {e}")),
-            }
+    if !args.inject_topics.is_empty() {
+        let mut topic_intervals = HashMap::new();
+        for entry in &args.inject_topics {
+            let (name, interval) = parse_inject_topic(entry)?;
+            topic_intervals.insert(name, interval);
         }
-        Ok(FilterMode::Blacklist(regexes))
+        Ok(FilterMode::Inject(topic_intervals))
+    } else if !args.disabled_topics.is_empty() {
+        Ok(FilterMode::Blacklist(compile_regex_patterns(
+            &args.disabled_topics,
+        )?))
     } else if !args.enabled_topics.is_empty() {
-        let mut regexes = Vec::new();
-        for pattern in &args.enabled_topics {
-            match Regex::new(pattern) {
-                Ok(re) => regexes.push(re),
-                Err(e) => return Err(format!("Invalid regex pattern '{pattern}': {e}")),
-            }
-        }
-        Ok(FilterMode::Whitelist(regexes))
+        Ok(FilterMode::Whitelist(compile_regex_patterns(
+            &args.enabled_topics,
+        )?))
     } else {
         Ok(FilterMode::Disabled)
     }
@@ -86,32 +124,60 @@ fn build_filter_mode(args: &CalypsoArgs) -> Result<FilterMode, String> {
 fn should_publish(topic: &str, filter: &FilterMode) -> bool {
     match filter {
         FilterMode::Disabled => true,
-        FilterMode::Blacklist(patterns) => {
-            // Publish if topic does NOT match any blacklist pattern
-            !patterns.iter().any(|re| re.is_match(topic))
+        FilterMode::Blacklist(patterns) => !patterns.iter().any(|re| re.is_match(topic)),
+        FilterMode::Whitelist(patterns) => patterns.iter().any(|re| re.is_match(topic)),
+        FilterMode::Inject(topics) => topics.contains_key(topic),
+    }
+}
+
+/**
+ * Build the final list of components to simulate based on the filter mode.
+ * In Inject mode, validates topic names exist and overrides `sim_freq`.
+ */
+fn build_components(filter_mode: &FilterMode) -> Result<Vec<SimComponent>, String> {
+    let all_components = create_simulated_components();
+
+    match filter_mode {
+        FilterMode::Inject(topic_intervals) => {
+            let components: Vec<SimComponent> = all_components
+                .into_iter()
+                .filter_map(|mut component| {
+                    topic_intervals.get(&component.name).map(|&interval| {
+                        component.sim_freq = interval;
+                        component
+                    })
+                })
+                .collect();
+
+            // Validate all requested topics were found
+            let found: HashSet<&str> =
+                components.iter().map(|c| c.name.as_str()).collect();
+            let missing: Vec<&str> = topic_intervals
+                .keys()
+                .filter(|t| !found.contains(t.as_str()))
+                .map(String::as_str)
+                .collect();
+            if !missing.is_empty() {
+                return Err(format!("Unknown topic(s): {}", missing.join(", ")));
+            }
+
+            for c in &components {
+                info!("Injecting '{}' at {}ms interval", c.name, c.sim_freq);
+            }
+            Ok(components)
         }
-        FilterMode::Whitelist(patterns) => {
-            // Publish if topic matches at least one whitelist pattern
-            patterns.iter().any(|re| re.is_match(topic))
-        }
+        _ => Ok(all_components
+            .into_iter()
+            .filter(|component| should_publish(&component.name, filter_mode))
+            .collect()),
     }
 }
 
 async fn simulate_out(
     token: CancellationToken,
     pub_channel: mpsc::Sender<(String, ServerData)>,
-    filter_mode: FilterMode,
+    mut simulated_components: Vec<SimComponent>,
 ) {
-    // todo: a way to turn individual components on and off
-    // note: components are pre-initialized within the function
-    let all_components = create_simulated_components();
-
-    // Filter components based on filter mode
-    let mut simulated_components: Vec<SimComponent> = all_components
-        .into_iter()
-        .filter(|component| should_publish(&component.name, &filter_mode))
-        .collect();
-
     if simulated_components.is_empty() {
         info!("No components to simulate after filtering. All topics filtered out.");
     } else {
@@ -241,9 +307,16 @@ async fn main() {
     let task_tracker = TaskTracker::new();
     let token = CancellationToken::new();
 
-    // Build filter mode and validate regex patterns
+    // Build filter mode, validate patterns, and create filtered components
     let filter_mode = match build_filter_mode(&cli) {
         Ok(mode) => mode,
+        Err(err) => {
+            eprintln!("Error: {err}");
+            exit(1);
+        }
+    };
+    let components = match build_components(&filter_mode) {
+        Ok(c) => c,
         Err(err) => {
             eprintln!("Error: {err}");
             exit(1);
@@ -284,7 +357,7 @@ async fn main() {
 
     task_tracker.spawn(publish_stub(token.clone(), client, decoder_recv));
 
-    task_tracker.spawn(simulate_out(token.clone(), decoder_send, filter_mode));
+    task_tracker.spawn(simulate_out(token.clone(), decoder_send, components));
 
     task_tracker.close();
 
