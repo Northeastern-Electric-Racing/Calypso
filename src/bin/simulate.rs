@@ -150,8 +150,7 @@ fn build_components(filter_mode: &FilterMode) -> Result<Vec<SimComponent>, Strin
                 .collect();
 
             // Validate all requested topics were found
-            let found: HashSet<&str> =
-                components.iter().map(|c| c.name.as_str()).collect();
+            let found: HashSet<&str> = components.iter().map(|c| c.name.as_str()).collect();
             let missing: Vec<&str> = topic_intervals
                 .keys()
                 .filter(|t| !found.contains(t.as_str()))
