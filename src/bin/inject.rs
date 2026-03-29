@@ -16,9 +16,9 @@ use crossterm::{
 use futures_util::StreamExt;
 use protobuf::Message;
 use rand::prelude::*;
+use rumqttc::v5::mqttbytes::QoS;
 use rumqttc::v5::{AsyncClient, MqttOptions};
 use tokio_util::sync::CancellationToken;
-use tracing::debug;
 
 #[derive(Parser, Debug)]
 #[command(version, about = "Interactive MQTT injection tool for manual testing")]
@@ -39,6 +39,15 @@ struct InjectArgs {
     /// List all available topics and exit
     #[arg(long)]
     list_topics: bool,
+}
+
+/// RAII guard that restores the terminal from raw mode on drop.
+struct RawModeGuard;
+
+impl Drop for RawModeGuard {
+    fn drop(&mut self) {
+        let _ = disable_raw_mode();
+    }
 }
 
 fn parse_key_map(content: &str) -> Result<HashMap<char, String>, String> {
@@ -101,6 +110,7 @@ fn randomize_component(component: &mut SimComponent) {
                 if *round {
                     *current = current.round();
                 }
+                *current = current.clamp(*min, *max);
             }
             SimValue::Discrete {
                 options, current, ..
@@ -115,13 +125,45 @@ fn randomize_component(component: &mut SimComponent) {
 async fn poll_stub(token: CancellationToken, mut eventloop: rumqttc::v5::EventLoop) {
     loop {
         tokio::select! {
-            () = token.cancelled() => {
-                debug!("MQTT poll shutting down");
-                break;
-            },
+            () = token.cancelled() => break,
             _ = eventloop.poll() => {}
         }
     }
+}
+
+/// Randomize a component's value and publish it to the MQTT broker.
+async fn publish_injection(ch: char, component: &mut SimComponent, client: &AsyncClient) {
+    randomize_component(component);
+    let data = component.get_decode_data();
+
+    let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
+    let mut payload = serverdata::ServerData::new();
+    payload.unit.clone_from(&data.unit);
+    payload.values.clone_from(&data.value);
+    payload.time_us = timestamp;
+
+    let values_str: Vec<String> = data.value.iter().map(|v| format!("{v:.2}")).collect();
+
+    let Ok(bytes) = payload.write_to_bytes() else {
+        return;
+    };
+    match client
+        .publish(&data.topic, QoS::AtMostOnce, false, bytes)
+        .await
+    {
+        Ok(()) => {
+            print!(
+                "[{ch}] {} = [{}] {}\r\n",
+                data.topic,
+                values_str.join(", "),
+                data.unit
+            );
+        }
+        Err(e) => {
+            print!("[{ch}] publish error: {e}\r\n");
+        }
+    }
+    io::stdout().flush().ok();
 }
 
 #[tokio::main]
@@ -197,6 +239,7 @@ async fn main() {
     println!();
 
     enable_raw_mode().expect("Failed to enable raw mode");
+    let guard = RawModeGuard;
 
     let mut reader = EventStream::new();
 
@@ -207,52 +250,14 @@ async fn main() {
                 modifiers,
                 kind: KeyEventKind::Press,
                 ..
-            }))) if modifiers.contains(KeyModifiers::CONTROL) => {
-                break;
-            }
+            }))) if modifiers.contains(KeyModifiers::CONTROL) => break,
             Some(Ok(Event::Key(KeyEvent {
                 code: KeyCode::Char(ch),
                 kind: KeyEventKind::Press,
                 ..
             }))) => {
                 if let Some(component) = components.get_mut(&ch) {
-                    randomize_component(component);
-                    let data = component.get_decode_data();
-
-                    let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
-                    let mut payload = serverdata::ServerData::new();
-                    payload.unit.clone_from(&data.unit);
-                    payload.values.clone_from(&data.value);
-                    payload.time_us = timestamp;
-
-                    let topic = &data.topic;
-                    let values_str: Vec<String> =
-                        data.value.iter().map(|v| format!("{v:.2}")).collect();
-
-                    if let Ok(bytes) = payload.write_to_bytes() {
-                        match client
-                            .publish(
-                                topic.as_str(),
-                                rumqttc::v5::mqttbytes::QoS::AtMostOnce,
-                                false,
-                                bytes,
-                            )
-                            .await
-                        {
-                            Ok(()) => {
-                                print!(
-                                    "[{ch}] {topic} = [{}] {}\r\n",
-                                    values_str.join(", "),
-                                    data.unit
-                                );
-                                io::stdout().flush().ok();
-                            }
-                            Err(e) => {
-                                print!("[{ch}] publish error: {e}\r\n");
-                                io::stdout().flush().ok();
-                            }
-                        }
-                    }
+                    publish_injection(ch, component, &client).await;
                 }
             }
             Some(Err(_)) | None => break,
@@ -260,7 +265,7 @@ async fn main() {
         }
     }
 
-    disable_raw_mode().expect("Failed to disable raw mode");
+    drop(guard);
     println!("\r\nShutting down...");
 
     token.cancel();
