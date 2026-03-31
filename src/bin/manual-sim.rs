@@ -217,7 +217,10 @@ async fn main() {
 
     let client_id = format!(
         "Calypso-Inject-{}",
-        UNIX_EPOCH.elapsed().expect("Time went backwards").as_millis()
+        UNIX_EPOCH
+            .elapsed()
+            .expect("Time went backwards")
+            .as_millis()
     );
     let mut mqtt_opts = MqttOptions::new(client_id, host, port);
     mqtt_opts
