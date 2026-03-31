@@ -51,19 +51,19 @@ Now view calypso interpret the can message and broadcast it on `mqttui`
      "s": "BMS/Pack/SOC"
    }
    ```
-   See `inject_keymap.example.json` for a starting point. Use `--list-topics` to see all available topics:
+   See `manual_sim_keymap.example.json` for a starting point. Use `--list-topics` to see all available topics:
    ```
    cargo run --bin manual-sim -- --list-topics
    ```
 
 2. Run with your keymap:
    ```
-   cargo run --bin manual-sim -- --key-map inject_keymap.example.json
+   cargo run --bin manual-sim -- --key-map manual_sim_keymap.example.json
    ```
 
 3. Press the mapped keys to inject values. Press `Ctrl+C` to exit.
 
-To use a remote broker: `cargo run --bin manual-sim -- --key-map inject_keymap.example.json -u 10.0.0.5:1883`
+To use a remote broker: `cargo run --bin manual-sim -- --key-map manual_sim_keymap.example.json -u 10.0.0.5:1883`
 
 ### Simulation Mode
 #### Run from build
