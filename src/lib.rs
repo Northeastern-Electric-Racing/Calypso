@@ -6,5 +6,4 @@ pub mod proto;
 pub mod simulatable_message;
 pub mod simulate_data;
 
-#[cfg(target_os = "linux")]
 pub mod imd_poll;
