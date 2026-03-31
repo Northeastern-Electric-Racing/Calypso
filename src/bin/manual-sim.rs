@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::io::{self, Write};
 use std::process::exit;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, UNIX_EPOCH};
 
 use calypso::{
     proto::serverdata,
@@ -24,7 +24,7 @@ use tokio_util::sync::CancellationToken;
 #[command(version, about = "Interactive MQTT injection tool for manual testing")]
 struct InjectArgs {
     /// Path to JSON key mapping file (maps single characters to MQTT topics)
-    #[arg(short = 'k', long)]
+    #[arg(short = 'k', long, required_unless_present = "list_topics")]
     key_map: Option<String>,
 
     /// Siren broker host:port
@@ -41,8 +41,15 @@ struct InjectArgs {
     list_topics: bool,
 }
 
-/// RAII guard that restores the terminal from raw mode on drop.
+/// RAII guard that enables raw mode on creation and restores on drop.
 struct RawModeGuard;
+
+impl RawModeGuard {
+    fn new() -> io::Result<Self> {
+        enable_raw_mode()?;
+        Ok(Self)
+    }
+}
 
 impl Drop for RawModeGuard {
     fn drop(&mut self) {
@@ -55,12 +62,12 @@ fn parse_key_map(content: &str) -> Result<HashMap<char, String>, String> {
         serde_json::from_str(content).map_err(|e| format!("Invalid key map JSON: {e}"))?;
     let mut map = HashMap::new();
     for (key_str, topic) in raw {
-        if key_str.len() != 1 {
+        let mut chars = key_str.chars();
+        let (Some(ch), None) = (chars.next(), chars.next()) else {
             return Err(format!(
                 "Key mapping keys must be single characters, got: '{key_str}'"
             ));
-        }
-        let ch = key_str.chars().next().unwrap();
+        };
         map.insert(ch, topic);
     }
     Ok(map)
@@ -115,8 +122,7 @@ fn randomize_component(component: &mut SimComponent) {
             SimValue::Discrete {
                 options, current, ..
             } => {
-                let idx = rng.random_range(0..options.len());
-                *current = options[idx].0;
+                *current = options.choose(&mut rng).unwrap().0;
             }
         }
     }
@@ -126,7 +132,12 @@ async fn poll_stub(token: CancellationToken, mut eventloop: rumqttc::v5::EventLo
     loop {
         tokio::select! {
             () = token.cancelled() => break,
-            _ = eventloop.poll() => {}
+            result = eventloop.poll() => {
+                if let Err(e) = result {
+                    print!("MQTT connection error: {e}\r\n");
+                    io::stdout().flush().ok();
+                }
+            }
         }
     }
 }
@@ -142,9 +153,9 @@ async fn publish_injection(ch: char, component: &mut SimComponent, client: &Asyn
     payload.values.clone_from(&data.value);
     payload.time_us = timestamp;
 
-    let values_str: Vec<String> = data.value.iter().map(|v| format!("{v:.2}")).collect();
-
     let Ok(bytes) = payload.write_to_bytes() else {
+        print!("[{ch}] serialization error for {}\r\n", data.topic);
+        io::stdout().flush().ok();
         return;
     };
     match client
@@ -152,6 +163,7 @@ async fn publish_injection(ch: char, component: &mut SimComponent, client: &Asyn
         .await
     {
         Ok(()) => {
+            let values_str: Vec<String> = data.value.iter().map(|v| format!("{v:.2}")).collect();
             print!(
                 "[{ch}] {} = [{}] {}\r\n",
                 data.topic,
@@ -179,10 +191,8 @@ async fn main() {
         return;
     }
 
-    let key_map_path = cli.key_map.unwrap_or_else(|| {
-        eprintln!("--key-map is required (use --list-topics to see available topics)");
-        exit(1);
-    });
+    // clap enforces key_map is present when list_topics is absent
+    let key_map_path = cli.key_map.unwrap();
 
     let key_map = load_key_map(&key_map_path);
     if key_map.is_empty() {
@@ -196,7 +206,6 @@ async fn main() {
         exit(1);
     }
 
-    // Set up MQTT connection
     let (host, port_str) = cli.siren_host_url.split_once(':').unwrap_or_else(|| {
         eprintln!("Invalid siren URL format, expected host:port");
         exit(1);
@@ -208,10 +217,7 @@ async fn main() {
 
     let client_id = format!(
         "Calypso-Inject-{}",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("Time went backwards")
-            .as_millis()
+        UNIX_EPOCH.elapsed().expect("Time went backwards").as_millis()
     );
     let mut mqtt_opts = MqttOptions::new(client_id, host, port);
     mqtt_opts
@@ -225,21 +231,18 @@ async fn main() {
     let token = CancellationToken::new();
     let poll_handle = tokio::spawn(poll_stub(token.clone(), eventloop));
 
-    // Print key mappings
     println!("Key Mappings:");
     let mut sorted_keys: Vec<_> = components.keys().copied().collect();
     sorted_keys.sort_unstable();
     for key in &sorted_keys {
-        if let Some(component) = components.get(key) {
-            println!("  {key} → {} [{}]", component.name, component.unit);
-        }
+        let component = &components[key];
+        println!("  {key} → {} [{}]", component.name, component.unit);
     }
     println!();
     println!("Press mapped keys to inject. Ctrl+C to exit.");
     println!();
 
-    enable_raw_mode().expect("Failed to enable raw mode");
-    let guard = RawModeGuard;
+    let guard = RawModeGuard::new().expect("Failed to enable raw mode");
 
     let mut reader = EventStream::new();
 
@@ -260,7 +263,12 @@ async fn main() {
                     publish_injection(ch, component, &client).await;
                 }
             }
-            Some(Err(_)) | None => break,
+            Some(Err(e)) => {
+                print!("Terminal event error: {e}\r\n");
+                io::stdout().flush().ok();
+                break;
+            }
+            None => break,
             _ => {}
         }
     }
