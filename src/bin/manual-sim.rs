@@ -60,17 +60,17 @@ impl Drop for RawModeGuard {
 fn parse_key_map(content: &str) -> Result<HashMap<char, String>, String> {
     let raw: HashMap<String, String> =
         serde_json::from_str(content).map_err(|e| format!("Invalid key map JSON: {e}"))?;
-    let mut map = HashMap::new();
-    for (key_str, topic) in raw {
-        let mut chars = key_str.chars();
-        let (Some(ch), None) = (chars.next(), chars.next()) else {
-            return Err(format!(
-                "Key mapping keys must be single characters, got: '{key_str}'"
-            ));
-        };
-        map.insert(ch, topic);
-    }
-    Ok(map)
+    raw.into_iter()
+        .map(|(key_str, topic)| {
+            let mut chars = key_str.chars();
+            match (chars.next(), chars.next()) {
+                (Some(ch), None) => Ok((ch, topic)),
+                _ => Err(format!(
+                    "Key mapping keys must be single characters, got: '{key_str}'"
+                )),
+            }
+        })
+        .collect()
 }
 
 fn load_key_map(path: &str) -> HashMap<char, String> {
