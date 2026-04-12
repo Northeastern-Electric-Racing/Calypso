@@ -39,6 +39,32 @@ Ex. `cansend vcan0 702#01010101FFFFFFFF`
 Now view calypso interpret the can message and broadcast it on `mqttui`
 
 
+### Manual Simulation (Interactive Injection)
+
+`manual-sim` lets you inject MQTT messages by pressing keys in the terminal. Each key maps to a topic and publishes a randomized value within that topic's defined range.
+
+1. Create a keymap JSON file mapping single characters to topics:
+   ```json
+   {
+     "v": "BMS/Pack/Voltage",
+     "c": "BMS/Pack/Current",
+     "s": "BMS/Pack/SOC"
+   }
+   ```
+   See `manual_sim_keymap.example.json` for a starting point. Use `--list-topics` to see all available topics:
+   ```
+   cargo run --bin manual-sim -- --list-topics
+   ```
+
+2. Run with your keymap:
+   ```
+   cargo run --bin manual-sim -- --key-map manual_sim_keymap.example.json
+   ```
+
+3. Press the mapped keys to inject values. Press `Ctrl+C` to exit.
+
+To use a remote broker: `cargo run --bin manual-sim -- --key-map manual_sim_keymap.example.json -u 10.0.0.5:1883`
+
 ### Simulation Mode
 #### Run from build
 - Same setup as above, then use the entry point `simulate` instead of `main`

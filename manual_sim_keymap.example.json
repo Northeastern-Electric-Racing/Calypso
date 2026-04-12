@@ -1,0 +1,6 @@
+{
+  "v": "BMS/Pack/Voltage",
+  "c": "BMS/Pack/Current",
+  "s": "BMS/Pack/SOC",
+  "h": "BMS/Pack/Health"
+}
