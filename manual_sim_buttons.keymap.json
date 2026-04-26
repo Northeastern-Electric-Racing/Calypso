@@ -1,0 +1,30 @@
+{
+  "h": {
+    "desc": "home / esc (button_id=0 + Cerberus home_mode pulse)",
+    "sequence": [
+      {"topic": "Wheel/Buttons/button_id", "value": 0},
+      {"topic": "VCU/CarState/home_mode", "value": 1, "delay_ms": 10},
+      {"topic": "VCU/CarState/home_mode", "value": 0, "delay_ms": 100}
+    ]
+  },
+  "l": {"topic": "Wheel/Buttons/button_id", "value": 1, "desc": "left"},
+  "2": {"topic": "Wheel/Buttons/button_id", "value": 2, "desc": "launch control toggle"},
+  "j": {"topic": "Wheel/Buttons/button_id", "value": 3, "desc": "up (regen)"},
+  "k": {"topic": "Wheel/Buttons/button_id", "value": 4, "desc": "down (regen)"},
+  "e": {"topic": "Wheel/Buttons/button_id", "value": 5, "desc": "enter"},
+  "r": {"topic": "Wheel/Buttons/button_id", "value": 6, "desc": "right"},
+  "7": {"topic": "Wheel/Buttons/button_id", "value": 7, "desc": "traction control toggle"},
+  "8": {"topic": "Wheel/Buttons/button_id", "value": 8, "desc": "up (torque)"},
+  "9": {"topic": "Wheel/Buttons/button_id", "value": 9, "desc": "down (torque)"},
+  "m": {"topic": "VCU/CarState/home_mode", "value": 0, "desc": "clear home_mode"},
+  "n": {"topic": "VCU/CarState/nero_index", "value": 0, "desc": "reset nero_index"},
+  "d": {"topic": "VCU/CarState/not_in_reverse", "value": 1, "desc": "forward drive"},
+  "w": {
+    "desc": "force menu wrap (nero_index=0 + home_mode pulse)",
+    "sequence": [
+      {"topic": "VCU/CarState/nero_index", "value": 0},
+      {"topic": "VCU/CarState/home_mode", "value": 1, "delay_ms": 10},
+      {"topic": "VCU/CarState/home_mode", "value": 0, "delay_ms": 50}
+    ]
+  }
+}

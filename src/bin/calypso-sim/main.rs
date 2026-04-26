@@ -1,0 +1,155 @@
+mod cli;
+mod keymap;
+mod modes;
+mod publish;
+mod raw_mode;
+mod registry;
+mod warnings;
+
+use std::process::exit;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use calypso::simulate_data::create_simulated_components;
+use clap::Parser;
+use rumqttc::v5::{AsyncClient, EventLoop, MqttOptions};
+use tokio_util::sync::CancellationToken;
+use tracing::level_filters::LevelFilter;
+use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
+
+use cli::Cli;
+use registry::TopicRegistry;
+
+#[tokio::main]
+async fn main() {
+    let cli = Cli::parse();
+
+    init_tracing();
+
+    if cli.list_topics {
+        list_topics_and_exit();
+    }
+
+    if let Err(err) = cli.validate() {
+        eprintln!("Error: {err}");
+        exit(2);
+    }
+
+    warnings::print_unsimulated();
+
+    let (client, eventloop) = match connect_mqtt(&cli.siren_host_url) {
+        Ok(pair) => pair,
+        Err(err) => {
+            eprintln!("Error: {err}");
+            exit(1);
+        }
+    };
+
+    let token = CancellationToken::new();
+    let poll_handle = tokio::spawn(modes::poll_eventloop(token.clone(), eventloop));
+
+    let registry = TopicRegistry::shared();
+
+    let auto_handle = if cli.run_autonomous() {
+        Some(tokio::spawn(modes::autonomous::run(
+            token.clone(),
+            client.clone(),
+            registry.clone(),
+            cli.enable_topic.clone(),
+            cli.disable_topic.clone(),
+        )))
+    } else {
+        None
+    };
+
+    let foreground = run_foreground(&cli, &token, &client, &registry).await;
+
+    token.cancel();
+    if let Some(h) = auto_handle {
+        let _ = h.await;
+    }
+    let _ = poll_handle.await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    if let Err(err) = foreground {
+        eprintln!("Error: {err}");
+        exit(1);
+    }
+}
+
+async fn run_foreground(
+    cli: &Cli,
+    token: &CancellationToken,
+    client: &AsyncClient,
+    registry: &registry::SharedRegistry,
+) -> Result<(), String> {
+    if cli.stream {
+        modes::stream::run(token.clone(), client.clone(), registry.clone()).await
+    } else if let Some(script_path) = &cli.script {
+        let key_map_path = cli
+            .key_map
+            .as_deref()
+            .ok_or_else(|| "--script requires --key-map".to_string())?;
+        modes::auto_script::run(client.clone(), key_map_path, script_path, registry.clone()).await
+    } else if let Some(key_map_path) = &cli.key_map {
+        modes::interactive::run(token.clone(), client.clone(), key_map_path, registry.clone()).await
+    } else {
+        // Pure --auto: wait for SIGINT, then exit.
+        match tokio::signal::ctrl_c().await {
+            Ok(()) => Ok(()),
+            Err(e) => Err(format!("ctrl+c handler failed: {e}")),
+        }
+    }
+}
+
+fn init_tracing() {
+    // Tracing always writes to stderr so stdout stays clean for stream mode
+    // and keymap-mode logs.
+    let subscriber = tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
+        .with_thread_ids(false)
+        .with_ansi(true)
+        .with_span_events(FmtSpan::CLOSE)
+        .with_env_filter(
+            EnvFilter::builder()
+                .with_default_directive(LevelFilter::INFO.into())
+                .from_env_lossy(),
+        )
+        .finish();
+    let _ = tracing::subscriber::set_global_default(subscriber);
+}
+
+fn list_topics_and_exit() -> ! {
+    let components = create_simulated_components();
+    println!("Available topics ({} total):", components.len());
+    for c in &components {
+        println!("  {} [{}]", c.name, c.unit);
+    }
+    exit(0);
+}
+
+fn connect_mqtt(host_url: &str) -> Result<(AsyncClient, EventLoop), String> {
+    let (host, port_str) = host_url
+        .split_once(':')
+        .ok_or_else(|| format!("Invalid broker URL '{host_url}', expected host:port"))?;
+    let port: u16 = port_str
+        .parse()
+        .map_err(|_| format!("Invalid port: {port_str}"))?;
+
+    let client_id = format!(
+        "Calypso-Sim-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0)
+    );
+
+    let mut mqtt_opts = MqttOptions::new(client_id, host, port);
+    mqtt_opts
+        .set_keep_alive(Duration::from_secs(20))
+        .set_clean_start(true)
+        .set_connection_timeout(3)
+        .set_session_expiry_interval(Some(u32::MAX))
+        .set_topic_alias_max(Some(600));
+    let (client, eventloop) = AsyncClient::new(mqtt_opts, 600);
+    Ok((client, eventloop))
+}

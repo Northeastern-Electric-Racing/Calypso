@@ -8,7 +8,7 @@ use std::time::Instant;
 /**
  * A `SimComponent` roughly corresponds to a `NetField` with properties inherited from `CANMsg`
  */
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SimComponent {
     pub id: String,
     pub points: Vec<SimPoint>,
@@ -23,7 +23,7 @@ pub struct SimComponent {
 /**
  * Corresponds to `CANPoint` of a `NetField`
  */
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SimPoint {
     pub size: usize,
     pub parse: Option<bool>,
@@ -37,7 +37,7 @@ pub struct SimPoint {
 /**
  * The mode of simulation and the real-time value of the `CANPoint`
  */
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum SimValue {
     /// Ranged mode where the value is within a min/max range and can include increment parameters.
     Range {
