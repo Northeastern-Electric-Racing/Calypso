@@ -1,15 +1,20 @@
 mod cli;
+mod data;
 mod keymap;
 mod modes;
+#[allow(clippy::all, clippy::pedantic)]
+mod proto;
 mod publish;
 mod raw_mode;
 mod registry;
+mod simulatable_message;
+mod simulate_data;
 mod warnings;
 
 use std::process::exit;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use calypso::simulate_data::create_simulated_components;
+use crate::simulate_data::create_simulated_components;
 use clap::Parser;
 use rumqttc::v5::{AsyncClient, EventLoop, MqttOptions};
 use tokio_util::sync::CancellationToken;
@@ -29,20 +34,12 @@ async fn main() {
         list_topics_and_exit();
     }
 
-    if let Err(err) = cli.validate() {
-        eprintln!("Error: {err}");
-        exit(2);
-    }
-
     warnings::print_unsimulated();
 
-    let (client, eventloop) = match connect_mqtt(&cli.siren_host_url) {
-        Ok(pair) => pair,
-        Err(err) => {
-            eprintln!("Error: {err}");
-            exit(1);
-        }
-    };
+    let (client, eventloop) = connect_mqtt(&cli.siren_host_url).unwrap_or_else(|err| {
+        eprintln!("Error: {err}");
+        exit(1);
+    });
 
     let token = CancellationToken::new();
     let poll_handle = tokio::spawn(modes::poll_eventloop(token.clone(), eventloop));
@@ -64,10 +61,14 @@ async fn main() {
     let foreground = run_foreground(&cli, &token, &client, &registry).await;
 
     token.cancel();
-    if let Some(h) = auto_handle {
-        let _ = h.await;
+    if let Some(h) = auto_handle
+        && let Err(e) = h.await
+    {
+        tracing::error!("autonomous task panicked: {e}");
     }
-    let _ = poll_handle.await;
+    if let Err(e) = poll_handle.await {
+        tracing::error!("MQTT eventloop task panicked: {e}");
+    }
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     if let Err(err) = foreground {
@@ -91,13 +92,18 @@ async fn run_foreground(
             .ok_or_else(|| "--script requires --key-map".to_string())?;
         modes::auto_script::run(client.clone(), key_map_path, script_path, registry.clone()).await
     } else if let Some(key_map_path) = &cli.key_map {
-        modes::interactive::run(token.clone(), client.clone(), key_map_path, registry.clone()).await
+        modes::interactive::run(
+            token.clone(),
+            client.clone(),
+            key_map_path,
+            registry.clone(),
+        )
+        .await
     } else {
         // Pure --auto: wait for SIGINT, then exit.
-        match tokio::signal::ctrl_c().await {
-            Ok(()) => Ok(()),
-            Err(e) => Err(format!("ctrl+c handler failed: {e}")),
-        }
+        tokio::signal::ctrl_c()
+            .await
+            .map_err(|e| format!("ctrl+c handler failed: {e}"))
     }
 }
 
@@ -106,8 +112,6 @@ fn init_tracing() {
     // and keymap-mode logs.
     let subscriber = tracing_subscriber::fmt()
         .with_writer(std::io::stderr)
-        .with_thread_ids(false)
-        .with_ansi(true)
         .with_span_events(FmtSpan::CLOSE)
         .with_env_filter(
             EnvFilter::builder()
@@ -150,6 +154,5 @@ fn connect_mqtt(host_url: &str) -> Result<(AsyncClient, EventLoop), String> {
         .set_connection_timeout(3)
         .set_session_expiry_interval(Some(u32::MAX))
         .set_topic_alias_max(Some(600));
-    let (client, eventloop) = AsyncClient::new(mqtt_opts, 600);
-    Ok((client, eventloop))
+    Ok(AsyncClient::new(mqtt_opts, 600))
 }

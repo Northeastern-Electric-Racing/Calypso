@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use rumqttc::v5::AsyncClient;
 
-use crate::keymap::{KeyMode, build_topic_states, load_key_map, publish_injection};
-use crate::registry::{Owner, SharedRegistry};
+use crate::keymap::{claim_keymap_topics, load_states, publish_injection};
+use crate::registry::SharedRegistry;
 
 /// Run a scripted sequence from a text file, then return. Each line is
 /// either a single character (fires that key from the keymap) or
@@ -14,30 +14,8 @@ pub async fn run(
     script_path: &str,
     registry: SharedRegistry,
 ) -> Result<(), String> {
-    let key_map = load_key_map(key_map_path)?;
-    if key_map.is_empty() {
-        return Err("Key map is empty".into());
-    }
-    let mut states = build_topic_states(key_map);
-    if states.is_empty() {
-        return Err("No matching topics found for any key mapping".into());
-    }
-
-    {
-        let mut reg = registry.write().await;
-        for state in states.values() {
-            match &state.mode {
-                KeyMode::Sequence { steps } => {
-                    for step in steps {
-                        reg.set(&step.topic, Owner::Stream);
-                    }
-                }
-                _ => {
-                    reg.set(&state.topic, Owner::Stream);
-                }
-            }
-        }
-    }
+    let mut states = load_states(key_map_path)?;
+    claim_keymap_topics(&states, &registry).await;
 
     let script = std::fs::read_to_string(script_path)
         .map_err(|e| format!("Failed to read script '{script_path}': {e}"))?;

@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::time::Duration;
 
-use calypso::simulatable_message::{SimComponent, SimValue};
-use calypso::simulate_data::create_simulated_components;
+use crate::simulatable_message::{SimComponent, SimValue};
+use crate::simulate_data::create_simulated_components;
 use rand::prelude::*;
 use rumqttc::v5::AsyncClient;
 use serde::Deserialize;
@@ -11,6 +11,38 @@ use serde::Deserialize;
 use crate::publish::publish_data;
 use crate::raw_mode::line_end;
 use crate::registry::{Owner, SharedRegistry};
+
+/// Build the topic states from a keymap file, erroring if the resulting set
+/// is empty.
+pub fn load_states(key_map_path: &str) -> Result<HashMap<char, KeyState>, String> {
+    let key_map = load_key_map(key_map_path)?;
+    if key_map.is_empty() {
+        return Err("Key map is empty".into());
+    }
+    let states = build_topic_states(key_map);
+    if states.is_empty() {
+        return Err("No matching topics found for any key mapping".into());
+    }
+    Ok(states)
+}
+
+/// Claim every topic referenced by `states` for `Owner::Stream` so the
+/// autonomous heartbeat (if running) yields ownership.
+pub async fn claim_keymap_topics(states: &HashMap<char, KeyState>, registry: &SharedRegistry) {
+    let mut reg = registry.write().await;
+    for state in states.values() {
+        match &state.mode {
+            KeyMode::Sequence { steps } => {
+                for step in steps {
+                    reg.set(&step.topic, Owner::Stream);
+                }
+            }
+            _ => {
+                reg.set(&state.topic, Owner::Stream);
+            }
+        }
+    }
+}
 
 /// A keymap entry. Four forms:
 /// * Bare topic string — random value within sim bounds (requires the topic
@@ -257,22 +289,19 @@ pub fn randomize_component(component: &mut SimComponent) {
 
 /// Advance an increment-mode state and return the value to publish *before*
 /// the advance (so the first press emits the starting value).
-pub fn advance_increment(
-    current: &mut f32,
-    step: f32,
-    min: Option<f32>,
-    max: Option<f32>,
-) -> f32 {
+pub fn advance_increment(current: &mut f32, step: f32, min: Option<f32>, max: Option<f32>) -> f32 {
     let emitted = *current;
     let mut next = *current + step;
     if let Some(hi) = max
-        && next > hi {
-            next = min.unwrap_or(hi);
-        }
+        && next > hi
+    {
+        next = min.unwrap_or(hi);
+    }
     if let Some(lo) = min
-        && next < lo {
-            next = max.unwrap_or(lo);
-        }
+        && next < lo
+    {
+        next = max.unwrap_or(lo);
+    }
     *current = next;
     emitted
 }
@@ -287,9 +316,7 @@ fn resolve_single_publish(state: &mut KeyState) -> Option<(String, String, Vec<f
             let data = component.get_decode_data();
             Some((data.topic, data.unit, data.value))
         }
-        KeyMode::Pinned { value } => {
-            Some((state.topic.clone(), state.unit.clone(), vec![*value]))
-        }
+        KeyMode::Pinned { value } => Some((state.topic.clone(), state.unit.clone(), vec![*value])),
         KeyMode::Increment {
             current,
             step,

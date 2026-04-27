@@ -33,11 +33,12 @@ fn collect_unsimulated_topics() -> Vec<String> {
         };
         for msg in msgs {
             if let OdysseyMsg::Can(canmsg) = msg
-                && canmsg.sim_freq.is_none() {
-                    for field in canmsg.fields {
-                        out.push(field.name);
-                    }
+                && canmsg.sim_freq.is_none()
+            {
+                for field in canmsg.fields {
+                    out.push(field.name);
                 }
+            }
         }
     }
     out.sort();

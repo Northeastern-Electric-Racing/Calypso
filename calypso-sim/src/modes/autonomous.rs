@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use calypso::simulate_data::create_simulated_components;
+use crate::simulate_data::create_simulated_components;
 use regex::Regex;
 use rumqttc::v5::AsyncClient;
 use tokio_util::sync::CancellationToken;

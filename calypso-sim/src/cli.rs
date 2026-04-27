@@ -12,7 +12,7 @@ pub struct Cli {
         short = 'u',
         long,
         env = "CALYPSO_SIREN_HOST_URL",
-        default_value = "127.0.0.1:1883"
+        default_value = "localhost:1883"
     )]
     pub siren_host_url: String,
 
@@ -49,7 +49,7 @@ pub struct Cli {
     /// Accept JSON-RPC 2.0 commands on stdin (one per line); replies on
     /// stdout. Tracing/diagnostics go to stderr. `--auto` defaults OFF in
     /// this mode unless explicitly set.
-    #[arg(long)]
+    #[arg(long, conflicts_with = "key_map")]
     pub stream: bool,
 }
 
@@ -58,25 +58,7 @@ impl Cli {
     /// True if `--auto` was set, OR no other input mode was chosen and
     /// `--list-topics` wasn't requested.
     pub fn run_autonomous(&self) -> bool {
-        if self.auto {
-            return true;
-        }
         let any_other_mode = self.stream || self.key_map.is_some() || self.script.is_some();
-        !any_other_mode && !self.list_topics
-    }
-
-    /// Validate mutually-exclusive mode flags.
-    pub fn validate(&self) -> Result<(), String> {
-        let mut chosen = 0;
-        if self.stream {
-            chosen += 1;
-        }
-        if self.key_map.is_some() {
-            chosen += 1;
-        }
-        if chosen > 1 {
-            return Err("--stream and --key-map are mutually exclusive".into());
-        }
-        Ok(())
+        self.auto || (!any_other_mode && !self.list_topics)
     }
 }

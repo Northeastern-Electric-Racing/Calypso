@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use calypso::simulate_data::create_simulated_components;
+use crate::simulate_data::create_simulated_components;
 use rumqttc::v5::AsyncClient;
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -75,13 +75,14 @@ async fn handle_line(line: &str, client: &AsyncClient, registry: &SharedRegistry
     };
 
     if let Some(ver) = &request.jsonrpc
-        && ver != "2.0" {
-            return error(
-                request.id.unwrap_or(Value::Null),
-                ERR_INVALID_REQUEST,
-                "jsonrpc version must be \"2.0\"",
-            );
-        }
+        && ver != "2.0"
+    {
+        return error(
+            request.id.unwrap_or(Value::Null),
+            ERR_INVALID_REQUEST,
+            "jsonrpc version must be \"2.0\"",
+        );
+    }
     let id = request.id.unwrap_or(Value::Null);
 
     match request.method.as_str() {
@@ -92,7 +93,11 @@ async fn handle_line(line: &str, client: &AsyncClient, registry: &SharedRegistry
         "status" => handle_status(id, registry).await,
         "list_topics" => handle_list_topics(id),
         "ping" => ok(id, json!({"ok": true})),
-        other => error(id, ERR_METHOD_NOT_FOUND, &format!("Unknown method: {other}")),
+        other => error(
+            id,
+            ERR_METHOD_NOT_FOUND,
+            &format!("Unknown method: {other}"),
+        ),
     }
 }
 
@@ -119,14 +124,17 @@ async fn handle_publish(
     };
 
     let values = match (p.value, p.values) {
+        (Some(_), Some(_)) => {
+            return error(
+                id,
+                ERR_INVALID_PARAMS,
+                "specify `value` or `values`, not both",
+            );
+        }
         (Some(v), None) => vec![v],
         (None, Some(vs)) if !vs.is_empty() => vs,
-        (Some(_), Some(_)) => {
-            return error(id, ERR_INVALID_PARAMS, "specify `value` or `values`, not both");
-        }
-        (None, None | Some(_)) => {
-            return error(id, ERR_INVALID_PARAMS, "missing `value` or `values`");
-        }
+        // None/None or None/Some(empty)
+        _ => return error(id, ERR_INVALID_PARAMS, "missing `value` or `values`"),
     };
 
     if registry.read().await.owner(&p.topic) == Owner::Silenced {

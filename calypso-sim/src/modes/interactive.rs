@@ -7,11 +7,11 @@ use rumqttc::v5::AsyncClient;
 use tokio_util::sync::CancellationToken;
 
 use crate::keymap::{
-    KeyMode, KeyState, build_topic_states, desc_suffix, load_key_map, publish_injection,
+    KeyMode, KeyState, claim_keymap_topics, desc_suffix, load_states, publish_injection,
     unit_suffix,
 };
 use crate::raw_mode::{RawModeGuard, line_end};
-use crate::registry::{Owner, SharedRegistry};
+use crate::registry::SharedRegistry;
 
 /// Run the interactive raw-mode keypress loop. Claims every keymap topic in
 /// the registry so the autonomous loop (if running) yields ownership.
@@ -21,15 +21,7 @@ pub async fn run(
     key_map_path: &str,
     registry: SharedRegistry,
 ) -> Result<(), String> {
-    let key_map = load_key_map(key_map_path)?;
-    if key_map.is_empty() {
-        return Err("Key map is empty".into());
-    }
-    let mut states = build_topic_states(key_map);
-    if states.is_empty() {
-        return Err("No matching topics found for any key mapping".into());
-    }
-
+    let mut states = load_states(key_map_path)?;
     claim_keymap_topics(&states, &registry).await;
 
     print_listing(&states);
@@ -74,22 +66,6 @@ pub async fn run(
     println!();
     println!("Shutting down...");
     Ok(())
-}
-
-async fn claim_keymap_topics(states: &HashMap<char, KeyState>, registry: &SharedRegistry) {
-    let mut reg = registry.write().await;
-    for state in states.values() {
-        match &state.mode {
-            KeyMode::Sequence { steps } => {
-                for step in steps {
-                    reg.set(&step.topic, Owner::Stream);
-                }
-            }
-            _ => {
-                reg.set(&state.topic, Owner::Stream);
-            }
-        }
-    }
 }
 
 fn print_listing(states: &HashMap<char, KeyState>) {
