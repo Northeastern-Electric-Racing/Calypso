@@ -15,14 +15,13 @@ use calypso::{
 };
 use calypso_cangen::can_types::BidirMode;
 use clap::Parser;
-use futures_util::StreamExt;
 use protobuf::Message;
 use rumqttc::v5::{
     AsyncClient, Event, EventLoop, MqttOptions,
     mqttbytes::v5::{Packet, Publish},
 };
 use socketcan::{
-    CanDataFrame, CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions, tokio::CanSocket,
+    CanDataFrame, CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions, tokio::CanSocket
 };
 use tokio::{
     signal,
@@ -85,13 +84,19 @@ async fn can_manager(
     send_raw_can: Option<Sender<CanDataFrame>>,
     mut send_over_can: Receiver<CanFrame>,
 ) {
-    let mut socket = CanSocket::open(&can_interface).expect("Failed to open CAN socket!");
+    let socket = CanSocket::open(&can_interface).expect("Failed to open CAN socket!");
     socket
         .set_error_filter_accept_all()
         .expect("Failed to set error mask on CAN socket!");
     socket
         .set_recv_own_msgs(true) // important to get the bidir messages
         .expect("Cant recv own messages");
+    socket
+        .set_recv_timestamp(true)
+        .expect("Cant set fetch timestamp");
+    // socket
+    //     .set_timestamping(SOF_TIMESTAMPING_RX_SOFTWARE | SOF_TIMESTAMPING_SOFTWARE)
+    //     .expect("Cant set timestamping flags");
 
     // the rate variables, updated every 3 seconds to the user
     let mut mqtt_cnt: u64 = 0u64;
@@ -105,9 +110,16 @@ async fn can_manager(
                 debug!("Shutting down CAN reader!");
                 break;
             },
-            Some(frame) = socket.next() => {
-                frame_cnt += 1;
-                pub_frame(frame, &main_send_to_siren, alt_send_to_siren.as_ref(), send_raw_can.as_ref(), &mut mqtt_cnt, ).await;
+            res = socket.read_frame_with_timestamp() => {
+                match res {
+                    Ok((frame, time)) => {
+                        frame_cnt += 1;
+                        pub_frame(frame, time, &main_send_to_siren, alt_send_to_siren.as_ref(), send_raw_can.as_ref(), &mut mqtt_cnt, ).await;
+                    },
+                    Err(err) => {
+                        warn!("CAN Socket failure: {}", err);
+                    }
+                }
             }
             Some(frame) = send_over_can.recv() => {
                 match socket.write_frame(frame).await {
@@ -135,7 +147,8 @@ async fn can_manager(
  * cnt: a variable incremented per MQTT message sent over `main_send`
  */
 async fn pub_frame(
-    frame: Result<CanFrame, socketcan::Error>,
+    frame: CanFrame,
+    timestamp: SystemTime,
     main_send: &Sender<(String, ServerData)>,
     alt_send: Option<&Sender<(String, ServerData)>>,
     raw_send: Option<&Sender<CanDataFrame>>,
@@ -143,7 +156,7 @@ async fn pub_frame(
 ) {
     let decoded_data = match frame {
         // CanDataFrame
-        Ok(CanFrame::Data(data_frame)) => {
+        CanFrame::Data(data_frame) => {
             let data = data_frame.data();
             let id: u32 = match data_frame.id() {
                 socketcan::Id::Standard(std) => std.as_raw().into(),
@@ -169,7 +182,7 @@ async fn pub_frame(
             }
         }
         // CanRemoteFrame
-        Ok(CanFrame::Remote(remote_frame)) => {
+        CanFrame::Remote(remote_frame) => {
             // Send frame ID for Remote
             vec![DecodeData::new(
                 vec![remote_frame.raw_id() as f32],
@@ -179,7 +192,7 @@ async fn pub_frame(
             )]
         }
         // CanErrorFrame
-        Ok(CanFrame::Error(error_frame)) => {
+        CanFrame::Error(error_frame) => {
             // Publish enum index of error onto CAN
             // TODO: maybe look into better representation?
             let error_index: f32 = match CanError::from(error_frame) {
@@ -202,14 +215,9 @@ async fn pub_frame(
                 None,
             )]
         }
-        // Socket failure
-        Err(err) => {
-            warn!("CAN Socket failure: {}", err);
-            return;
-        }
     };
     // TODO switch to hardware timestamps
-    let timestamp = UNIX_EPOCH.elapsed().unwrap().as_micros() as u64;
+    let timestamp = timestamp.duration_since(UNIX_EPOCH).unwrap().as_micros() as u64;
 
     // Convert decoded CAN to Protobuf and publish over MQTT
     for data in &decoded_data {

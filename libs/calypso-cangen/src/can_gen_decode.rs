@@ -20,7 +20,7 @@ pub fn gen_decoder_fn(msg: &mut CANMsg) -> ProcMacro2TokenStream {
             field
                 .values
                 .iter()
-                .all(|&value| msg.points[value - 1].parse.is_some_and(|p| p))
+                .all(|&value| msg.points[value - 1].parse.unwrap_or(true))
         })
         .count();
     // Generate local variables for each CANPoint in the Message
