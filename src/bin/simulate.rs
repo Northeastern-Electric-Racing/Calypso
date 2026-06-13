@@ -276,8 +276,7 @@ async fn main() {
         .set_keep_alive(Duration::from_secs(20))
         .set_clean_start(true)
         .set_connection_timeout(3)
-        .set_session_expiry_interval(Some(u32::MAX))
-        .set_topic_alias_max(Some(600));
+        .set_session_expiry_interval(Some(u32::MAX));
     let (client, eventloop) = rumqttc::v5::AsyncClient::new(mqtt_opts_main, 600);
 
     task_tracker.spawn(poll_stub(token.clone(), eventloop));

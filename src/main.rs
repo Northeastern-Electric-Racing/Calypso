@@ -271,8 +271,7 @@ async fn siren_creator(pub_path: String) -> [(AsyncClient, EventLoop); 2] {
         .set_keep_alive(Duration::from_secs(20))
         .set_clean_start(false)
         .set_connection_timeout(3)
-        .set_session_expiry_interval(Some(u32::MAX))
-        .set_topic_alias_max(Some(600));
+        .set_session_expiry_interval(Some(u32::MAX));
     let (main_client, main_eventloop) = rumqttc::v5::AsyncClient::new(mqtt_opts_main, 600);
 
     let mut mqtt_opts_alt = MqttOptions::new(
@@ -290,8 +289,7 @@ async fn siren_creator(pub_path: String) -> [(AsyncClient, EventLoop); 2] {
         .set_keep_alive(Duration::from_secs(20))
         .set_clean_start(false)
         .set_connection_timeout(3)
-        .set_session_expiry_interval(Some(u32::MAX))
-        .set_topic_alias_max(Some(600));
+        .set_session_expiry_interval(Some(u32::MAX));
     let (alt_client, alt_eventloop) = rumqttc::v5::AsyncClient::new(mqtt_opts_alt, 600);
 
     // subscribe for bidirectionality
