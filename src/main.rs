@@ -21,7 +21,7 @@ use rumqttc::v5::{
     mqttbytes::v5::{Packet, Publish},
 };
 use socketcan::{
-    CanDataFrame, CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions, tokio::CanSocket
+    CanDataFrame, CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions, tokio::CanSocket,
 };
 use tokio::{
     signal,
