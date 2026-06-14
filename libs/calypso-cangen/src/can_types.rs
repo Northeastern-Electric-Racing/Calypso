@@ -8,14 +8,14 @@ use serde::{Deserialize, Serialize};
 // in Embedded-Base/cangen
 
 // See https://nerdocs.atlassian.net/wiki/spaces/NER/pages/1162018881/Odyssey+Car+Configuration+Framework
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(untagged, expecting = "CANMsg")]
 pub enum OdysseyMsg {
     Can(CANMsg),
     Meta(MetaMsg), // to be indexed, but not recieved - MUST GO LAST
 }
 
-#[derive(JsonSchema, Deserialize, Serialize, Debug)]
+#[derive(JsonSchema, Deserialize, Serialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct MetaMsg {
     pub desc: String,
@@ -25,7 +25,7 @@ pub struct MetaMsg {
 /**
  *  Class representing a CAN message
  */
-#[derive(JsonSchema, Deserialize, Serialize, Debug)]
+#[derive(JsonSchema, Deserialize, Serialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct CANMsg {
     pub id: String,
@@ -72,7 +72,7 @@ impl quote::ToTokens for BidirMode {
 /**
  *  Class representing a `NetField` of a CAN message
  */
-#[derive(JsonSchema, Deserialize, Serialize, Debug)]
+#[derive(JsonSchema, Deserialize, Serialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct NetField {
     pub name: String,
@@ -85,7 +85,7 @@ pub struct NetField {
 /**
  *  Class representing a `NetField` of a Meta message (there are no values)
  */
-#[derive(JsonSchema, Deserialize, Serialize, Debug)]
+#[derive(JsonSchema, Deserialize, Serialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct DumbNetField {
     pub name: String,
@@ -97,7 +97,7 @@ pub struct DumbNetField {
 /**
  *  Class representing a CAN point of a `NetField`
  */
-#[derive(JsonSchema, Deserialize, Serialize, Debug)]
+#[derive(JsonSchema, Deserialize, Serialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct CANPoint {
     pub size: usize,
@@ -121,13 +121,13 @@ pub struct CANPoint {
     pub sim: Option<Sim>,
 }
 
-#[derive(JsonSchema, Deserialize, Serialize, Debug)]
+#[derive(JsonSchema, Deserialize, Serialize, Clone, Debug)]
 pub struct Formatter {
     pub key: String,
     pub arg: f32,
 }
 
-#[derive(JsonSchema, Deserialize, Serialize, Debug)]
+#[derive(JsonSchema, Deserialize, Serialize, Clone, Debug)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum Sim {
     SimRange {

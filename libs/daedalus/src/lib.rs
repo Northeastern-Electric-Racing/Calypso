@@ -29,22 +29,39 @@ pub fn gen_decode_data(_item: TokenStream) -> TokenStream {
     let mut __decode_functions = quote! {};
     let mut __decode_map_entries = ProcMacro2TokenStream::new();
 
-    // Iterate through CAN spec directory and generate decode functions/mappings
-    // for each valid entry
-    if let Ok(__entries) = fs::read_dir(CANGEN_SPEC_PATH) {
-        __entries
-            .filter_map(Result::ok)
-            .map(|__entry| __entry.path())
-            .filter(|__path| {
-                __path.is_file() && __path.extension().is_some_and(|ext| ext == "json")
-            })
-            .for_each(|__path| {
-                __decode_functions.extend(gen_decode_fns(__path.clone()));
-                __decode_map_entries.extend(gen_decode_mappings(__path.clone()));
-            });
-    } else {
-        eprintln!("Could not read from directory: {CANGEN_SPEC_PATH}");
-    }
+    // get the parsed JSON of each valid spec file
+    let __parsed = match fs::read_dir(CANGEN_SPEC_PATH) {
+        Ok(__parsed) => __parsed,
+        Err(__error) => {
+            eprintln!("Could not read from directory: {CANGEN_SPEC_PATH} with error: {__error}");
+            return TokenStream::new();
+        }
+    };
+
+    let __json: Vec<OdysseyMsg> = __parsed
+        .filter_map(Result::ok)
+        .map(|__entry| __entry.path())
+        .filter(|__path| __path.is_file() && __path.extension().is_some_and(|ext| ext == "json"))
+        .filter_map(|__path| {
+            let __data = match fs::read_to_string(__path) {
+                Ok(__data) => __data,
+                Err(__error) => {
+                    eprintln!("Could not read file: {__error}");
+                    return None;
+                }
+            };
+
+            // treat deserialization failures as critical
+            Some(
+                serde_json::from_str::<Vec<OdysseyMsg>>(&__data)
+                    .expect("Error deserializing {__path}"),
+            )
+        })
+        .flatten()
+        .collect();
+
+    let mut __decode_functions = gen_decode_fns(__json.clone());
+    let mut __decode_map_entries = gen_decode_mappings(__json);
 
     let __decode_expanded = quote! {
         #__decode_prelude
@@ -59,19 +76,10 @@ pub fn gen_decode_data(_item: TokenStream) -> TokenStream {
 }
 
 /**
- *  Helper function to generate decode phf map entries for a given JSON spec file
+ *  Helper function to generate decode phf map entries for a given
+ *  Odyssey Messages
  */
-fn gen_decode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
-    let _contents = match fs::read_to_string(&_path) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error opening file {_path:?}: {e}");
-            return quote! {};
-        }
-    };
-
-    // Iterate through CANMsg list and generate decode mapping for each
-    let mut _msgs: Vec<OdysseyMsg> = serde_json::from_str(&_contents).unwrap();
+fn gen_decode_mappings(mut _msgs: Vec<OdysseyMsg>) -> ProcMacro2TokenStream {
     let _entries: ProcMacro2TokenStream = _msgs
         .iter_mut()
         .filter_map(|_m| match _m {
@@ -97,19 +105,9 @@ fn gen_decode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
 }
 
 /**
- *  Helper function to generate decode functions for a given JSON spec file
+ *  Helper function to generate decode functions for given Odyssey Messages
  */
-fn gen_decode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
-    let _contents = match fs::read_to_string(&_path) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error opening file {_path:?}: {e}");
-            return quote! {};
-        }
-    };
-
-    // Iterate through CANMsg list and generate decode function for each
-    let mut _msgs: Vec<OdysseyMsg> = serde_json::from_str(&_contents).unwrap();
+fn gen_decode_fns(mut _msgs: Vec<OdysseyMsg>) -> ProcMacro2TokenStream {
     let _fns = _msgs
         .iter_mut()
         .filter_map(|_m| match _m {
@@ -147,24 +145,43 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
     let mut __encode_key_list_entries = ProcMacro2TokenStream::new();
     let mut __encode_key_list_size: usize = 0;
 
+    // get the parsed JSON of each valid spec file
+    let __parsed = match fs::read_dir(CANGEN_SPEC_PATH) {
+        Ok(__parsed) => __parsed,
+        Err(__error) => {
+            eprintln!("Could not read from directory: {CANGEN_SPEC_PATH} with error: {__error}");
+            return TokenStream::new();
+        }
+    };
+
+    let __json: Vec<OdysseyMsg> = __parsed
+        .filter_map(Result::ok)
+        .map(|__entry| __entry.path())
+        .filter(|__path| __path.is_file() && __path.extension().is_some_and(|ext| ext == "json"))
+        .filter_map(|__path| {
+            let __data = match fs::read_to_string(__path) {
+                Ok(__data) => __data,
+                Err(__error) => {
+                    eprintln!("Could not read file: {__error}");
+                    return None;
+                }
+            };
+
+            // treat deserialization failures as critical
+            Some(
+                serde_json::from_str::<Vec<OdysseyMsg>>(&__data)
+                    .expect("Error deserializing {__path}"),
+            )
+        })
+        .flatten()
+        .collect();
+
     // Iterate through CAN spec directory and generate encode functions/mappings
     // for each valid entry
-    if let Ok(__entries) = fs::read_dir(CANGEN_SPEC_PATH) {
-        __entries
-            .filter_map(Result::ok)
-            .map(|__entry| __entry.path())
-            .filter(|__path| {
-                __path.is_file() && __path.extension().is_some_and(|ext| ext == "json")
-            })
-            .for_each(|__path| {
-                __encode_functions.extend(gen_encode_fns(__path.clone()));
-                __encode_map_entries.extend(gen_encode_mappings(__path.clone()));
-                __encode_key_list_entries
-                    .extend(gen_encode_keys(__path.clone(), &mut __encode_key_list_size));
-            });
-    } else {
-        eprintln!("Could not read from directory: {CANGEN_SPEC_PATH}");
-    }
+
+    let __encode_functions = gen_encode_fns(__json.clone());
+    let __encode_map_entries = gen_encode_mappings(__json.clone());
+    let __encode_key_list_entries = gen_encode_keys(__json, &mut __encode_key_list_size);
 
     let __encode_expanded = quote! {
         #__encode_prelude
@@ -183,19 +200,9 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
 }
 
 /**
- *  Helper function to generate encode functions for a given JSON spec file
+ *  Helper function to generate encode functions for given Odyssey Messages
  */
-fn gen_encode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
-    let _contents = match fs::read_to_string(&_path) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error opening file {_path:?}: {e}");
-            return quote! {};
-        }
-    };
-
-    // Iterate through CANMsg list and generate encode function for each
-    let mut _msgs: Vec<OdysseyMsg> = serde_json::from_str(&_contents).unwrap();
+fn gen_encode_fns(mut _msgs: Vec<OdysseyMsg>) -> ProcMacro2TokenStream {
     let _fns = _msgs
         .iter_mut()
         .filter_map(|e| match e {
@@ -216,19 +223,10 @@ fn gen_encode_fns(_path: PathBuf) -> ProcMacro2TokenStream {
 }
 
 /**
- *  Helper function to generate encode phf map entries for a given JSON spec file
+ *  Helper function to generate encode phf map entries for
+ *  given Odyssey Messages
  */
-fn gen_encode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
-    let _contents = match fs::read_to_string(&_path) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error opening file {_path:?}: {e}");
-            return quote! {};
-        }
-    };
-
-    // Only create encode mappings for CANMsgs with key field
-    let mut _msgs: Vec<OdysseyMsg> = serde_json::from_str(&_contents).unwrap();
+fn gen_encode_mappings(mut _msgs: Vec<OdysseyMsg>) -> ProcMacro2TokenStream {
     let _entries = _msgs
         .iter_mut()
         .filter_map(|_m| match _m {
@@ -258,18 +256,13 @@ fn gen_encode_mappings(_path: PathBuf) -> ProcMacro2TokenStream {
 }
 
 /**
- *  Helper function to generate encode key list entries for a given JSON spec file
+ *  Helper function to generate encode key list entries for
+ *  given Odyssey Messages
  */
-fn gen_encode_keys(_path: PathBuf, _key_list_size: &mut usize) -> ProcMacro2TokenStream {
-    let _contents = match fs::read_to_string(&_path) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error opening file {_path:?}: {e}");
-            return quote! {};
-        }
-    };
-
-    let mut _msgs: Vec<OdysseyMsg> = serde_json::from_str(&_contents).unwrap();
+fn gen_encode_keys(
+    mut _msgs: Vec<OdysseyMsg>,
+    _key_list_size: &mut usize,
+) -> ProcMacro2TokenStream {
     let _entries = _msgs
         .iter_mut()
         .filter_map(|_m| match _m {
