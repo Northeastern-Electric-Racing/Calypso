@@ -635,7 +635,8 @@ def main():
         log.info("all scenarios complete")
     finally:
         with contextlib.suppress(Exception):
-            VcuMock(client).release_all() if 'vcu' not in locals() else vcu.release_all()
+            if 'vcu' in locals():
+                vcu.release_all()
         client.close()
         obs.stop()
 

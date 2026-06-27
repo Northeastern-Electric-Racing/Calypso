@@ -29,26 +29,33 @@ pub async fn run(
             continue;
         }
         if let Some(rest) = line.strip_prefix("sleep ") {
-            match rest.trim().parse::<u64>() {
-                Ok(ms) => tokio::time::sleep(Duration::from_millis(ms)).await,
-                Err(_) => eprintln!("script: line {}: bad sleep arg '{rest}'", lineno + 1),
-            }
+            // Deterministic replay: a malformed directive aborts the run rather
+            // than silently skipping it and throwing off downstream timing.
+            let ms: u64 = rest.trim().parse().map_err(|_| {
+                format!(
+                    "script: line {}: bad sleep arg '{}'",
+                    lineno + 1,
+                    rest.trim()
+                )
+            })?;
+            tokio::time::sleep(Duration::from_millis(ms)).await;
             continue;
         }
         let mut chars = line.chars();
         let Some(ch) = chars.next() else { continue };
         if chars.next().is_some() {
-            eprintln!(
+            return Err(format!(
                 "script: line {}: expected single char or 'sleep N', got '{line}'",
                 lineno + 1
-            );
-            continue;
+            ));
         }
-        if let Some(state) = states.get_mut(&ch) {
-            publish_injection(ch, state, &client, &registry).await;
-        } else {
-            eprintln!("script: line {}: no binding for key '{ch}'", lineno + 1);
-        }
+        let Some(state) = states.get_mut(&ch) else {
+            return Err(format!(
+                "script: line {}: no binding for key '{ch}'",
+                lineno + 1
+            ));
+        };
+        publish_injection(ch, state, &client, &registry).await;
     }
 
     // Allow broker time to flush.

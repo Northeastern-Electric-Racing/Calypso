@@ -1,10 +1,8 @@
-use std::io::{self, Write};
-
 use crate::simulate_data::create_simulated_components;
 use rumqttc::v5::AsyncClient;
 use serde::Deserialize;
 use serde_json::{Value, json};
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio_util::sync::CancellationToken;
 
 use crate::publish::publish_data;
@@ -38,7 +36,7 @@ pub async fn run(
                         continue;
                     }
                     let resp = handle_line(&line, &client, &registry).await;
-                    write_line(&resp);
+                    write_line(&resp).await;
                 }
                 Ok(None) => break, // stdin closed
                 Err(e) => {
@@ -194,9 +192,12 @@ fn error(id: Value, code: i32, message: &str) -> Value {
     json!({"jsonrpc": "2.0", "id": id, "error": {"code": code, "message": message}})
 }
 
-fn write_line(value: &Value) {
-    let s = serde_json::to_string(value).unwrap_or_else(|_| "{}".into());
-    let mut out = io::stdout().lock();
-    let _ = writeln!(out, "{s}");
-    let _ = out.flush();
+async fn write_line(value: &Value) {
+    let mut s = serde_json::to_string(value).unwrap_or_else(|_| "{}".into());
+    s.push('\n');
+    // Async stdout so a slow/stalled stream consumer can't block a runtime
+    // worker thread (the read side is already async).
+    let mut out = tokio::io::stdout();
+    let _ = out.write_all(s.as_bytes()).await;
+    let _ = out.flush().await;
 }

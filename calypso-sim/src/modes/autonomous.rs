@@ -10,14 +10,14 @@ use crate::publish::publish_data;
 use crate::registry::{Owner, SharedRegistry};
 
 #[derive(Debug)]
-enum FilterMode {
+pub(crate) enum FilterMode {
     Disabled,
     Blacklist(Vec<Regex>),
     Whitelist(Vec<Regex>),
 }
 
 impl FilterMode {
-    fn build(enable: &[String], disable: &[String]) -> Result<Self, String> {
+    pub(crate) fn build(enable: &[String], disable: &[String]) -> Result<Self, String> {
         if !disable.is_empty() {
             Ok(Self::Blacklist(compile_patterns(disable)?))
         } else if !enable.is_empty() {
@@ -52,17 +52,8 @@ pub async fn run(
     token: CancellationToken,
     client: AsyncClient,
     registry: SharedRegistry,
-    enable: Vec<String>,
-    disable: Vec<String>,
+    filter: FilterMode,
 ) {
-    let filter = match FilterMode::build(&enable, &disable) {
-        Ok(f) => f,
-        Err(err) => {
-            eprintln!("Autonomous mode: {err}");
-            return;
-        }
-    };
-
     let mut components: Vec<_> = create_simulated_components()
         .into_iter()
         .filter(|c| filter.allows(&c.name))

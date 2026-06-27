@@ -2,6 +2,9 @@
 // Vendored from main calypso (src/simulatable_message.rs). Some struct
 // fields are read only by the codegen-expanded `create_simulated_components`
 // initializer and not by sim code paths.
+//
+// Divergence from upstream: `SimValue::initialize` adds bounds guards (empty
+// range / empty options) so a degenerate spec entry can't panic at startup.
 
 use super::data::DecodeData;
 use rand::prelude::*;
@@ -129,7 +132,13 @@ impl SimValue {
                 current,
                 ..
             } => {
-                *current = rng.random_range(*min..*max);
+                // Guard a degenerate (min == max) range: `random_range` panics
+                // on an empty range. Mirrors `keymap::randomize_component`.
+                *current = if (*max - *min).abs() < f32::EPSILON {
+                    *min
+                } else {
+                    rng.random_range(*min..*max)
+                };
                 if *inc_min != 0.0 {
                     *current = (*current / *inc_min).round() * *inc_min; // Round to nearest inc_min
                 }
@@ -138,8 +147,10 @@ impl SimValue {
                 }
             }
             SimValue::Discrete { options, current } => {
-                let idx = rng.random_range(0..options.len());
-                *current = options[idx].0;
+                // `choose` is empty-safe (returns None); direct indexing panics.
+                if let Some(&(v, _)) = options.choose(&mut rng) {
+                    *current = v;
+                }
             }
         }
     }

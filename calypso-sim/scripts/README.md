@@ -50,7 +50,7 @@ Useful flags:
 | `S3` | Enter PIT — `menu_select` rejected without brake+tsms, accepted once both set. |
 | `S4` | Drive telemetry sweep — sine accelerator, speed capped at `PIT_MAX_SPEED=5 mph`. |
 | `S4b` | (with `--with-auto`) Verify autonomous does not republish claimed topics. |
-| `S5` | Enter REVERSE — only allowed from F_PIT, requires brake+tsms+menu cycle. |
+| `S5` | Enter REVERSE — return home, scroll to REVERSE, select (gateless: no brake/tsms required), verify `not_in_reverse=0`. |
 | `S6` | Fault — trigger `BSPD_PREFAULT`, verify FAULTED+OFF+home, then recover. |
 
 Each scenario prints `Sx ✓ ...` on success or raises `AssertionError` on failure.

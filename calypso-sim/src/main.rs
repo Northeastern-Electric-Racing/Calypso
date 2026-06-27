@@ -47,12 +47,19 @@ async fn main() {
     let registry = TopicRegistry::shared();
 
     let auto_handle = if cli.run_autonomous() {
+        // Validate the enable/disable regex patterns up front so a bad pattern
+        // fails fast with a non-zero exit instead of silently disabling the
+        // entire autonomous heartbeat inside the spawned task.
+        let filter = modes::autonomous::FilterMode::build(&cli.enable_topic, &cli.disable_topic)
+            .unwrap_or_else(|err| {
+                eprintln!("Error: {err}");
+                exit(1);
+            });
         Some(tokio::spawn(modes::autonomous::run(
             token.clone(),
             client.clone(),
             registry.clone(),
-            cli.enable_topic.clone(),
-            cli.disable_topic.clone(),
+            filter,
         )))
     } else {
         None
@@ -152,7 +159,6 @@ fn connect_mqtt(host_url: &str) -> Result<(AsyncClient, EventLoop), String> {
         .set_keep_alive(Duration::from_secs(20))
         .set_clean_start(true)
         .set_connection_timeout(3)
-        .set_session_expiry_interval(Some(u32::MAX))
-        .set_topic_alias_max(Some(600));
+        .set_session_expiry_interval(Some(u32::MAX));
     Ok(AsyncClient::new(mqtt_opts, 600))
 }
