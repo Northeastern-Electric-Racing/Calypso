@@ -1,20 +1,11 @@
 # Calypso
 Custom CAN decoder to translate CAN messages to MQTT protobuf encoded packets with low latency and a JSON configuration structure.
 
+Foll developer guide here: https://nerdocs.atlassian.net/wiki/spaces/NER/pages/1815773187/Calypso+and+Odyssey+Definitions+Guide
+
 Usage: run `-h` to see the full usage options and defaults.
 
 ### Develop setup
-#### Go to Settings in VSCode
-search Rust-analyzer check and set the command from check -> clippy
-
-#### Open Settings.json
-add following information:
-```
-"[rust]": {
-    "editor.defaultFormatter": "rust-lang.rust-analyzer",
-    "editor.formatOnSave": true
-} 
-```
 
 To test it on linux, please install:
 - mosquitto broker: https://mosquitto.org
@@ -26,7 +17,7 @@ To test it on linux, please install:
 
 Process for testing:  
 - run `mosquitto` and leave it open
-- run `mqttui` and leave it open
+- run `mqttui` (from [here](https://nerdocs.atlassian.net/wiki/spaces/NER/pages/366280737/Read+Data+from+MQTTUI#Get-the-app-\(do-once\))) and leave it open
 - setup the can network:
     - `sudo ip link add dev vcan0 type vcan`
     - `sudo ip link set dev vcan0 up`
