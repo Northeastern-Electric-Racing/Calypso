@@ -44,6 +44,19 @@ impl TopicRegistry {
         self.overrides.get(topic).copied().unwrap_or(Owner::Auto)
     }
 
+    /// Whether the autonomous heartbeat may publish `topic`. The heartbeat
+    /// only drives a topic while it is still `Auto`-owned; once a stream or
+    /// keymap driver claims or silences it, the heartbeat yields.
+    pub fn auto_may_publish(&self, topic: &str) -> bool {
+        self.owner(topic) == Owner::Auto
+    }
+
+    /// Whether a stream/keymap driver may publish `topic`. Drivers may publish
+    /// anything except a topic that has been explicitly `Silenced`.
+    pub fn driver_may_publish(&self, topic: &str) -> bool {
+        self.owner(topic) != Owner::Silenced
+    }
+
     /// Set ownership; returns the previous owner. Setting back to `Auto`
     /// removes the override entirely.
     pub fn set(&mut self, topic: &str, owner: Owner) -> Owner {

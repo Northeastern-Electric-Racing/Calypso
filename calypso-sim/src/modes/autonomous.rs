@@ -7,7 +7,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 
 use crate::publish::publish_data;
-use crate::registry::{Owner, SharedRegistry};
+use crate::registry::SharedRegistry;
 
 #[derive(Debug)]
 pub(crate) enum FilterMode {
@@ -78,8 +78,7 @@ pub async fn run(
                     if !component.should_update() {
                         continue;
                     }
-                    let owner = registry.read().await.owner(&component.name);
-                    if owner != Owner::Auto {
+                    if !registry.read().await.auto_may_publish(&component.name) {
                         continue;
                     }
                     component.update();

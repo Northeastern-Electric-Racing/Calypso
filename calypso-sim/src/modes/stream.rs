@@ -135,7 +135,7 @@ async fn handle_publish(
         _ => return error(id, ERR_INVALID_PARAMS, "missing `value` or `values`"),
     };
 
-    if registry.read().await.owner(&p.topic) == Owner::Silenced {
+    if !registry.read().await.driver_may_publish(&p.topic) {
         return ok(id, json!({"skipped": "silenced"}));
     }
 

@@ -349,7 +349,7 @@ pub async fn publish_injection(
         }
         let steps = steps.clone();
         for step in steps {
-            if registry.read().await.owner(&step.topic) == Owner::Silenced {
+            if !registry.read().await.driver_may_publish(&step.topic) {
                 continue;
             }
             if step.delay_ms > 0 {
@@ -361,7 +361,7 @@ pub async fn publish_injection(
         return;
     }
 
-    if registry.read().await.owner(&state.topic) == Owner::Silenced {
+    if !registry.read().await.driver_may_publish(&state.topic) {
         return;
     }
 

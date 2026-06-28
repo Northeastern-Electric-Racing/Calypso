@@ -6,6 +6,7 @@
 use super::data::DecodeData;
 use rand::prelude::*;
 use regex::Regex;
+use std::sync::LazyLock;
 use std::time::Instant;
 
 /********************* SIMULATE_MESSAGE.H *********************/
@@ -243,6 +244,11 @@ impl SimValue {
     }
 }
 
+/// Placeholder pattern (`{}`) for in-topic value injection. Compiled once and
+/// reused, unlike the upstream copy in `calypso`'s `src/simulatable_message.rs`
+/// which recompiles it on every call; mirror this hoist if you optimize upstream.
+static PLACEHOLDER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\}").unwrap());
+
 /**
  * This helper function takes a `SimComponent`, injects the associated `CANPoint` values into the topic string
  * e.g. "Hello/{}/World/{}" -> "Hello/{4}/World{5}"
@@ -256,26 +262,21 @@ pub fn topic_values_inject(component: &SimComponent) -> String {
     if let Some(points_intopic) = &component.points_intopic {
         let component_name = &component.name;
         // check: placeholder count lines up with in point vector array length
-        let re = Regex::new(r"\{\}").unwrap();
-        if points_intopic.len() != re.find_iter(component_name).count() {
+        if points_intopic.len() != PLACEHOLDER_RE.find_iter(component_name).count() {
             eprintln!(
                 "[error] in-topic points vector length does not line up with placeholder count"
             );
             return component_name.clone();
         }
-        let in_topic_values: Vec<u32> = points_intopic
-            .iter()
-            .map(|p| p.get_value() as u32)
-            .collect();
 
-        // Replace {} placeholders with values
-        let mut value_iter = in_topic_values.iter();
-        re.replace_all(component_name, |_: &regex::Captures| {
-            value_iter
-                .next()
-                .map_or("{}".to_string(), std::string::ToString::to_string)
-        })
-        .into_owned()
+        // Replace {} placeholders with values, pulling each in-topic point's
+        // value on the fly (no intermediate Vec).
+        let mut values = points_intopic.iter().map(|p| p.get_value() as u32);
+        PLACEHOLDER_RE
+            .replace_all(component_name, |_: &regex::Captures| {
+                values.next().map_or("{}".to_string(), |v| v.to_string())
+            })
+            .into_owned()
     } else {
         component.name.clone()
     }
