@@ -2,9 +2,6 @@
 // Vendored from main calypso (src/simulatable_message.rs). Some struct
 // fields are read only by the codegen-expanded `create_simulated_components`
 // initializer and not by sim code paths.
-//
-// Divergence from upstream: `SimValue::initialize` adds bounds guards (empty
-// range / empty options) so a degenerate spec entry can't panic at startup.
 
 use super::data::DecodeData;
 use rand::prelude::*;
