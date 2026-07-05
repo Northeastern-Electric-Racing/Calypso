@@ -1,16 +1,16 @@
 use std::{
-    collections::HashMap, env, time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    collections::HashMap, time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use calypso::{
-    data::{DecodeData, EncodeData}, decode_data::DECODE_FUNCTION_MAP, encode_data::{ENCODABLE_KEY_LIST, ENCODE_FUNCTION_MAP}, imd_poll::imd_poll_main, models::{TestCanMessageEntry, TestProfile}, proto::{
+    data::{DecodeData, EncodeData}, decode_data::DECODE_FUNCTION_MAP, encode_data::{ENCODABLE_KEY_LIST, ENCODE_FUNCTION_MAP}, imd_poll::imd_poll_main, proto::{
         command_data,
         serverdata::{self, ServerData},
     }
 };
 use calypso_cangen::can_types::BidirMode;
+use calypso_testmode_db::{TestCanMessageEntry, TestModeDb};
 use clap::Parser;
-use diesel::{Connection, QueryDsl, QueryResult, SqliteConnection};
 use futures_util::StreamExt;
 use protobuf::Message;
 use rumqttc::v5::{
@@ -393,21 +393,6 @@ async fn pub_msg(topic: String, data: ServerData, client: &AsyncClient) {
     };
 }
 
-/// Find a test profile by its unique name, or `None` if it doesn't exist.
-fn find_profile_by_name(
-    conn: &mut SqliteConnection,
-    profile_name: &str,
-) -> QueryResult<Option<TestProfile>> {
-    use calypso::schema::test_profile::dsl::*;
-    use diesel::{ExpressionMethods, OptionalExtension, RunQueryDsl, SelectableHelper};
-
-    test_profile
-        .filter(name.eq(profile_name))
-        .select(TestProfile::as_select())
-        .first(conn)
-        .optional()
-}
-
 struct ScheduledCanMessage {
     frame: CanFrame,
     period: Option<Duration>, // None when this is single shot
@@ -428,28 +413,12 @@ async fn test_manager(
     can_push_send: Sender<CanFrame>,
     test_profile: String,
 ) {
-    dotenvy::dotenv().ok();
-    let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| panic!("Specified Database URL is invalid"));
+    let mut db = TestModeDb::connect_from_env()
+        .unwrap_or_else(|err| panic!("Could not open test database: {}", err));
 
-    let mut connection =  SqliteConnection::establish(&database_url).unwrap_or_else(|_| panic!("Error Connecting to Test Database: {}", database_url));
-    
-    use calypso::schema::can_message::dsl::*;
-    use diesel::{ExpressionMethods, RunQueryDsl, SelectableHelper};
-    let test_profile_id = match find_profile_by_name(&mut connection, &test_profile).unwrap_or_else(|_| panic!("Failed to query DB for test profile.")) {
-        Some(profile) => {
-            profile.id
-        }
-        None => {
-            panic!("Test Profile {} not found", test_profile);
-        }
-    };
-
-    let can_messages: Vec<TestCanMessageEntry> = can_message
-        .filter(profile_id.eq(test_profile_id))
-        .select(TestCanMessageEntry::as_select())
-        .order(offset_ms.asc())
-        .load(&mut connection)
-        .unwrap_or_else(|_| panic!("Failed to load CAN messages for profile {}", test_profile));
+    let can_messages = db
+        .load_profile_messages(&test_profile)
+        .unwrap_or_else(|err| panic!("Could not load test profile '{}': {}", test_profile, err));
 
 
     let start = Instant::now();
