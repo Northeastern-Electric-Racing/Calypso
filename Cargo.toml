@@ -45,7 +45,8 @@ can-dbc = "6.0.0"
 serde_json.workspace = true
 schemars.workspace = true
 num_enum = "0.7.5"
-
+diesel = { version = "2.2.0", features = ["sqlite", "returning_clauses_for_sqlite_3_35"] }
+dotenvy = "0.15.7"
 [target.'cfg(target_os = "linux")'.dependencies]
 socketcan = { version = "3.5.0", features = ["tokio"] }
 

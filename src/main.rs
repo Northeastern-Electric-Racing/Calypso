@@ -1,20 +1,16 @@
 use std::{
-    collections::HashMap,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    collections::HashMap, env, time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use calypso::{
-    data::{DecodeData, EncodeData},
-    decode_data::DECODE_FUNCTION_MAP,
-    encode_data::{ENCODABLE_KEY_LIST, ENCODE_FUNCTION_MAP},
-    imd_poll::imd_poll_main,
-    proto::{
+    data::{DecodeData, EncodeData}, decode_data::DECODE_FUNCTION_MAP, encode_data::{ENCODABLE_KEY_LIST, ENCODE_FUNCTION_MAP}, imd_poll::imd_poll_main, models::{TestCanMessageEntry, TestProfile}, proto::{
         command_data,
         serverdata::{self, ServerData},
-    },
+    }
 };
 use calypso_cangen::can_types::BidirMode;
 use clap::Parser;
+use diesel::{Connection, QueryDsl, QueryResult, SqliteConnection};
 use futures_util::StreamExt;
 use protobuf::Message;
 use rumqttc::v5::{
@@ -25,8 +21,7 @@ use socketcan::{
     CanDataFrame, CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions, tokio::CanSocket,
 };
 use tokio::{
-    signal,
-    sync::mpsc::{self, Receiver, Sender},
+    signal, sync::mpsc::{self, Receiver, Sender}, time::sleep_until,
 };
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
@@ -60,6 +55,13 @@ struct CalypsoArgs {
         default_value = "vcan0"
     )]
     socketcan_iface: String,
+
+    #[arg(
+        short = 't',
+        long,
+        env = "CALYPSO_TEST_PROFILE",
+    )]
+    test_profile: Option<String>,
 
     /// Whether to enable MQTT multi-client
     #[arg(short = 'm', long, env = "CALYPSO_MQTT_MULTICLIENT")]
@@ -391,6 +393,113 @@ async fn pub_msg(topic: String, data: ServerData, client: &AsyncClient) {
     };
 }
 
+/// Find a test profile by its unique name, or `None` if it doesn't exist.
+fn find_profile_by_name(
+    conn: &mut SqliteConnection,
+    profile_name: &str,
+) -> QueryResult<Option<TestProfile>> {
+    use calypso::schema::test_profile::dsl::*;
+    use diesel::{ExpressionMethods, OptionalExtension, RunQueryDsl, SelectableHelper};
+
+    test_profile
+        .filter(name.eq(profile_name))
+        .select(TestProfile::as_select())
+        .first(conn)
+        .optional()
+}
+
+struct ScheduledCanMessage {
+    frame: CanFrame,
+    period: Option<Duration>, // None when this is single shot
+    next_due: Instant
+}
+
+fn build_test_can_frame(msg: &TestCanMessageEntry) -> Option<CanFrame> {
+    let id: Id = if msg.is_extended != 0 {
+        socketcan::ExtendedId::new(msg.can_id as u32)?.into()
+    }   else {
+        socketcan::StandardId::new(msg.can_id as u16)?.into()
+    };
+    CanFrame::new(id, &msg.data)
+}
+
+async fn test_manager(
+    token:  CancellationToken,
+    can_push_send: Sender<CanFrame>,
+    test_profile: String,
+) {
+    dotenvy::dotenv().ok();
+    let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| panic!("Specified Database URL is invalid"));
+
+    let mut connection =  SqliteConnection::establish(&database_url).unwrap_or_else(|_| panic!("Error Connecting to Test Database: {}", database_url));
+    
+    use calypso::schema::can_message::dsl::*;
+    use diesel::{ExpressionMethods, RunQueryDsl, SelectableHelper};
+    let test_profile_id = match find_profile_by_name(&mut connection, &test_profile).unwrap_or_else(|_| panic!("Failed to query DB for test profile.")) {
+        Some(profile) => {
+            profile.id
+        }
+        None => {
+            panic!("Test Profile {} not found", test_profile);
+        }
+    };
+
+    let can_messages: Vec<TestCanMessageEntry> = can_message
+        .filter(profile_id.eq(test_profile_id))
+        .select(TestCanMessageEntry::as_select())
+        .order(offset_ms.asc())
+        .load(&mut connection)
+        .unwrap_or_else(|_| panic!("Failed to load CAN messages for profile {}", test_profile));
+
+
+    let start = Instant::now();
+    let mut scheduled: Vec<ScheduledCanMessage> =  can_messages.iter().filter_map(|m| {
+        Some(ScheduledCanMessage {
+          frame: build_test_can_frame(m)?,
+          period: m.period_ms.map(|p| Duration::from_millis(p as u64)),
+          next_due: start + Duration::from_millis(m.offset_ms as u64)
+        })
+    })
+    .collect();
+
+
+    loop {
+        // get soonest deadline, or just wait a while
+        let next: Instant = scheduled.iter().map(|s| s.next_due).min().unwrap_or_else(|| Instant::now() + Duration::from_secs(3600));
+
+        tokio::select! {
+            () = token.cancelled() => {
+                debug!("Shutting down Test Manager!");
+                break;
+            }
+            () = sleep_until(tokio::time::Instant::from_std(next)) => {
+                let now = Instant::now();
+                let mut i = 0;
+                while i < scheduled.len() {
+                    if scheduled[i].next_due <= now {
+                        if let Err(err) = can_push_send.send(scheduled[i].frame).await {
+                            warn!("Failed to send test can message {}", err);
+                        }
+                        match scheduled[i].period {
+                            // broadcast: reschedule the next send from now
+                            Some(period) => {
+                                scheduled[i].next_due = now + period;
+                                i += 1;
+                            }
+                            // oneshot: fire once, then drop it from the schedule
+                            None => {
+                                scheduled.remove(i);
+                            }
+                        }
+                    } else {
+                        i += 1;
+                    }
+                }
+            }
+        }
+    }   
+}
+
 /**
  * Thread to manage bidirectionality, both sending can messages and receiving MQTT messages from respective channels
  * `can_push_send`: the channel to send out CAN messages
@@ -572,8 +681,9 @@ async fn main() {
     // a channel to give protobuf messages to be sent out over MQTT
     let (decoder_send, decoder_recv) = mpsc::channel::<(String, ServerData)>(500);
 
-    // a channel to hijack certain raw CAN messages, right now only used for IMD
-    let (can_decoder_send, can_decoder_recv) = if cli.imd {
+    // a channel to hijack certain raw CAN messages, right now only used for IMD.
+    // IMD polling is disabled in test mode.
+    let (can_decoder_send, can_decoder_recv) = if cli.imd && cli.test_profile.is_none() {
         let ch = mpsc::channel::<CanDataFrame>(50);
         (Some(ch.0), Some(ch.1))
     } else {
@@ -622,20 +732,31 @@ async fn main() {
         ));
     }
 
-    task_tracker.spawn(bidir_manager(
-        token.clone(),
-        can_push_send.clone(),
-        siren_recv_recv,
-        cli.encode,
-    ));
-
-    if let Some(can_decoder_recv) = can_decoder_recv {
-        task_tracker.spawn(imd_poll_main(
+    if let Some(test_profile) = cli.test_profile {
+        // Test mode: replay a profile's scheduled CAN messages. The bidirectional
+        // command manager and IMD polling are disabled.
+        info!("Running in test mode with profile '{}'", test_profile);
+        task_tracker.spawn(test_manager(
             token.clone(),
             can_push_send,
-            can_decoder_recv,
-            decoder_send,
+            test_profile,
         ));
+    } else {
+        task_tracker.spawn(bidir_manager(
+            token.clone(),
+            can_push_send.clone(),
+            siren_recv_recv,
+            cli.encode,
+        ));
+
+        if let Some(can_decoder_recv) = can_decoder_recv {
+            task_tracker.spawn(imd_poll_main(
+                token.clone(),
+                can_push_send,
+                can_decoder_recv,
+                decoder_send,
+            ));
+        }
     }
 
     task_tracker.close();
