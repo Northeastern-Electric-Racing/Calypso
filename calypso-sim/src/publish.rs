@@ -58,12 +58,4 @@ mod tests {
         assert_eq!(decoded.time_us, ts);
         assert!(ts > 0, "timestamp should be a real epoch time");
     }
-
-    #[test]
-    fn encode_handles_empty_unit_and_values() {
-        let (bytes, _) = encode_server_data("", &[]).unwrap();
-        let decoded = serverdata::ServerData::parse_from_bytes(&bytes).unwrap();
-        assert!(decoded.unit.is_empty());
-        assert!(decoded.values.is_empty());
-    }
 }

@@ -62,3 +62,31 @@ impl Cli {
         self.auto || (!any_other_mode && !self.list_topics)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    fn cli(args: &[&str]) -> Cli {
+        Cli::try_parse_from(args).expect("valid args")
+    }
+
+    #[test]
+    fn autonomous_runs_by_default_when_no_mode_is_chosen() {
+        assert!(cli(&["calypso-sim"]).run_autonomous());
+    }
+
+    #[test]
+    fn a_foreground_mode_or_list_disables_the_heartbeat() {
+        assert!(!cli(&["calypso-sim", "--stream"]).run_autonomous());
+        assert!(!cli(&["calypso-sim", "--key-map", "keys.json"]).run_autonomous());
+        assert!(!cli(&["calypso-sim", "--list-topics"]).run_autonomous());
+    }
+
+    #[test]
+    fn explicit_auto_forces_the_heartbeat_alongside_a_mode() {
+        assert!(cli(&["calypso-sim", "--auto"]).run_autonomous());
+        assert!(cli(&["calypso-sim", "--stream", "--auto"]).run_autonomous());
+    }
+}

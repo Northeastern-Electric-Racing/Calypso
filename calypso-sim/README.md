@@ -112,10 +112,12 @@ cargo test
 | Layer | Where | What it checks |
 |---|---|---|
 | Unit — ownership | `src/registry.rs` | The `auto` / `stream` / `silenced` state machine: a claim makes the heartbeat yield, silence blocks everyone, release restores `auto`. |
+| Unit — keymap | `src/keymap.rs` | Increment wrap/saturate semantics (`advance_increment`), the serde `untagged` entry disambiguation (`step` → increment beats `value` → pinned; `sequence` wins), and the load-time skip rules (unknown topic with no `unit`, empty sequence). |
+| Unit — CLI modes | `src/cli.rs` | `run_autonomous` arbitration: heartbeat on by default, off under a foreground mode or `--list-topics`, forced on by explicit `--auto`. |
 | Unit — encoding | `src/publish.rs` | `ServerData` round-trips: unit, values, and timestamp survive encode → decode. |
 | Integration — protocol | `tests/protocol.rs` | Spawns the real `calypso-sim --stream` binary and checks the JSON-RPC contract (`ping`, `list_topics`, `publish`, and the `-32600` / `-32601` / `-32602` error paths). |
 | Integration — scenarios | `tests/scenarios.rs` | A `VcuMock` mirroring Cerberus-2.0's `Core/Src/u_statemachine.c` drives the binary over stdio: boot claims every `VCU/*` topic (S1), the brake + shutdown gate on entering PIT (S3), and ownership isolation via claim / silence / release with the heartbeat running (S4b). |
 
-No broker is needed because `publish` only enqueues (the eventloop retries a missing broker rather than dropping the queue), so it still returns a `ts_us`, and ownership arbitration is answered entirely from the JSON-RPC responses. Confirming the actual *bytes on the wire* end-to-end — the drive-sweep, reverse, and fault-recovery scenarios the former Python harness observed through a subscriber — is the one slice that needs a live broker and is a planned follow-up; value encoding itself is already covered by the `src/publish.rs` round-trip test.
+No broker is needed because `publish` only enqueues (the eventloop retries a missing broker rather than dropping the queue), so it still returns a `ts_us`, and ownership arbitration is answered entirely from the JSON-RPC responses. Observing the actual *bytes on the wire* — that a payload reaches a subscriber — needs a live broker, which in practice is **Siren** in the Docker compose stack (see the repo `Dockerfile`); a standalone end-to-end test broker is intentionally out of scope. The behavior such a test would exercise is already covered here: value encoding by the `src/publish.rs` round-trip, and the injection/arbitration logic by the registry, keymap, CLI, and scenario tests.
 
 CI (`.github/workflows/calypso-sim-ci.yml`) runs the suite on any change under `calypso-sim/**` or its path-dependencies.

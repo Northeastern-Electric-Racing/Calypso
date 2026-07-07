@@ -5,9 +5,10 @@
 //! parts verifiable without a broker: topic **ownership** (claim / status /
 //! silence / release) and the `VcuMock` **state machine** (the brake + shutdown
 //! gate on entering a drive mode). The end-to-end "these exact values landed on
-//! the topic" checks — Python's `assert_published` — are the one slice that
-//! needs a real broker and are left for a follow-up; value *encoding* itself is
-//! covered by the `encode_server_data` unit test in `src/publish.rs`.
+//! the topic" checks — Python's `assert_published` — need a live broker (Siren,
+//! in the Docker compose stack) and are intentionally out of scope here; value
+//! *encoding* is covered by the `encode_server_data` unit test in
+//! `src/publish.rs`.
 #![allow(dead_code)] // full firmware enums are mirrored; not every variant is exercised yet.
 mod common;
 
@@ -341,7 +342,7 @@ fn s3_enter_pit_is_gated_on_brake_and_shutdown() {
 /// topic is `stream`-owned (so `auto_may_publish` is false and the heartbeat
 /// yields), a silenced topic rejects even driver publishes, and releasing
 /// restores them. The end-to-end "heartbeat didn't republish" observation
-/// needs a broker and is deferred.
+/// needs a live broker (Siren) and is out of scope here.
 #[test]
 fn s4b_ownership_isolation_through_claim_silence_release() {
     let mut vcu = VcuMock::new(StreamHarness::spawn_with_auto());

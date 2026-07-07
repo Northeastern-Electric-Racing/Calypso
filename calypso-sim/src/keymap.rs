@@ -374,3 +374,146 @@ async fn log_and_publish(
     }
     let _ = std::io::stdout().flush();
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // --- advance_increment: emit-before-advance + wrap semantics ----------
+    //
+    // Float values are compared through `Vec<f32>`/arrays (element-wise
+    // `PartialEq`) rather than bare `f32 == f32` to stay clear of clippy's
+    // pedantic `float_cmp`; the values here are exact and deterministic.
+
+    /// Press an increment state `presses` times, collecting the value emitted
+    /// on each press (increment emits the current value *before* advancing).
+    fn press_sequence(
+        start: f32,
+        step: f32,
+        min: Option<f32>,
+        max: Option<f32>,
+        presses: usize,
+    ) -> Vec<f32> {
+        let mut current = start;
+        (0..presses)
+            .map(|_| advance_increment(&mut current, step, min, max))
+            .collect()
+    }
+
+    #[test]
+    fn increment_emits_start_first_then_wraps_at_max() {
+        // Climb 0,1,2, then wrap past max back to min.
+        assert_eq!(
+            press_sequence(0.0, 1.0, Some(0.0), Some(2.0), 5),
+            vec![0.0, 1.0, 2.0, 0.0, 1.0]
+        );
+    }
+
+    #[test]
+    fn increment_without_a_min_saturates_at_max() {
+        // No min to wrap to: once at max it stays there.
+        assert_eq!(
+            press_sequence(0.0, 1.0, None, Some(2.0), 5),
+            vec![0.0, 1.0, 2.0, 2.0, 2.0]
+        );
+    }
+
+    #[test]
+    fn increment_negative_step_wraps_min_to_max() {
+        // Counting down past min wraps up to max.
+        assert_eq!(
+            press_sequence(2.0, -1.0, Some(0.0), Some(2.0), 5),
+            vec![2.0, 1.0, 0.0, 2.0, 1.0]
+        );
+    }
+
+    #[test]
+    fn increment_unbounded_keeps_climbing() {
+        assert_eq!(
+            press_sequence(0.0, 5.0, None, None, 3),
+            vec![0.0, 5.0, 10.0]
+        );
+    }
+
+    // --- parse_key_map: serde `untagged` disambiguation -------------------
+
+    #[test]
+    fn parse_disambiguates_the_four_entry_shapes() {
+        let map = parse_key_map(
+            r#"{
+                "r": "Some/Topic",
+                "p": {"topic": "T", "value": 1.0},
+                "i": {"topic": "T", "value": 0.0, "step": 1.0},
+                "s": {"sequence": [{"topic": "T", "value": 1.0}]}
+            }"#,
+        )
+        .expect("valid keymap");
+
+        // Order matters: `step` must win over `value` (Increment before Pinned),
+        // and `sequence` must be recognized ahead of the object forms.
+        assert!(
+            matches!(map.get(&'r'), Some(KeyEntry::TopicOnly(_))),
+            "bare string should be random-mode"
+        );
+        assert!(
+            matches!(map.get(&'p'), Some(KeyEntry::Pinned { .. })),
+            "`value` without `step` should be pinned"
+        );
+        assert!(
+            matches!(map.get(&'i'), Some(KeyEntry::Increment { .. })),
+            "`step` should select increment even with `value` present"
+        );
+        assert!(
+            matches!(map.get(&'s'), Some(KeyEntry::Sequence { .. })),
+            "`sequence` should select sequence mode"
+        );
+    }
+
+    #[test]
+    fn parse_rejects_multi_character_keys() {
+        let err = parse_key_map(r#"{"ab": "Some/Topic"}"#).expect_err("multi-char key must fail");
+        assert!(err.contains("single characters"), "unexpected error: {err}");
+    }
+
+    // --- build_topic_states: classification & skip rules ------------------
+
+    fn build(json: &str) -> HashMap<char, KeyState> {
+        build_topic_states(parse_key_map(json).expect("valid keymap"))
+    }
+
+    #[test]
+    fn unknown_topic_without_a_unit_is_dropped() {
+        // Pinned to a topic the spec doesn't know, with no `unit` fallback.
+        let states = build(r#"{"a": {"topic": "Not/A/Real/Topic", "value": 1.0}}"#);
+        assert!(!states.contains_key(&'a'), "unresolvable unit should skip");
+    }
+
+    #[test]
+    fn unknown_topic_with_an_explicit_unit_is_kept() {
+        let states = build(r#"{"a": {"topic": "Not/A/Real/Topic", "value": 1.0, "unit": "V"}}"#);
+        let state = states.get(&'a').expect("explicit unit should keep it");
+        assert_eq!(state.unit, "V");
+        match &state.mode {
+            KeyMode::Pinned { value } => assert_eq!(vec![*value], vec![1.0_f32]),
+            other => panic!("expected Pinned, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn increment_start_falls_back_from_value_to_min() {
+        // No `value`, so the starting point resolves to `min`.
+        let states =
+            build(r#"{"a": {"topic": "Not/A/Real/Topic", "step": 1.0, "min": 3.0, "unit": "V"}}"#);
+        let state = states.get(&'a').expect("explicit unit should keep it");
+        match &state.mode {
+            KeyMode::Increment { current, .. } => assert_eq!(vec![*current], vec![3.0_f32]),
+            other => panic!("expected Increment, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn empty_sequence_is_dropped() {
+        let states = build(r#"{"a": {"sequence": []}}"#);
+        assert!(!states.contains_key(&'a'), "empty sequence should skip");
+    }
+}
