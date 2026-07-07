@@ -1,0 +1,42 @@
+name: calypso-sim CI
+
+# calypso-sim is a detached workspace, so the top-level `cargo *--all` in
+# rust-ci.yml never reaches it. Build/check it here, but only when the sim
+# crate — or a path-dependency it pulls in (the daedalus/calypso-cangen libs,
+# or the CAN spec submodule) — actually changes, to avoid running on every PR.
+on:
+  push:
+    branches:
+      - main
+      - Develop
+    paths: &sim-paths
+      - 'calypso-sim/**'
+      - 'libs/daedalus/**'
+      - 'libs/calypso-cangen/**'
+      - 'Odyssey-Definitions'
+      - '.github/workflows/calypso-sim-ci.yml'
+  pull_request:
+    branches:
+      - main
+      - Develop
+    paths: *sim-paths
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: calypso-sim
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - name: Build
+        run: cargo build --all --verbose
+      - name: Test
+        run: cargo test --verbose
+      - name: Fmt
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --verbose --all -- -D warnings
