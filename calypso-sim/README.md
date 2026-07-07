@@ -99,3 +99,23 @@ JSON-RPC 2.0 over stdio — one request per line on stdin, one response per line
 | `ping` | `{}` | `{ok: true}` |
 
 Errors follow JSON-RPC 2.0 (`{error: {code, message}}`) with the standard codes: `-32700` (parse), `-32600` (invalid request), `-32601` (method not found), `-32602` (invalid params), and `-32603` (internal).
+
+## Testing
+
+The tests need **no broker** — just run:
+
+```
+cd calypso-sim
+cargo test
+```
+
+| Layer | Where | What it checks |
+|---|---|---|
+| Unit — ownership | `src/registry.rs` | The `auto` / `stream` / `silenced` state machine: a claim makes the heartbeat yield, silence blocks everyone, release restores `auto`. |
+| Unit — encoding | `src/publish.rs` | `ServerData` round-trips: unit, values, and timestamp survive encode → decode. |
+| Integration — protocol | `tests/protocol.rs` | Spawns the real `calypso-sim --stream` binary and checks the JSON-RPC contract (`ping`, `list_topics`, `publish`, and the `-32600` / `-32601` / `-32602` error paths). |
+| Integration — scenarios | `tests/scenarios.rs` | A `VcuMock` mirroring Cerberus-2.0's `Core/Src/u_statemachine.c` drives the binary over stdio: boot claims every `VCU/*` topic (S1), the brake + shutdown gate on entering PIT (S3), and ownership isolation via claim / silence / release with the heartbeat running (S4b). |
+
+No broker is needed because `publish` only enqueues (the eventloop retries a missing broker rather than dropping the queue), so it still returns a `ts_us`, and ownership arbitration is answered entirely from the JSON-RPC responses. Confirming the actual *bytes on the wire* end-to-end — the drive-sweep, reverse, and fault-recovery scenarios the former Python harness observed through a subscriber — is the one slice that needs a live broker and is a planned follow-up; value encoding itself is already covered by the `src/publish.rs` round-trip test.
+
+CI (`.github/workflows/calypso-sim-ci.yml`) runs the suite on any change under `calypso-sim/**` or its path-dependencies.
