@@ -73,19 +73,14 @@ mod tests {
     }
 
     #[test]
-    fn autonomous_runs_by_default_when_no_mode_is_chosen() {
+    fn run_autonomous_arbitrates_the_heartbeat_against_other_modes() {
+        // On by default when nothing else is selected.
         assert!(cli(&["calypso-sim"]).run_autonomous());
-    }
-
-    #[test]
-    fn a_foreground_mode_or_list_disables_the_heartbeat() {
+        // A foreground mode or --list-topics turns the heartbeat off...
         assert!(!cli(&["calypso-sim", "--stream"]).run_autonomous());
         assert!(!cli(&["calypso-sim", "--key-map", "keys.json"]).run_autonomous());
         assert!(!cli(&["calypso-sim", "--list-topics"]).run_autonomous());
-    }
-
-    #[test]
-    fn explicit_auto_forces_the_heartbeat_alongside_a_mode() {
+        // ...unless --auto forces it back on alongside that mode.
         assert!(cli(&["calypso-sim", "--auto"]).run_autonomous());
         assert!(cli(&["calypso-sim", "--stream", "--auto"]).run_autonomous());
     }

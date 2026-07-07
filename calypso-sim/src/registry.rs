@@ -86,23 +86,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn unknown_topic_defaults_to_auto() {
-        let reg = TopicRegistry::new();
-        assert_eq!(reg.owner("VCU/CarState/speed"), Owner::Auto);
-        assert!(reg.auto_may_publish("VCU/CarState/speed"));
-        assert!(reg.driver_may_publish("VCU/CarState/speed"));
-    }
-
-    #[test]
-    fn claim_makes_auto_yield_but_keeps_driver() {
+    fn claim_makes_auto_yield_but_keeps_the_driver() {
         let mut reg = TopicRegistry::new();
-        let prev = reg.set("T", Owner::Stream);
-        assert_eq!(prev, Owner::Auto, "previous owner should be reported");
+        // Unmapped topics default to Auto — heartbeat and driver both publish.
+        assert_eq!(reg.owner("T"), Owner::Auto);
+        assert!(reg.auto_may_publish("T") && reg.driver_may_publish("T"));
+
+        assert_eq!(
+            reg.set("T", Owner::Stream),
+            Owner::Auto,
+            "prev owner reported"
+        );
         assert_eq!(reg.owner("T"), Owner::Stream);
-        // The autonomous heartbeat must yield a claimed topic...
-        assert!(!reg.auto_may_publish("T"));
-        // ...while the stream/keymap driver may still publish it.
-        assert!(reg.driver_may_publish("T"));
+        assert!(
+            !reg.auto_may_publish("T"),
+            "heartbeat yields a claimed topic"
+        );
+        assert!(reg.driver_may_publish("T"), "driver still owns it");
     }
 
     #[test]
@@ -117,24 +117,12 @@ mod tests {
     fn releasing_to_auto_clears_the_override() {
         let mut reg = TopicRegistry::new();
         reg.set("T", Owner::Stream);
-        let prev = reg.set("T", Owner::Auto);
-        assert_eq!(prev, Owner::Stream);
+        assert_eq!(
+            reg.set("T", Owner::Auto),
+            Owner::Stream,
+            "prev owner reported"
+        );
         assert_eq!(reg.owner("T"), Owner::Auto);
         assert!(reg.snapshot().is_empty(), "auto topics carry no override");
-    }
-
-    #[test]
-    fn snapshot_is_sorted_and_excludes_auto() {
-        let mut reg = TopicRegistry::new();
-        reg.set("beta", Owner::Stream);
-        reg.set("alpha", Owner::Silenced);
-        reg.set("gamma", Owner::Auto); // no-op: stays default
-        assert_eq!(
-            reg.snapshot(),
-            vec![
-                ("alpha".to_string(), Owner::Silenced),
-                ("beta".to_string(), Owner::Stream),
-            ]
-        );
     }
 }

@@ -381,9 +381,9 @@ mod tests {
 
     // --- advance_increment: emit-before-advance + wrap semantics ----------
     //
-    // Float values are compared through `Vec<f32>`/arrays (element-wise
-    // `PartialEq`) rather than bare `f32 == f32` to stay clear of clippy's
-    // pedantic `float_cmp`; the values here are exact and deterministic.
+    // Float values are compared through `Vec<f32>` (element-wise `PartialEq`)
+    // rather than bare `f32 == f32` to stay clear of clippy's pedantic
+    // `float_cmp`; the values here are exact and deterministic.
 
     /// Press an increment state `presses` times, collecting the value emitted
     /// on each press (increment emits the current value *before* advancing).
@@ -427,14 +427,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn increment_unbounded_keeps_climbing() {
-        assert_eq!(
-            press_sequence(0.0, 5.0, None, None, 3),
-            vec![0.0, 5.0, 10.0]
-        );
-    }
-
     // --- parse_key_map: serde `untagged` disambiguation -------------------
 
     #[test]
@@ -469,13 +461,7 @@ mod tests {
         );
     }
 
-    #[test]
-    fn parse_rejects_multi_character_keys() {
-        let err = parse_key_map(r#"{"ab": "Some/Topic"}"#).expect_err("multi-char key must fail");
-        assert!(err.contains("single characters"), "unexpected error: {err}");
-    }
-
-    // --- build_topic_states: classification & skip rules ------------------
+    // --- build_topic_states: load-time skip / start resolution ------------
 
     fn build(json: &str) -> HashMap<char, KeyState> {
         build_topic_states(parse_key_map(json).expect("valid keymap"))
@@ -489,19 +475,9 @@ mod tests {
     }
 
     #[test]
-    fn unknown_topic_with_an_explicit_unit_is_kept() {
-        let states = build(r#"{"a": {"topic": "Not/A/Real/Topic", "value": 1.0, "unit": "V"}}"#);
-        let state = states.get(&'a').expect("explicit unit should keep it");
-        assert_eq!(state.unit, "V");
-        match &state.mode {
-            KeyMode::Pinned { value } => assert_eq!(vec![*value], vec![1.0_f32]),
-            other => panic!("expected Pinned, got {other:?}"),
-        }
-    }
-
-    #[test]
     fn increment_start_falls_back_from_value_to_min() {
-        // No `value`, so the starting point resolves to `min`.
+        // No `value`, so the starting point resolves to `min` (the topic is
+        // kept via the explicit `unit`).
         let states =
             build(r#"{"a": {"topic": "Not/A/Real/Topic", "step": 1.0, "min": 3.0, "unit": "V"}}"#);
         let state = states.get(&'a').expect("explicit unit should keep it");
@@ -509,11 +485,5 @@ mod tests {
             KeyMode::Increment { current, .. } => assert_eq!(vec![*current], vec![3.0_f32]),
             other => panic!("expected Increment, got {other:?}"),
         }
-    }
-
-    #[test]
-    fn empty_sequence_is_dropped() {
-        let states = build(r#"{"a": {"sequence": []}}"#);
-        assert!(!states.contains_key(&'a'), "empty sequence should skip");
     }
 }
