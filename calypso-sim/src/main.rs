@@ -11,6 +11,9 @@ mod simulatable_message;
 mod simulate_data;
 mod warnings;
 
+#[cfg(test)]
+mod tests;
+
 use std::process::exit;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 

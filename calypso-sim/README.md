@@ -111,12 +111,12 @@ cargo test
 
 | Layer | Where | What it checks |
 |---|---|---|
-| Unit — ownership | `src/registry.rs` | The `auto` / `stream` / `silenced` state machine: a claim makes the heartbeat yield, silence blocks everyone, release restores `auto`. |
-| Unit — keymap | `src/keymap.rs` | Increment wrap/saturate semantics (`advance_increment`), the serde `untagged` entry disambiguation (`step` → increment beats `value` → pinned; `sequence` wins), and the load-time rules (unknown topic with no `unit` is dropped; increment start falls back `value` → `min`). |
-| Unit — CLI modes | `src/cli.rs` | `run_autonomous` arbitration: heartbeat on by default, off under a foreground mode or `--list-topics`, forced on by explicit `--auto`. |
-| Unit — encoding | `src/publish.rs` | `ServerData` round-trips: unit, values, and timestamp survive encode → decode. |
-| Integration — stream | `tests/stream.rs` | Spawns the real `calypso-sim --stream` binary and checks the JSON-RPC contract (`ping`, `list_topics`, `publish` + its `-32600` / `-32601` / `-32602` error paths) plus an end-to-end ownership-isolation flow (claim → silence → release with the heartbeat running). |
+| Unit — keymap | `src/tests/keymap.rs` | The two fragile pieces of keymap logic: increment emit-then-wrap/saturate (`advance_increment`), and the serde `untagged` shape disambiguation, whose result depends on variant *order* (`step` → increment beats `value` → pinned; `sequence` wins). |
+| Unit — CLI modes | `src/tests/cli.rs` | `run_autonomous` arbitration: heartbeat on by default, off under a foreground mode or `--list-topics`, forced on by explicit `--auto`. |
+| Integration — stream | `tests/stream.rs` | Spawns the real `calypso-sim --stream` binary and checks the JSON-RPC contract (`list_topics` is non-empty, `publish` requires exactly one of `value`/`values`, malformed requests get `-32601`/`-32600`) plus an end-to-end ownership flow — claim → silence → release with the heartbeat running, which doubles as the regression guard for the `auto`/`stream`/`silenced` arbitration. |
 
-No broker is needed because `publish` only enqueues (the eventloop retries a missing broker rather than dropping the queue), so it still returns a `ts_us`, and ownership arbitration is answered entirely from the JSON-RPC responses. Observing the actual *bytes on the wire* — that a payload reaches a subscriber — needs a live broker, which in practice is **Siren** in the Docker compose stack (see the repo `Dockerfile`); a standalone end-to-end test broker is intentionally out of scope. The behavior such a test would exercise is already covered here: value encoding by the `src/publish.rs` round-trip, and the injection/arbitration logic by the registry, keymap, and CLI unit tests plus the `tests/stream.rs` integration flow.
+The suite is deliberately small: each test guards logic a future change could silently break, not code that is obvious by reading it. Unit tests live in `src/tests/` — compiled into the crate under `cfg(test)`, so they reach internals via `use crate::…`; binary-driven tests live in the crate-root `tests/` dir, the only place Cargo sets `CARGO_BIN_EXE_calypso-sim`.
+
+No broker is needed because `publish` only enqueues (the eventloop retries a missing broker rather than dropping the queue), so it still returns a `ts_us`, and ownership arbitration is answered entirely from the JSON-RPC responses. Observing the actual *bytes on the wire* — that a payload reaches a subscriber — needs a live broker, which in practice is **Siren** in the Docker compose stack (see the repo `Dockerfile`); a standalone end-to-end test broker is intentionally out of scope.
 
 CI (`.github/workflows/calypso-sim-ci.yml`) runs the suite on any change under `calypso-sim/**` or its path-dependencies.

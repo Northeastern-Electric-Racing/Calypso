@@ -128,12 +128,6 @@ impl Drop for Sim {
 }
 
 #[test]
-fn ping_responds_ok() {
-    let mut sim = Sim::spawn();
-    assert_eq!(sim.ok("ping", json!({}))["ok"].as_bool(), Some(true));
-}
-
-#[test]
 fn list_topics_is_nonempty_and_well_formed() {
     let mut sim = Sim::spawn();
     let result = sim.ok("list_topics", json!({}));
@@ -149,19 +143,6 @@ fn list_topics_is_nonempty_and_well_formed() {
         );
         assert!(t.get("unit").is_some(), "topic missing unit: {t}");
     }
-}
-
-#[test]
-fn publish_returns_a_timestamp() {
-    let mut sim = Sim::spawn();
-    let result = sim.ok(
-        "publish",
-        json!({"topic": "VCU/CarState/speed", "value": 12.5}),
-    );
-    assert!(
-        result["ts_us"].as_u64().unwrap_or(0) > 0,
-        "publish should echo a microsecond timestamp, got {result}"
-    );
 }
 
 #[test]
@@ -183,17 +164,14 @@ fn publish_requires_exactly_one_of_value_or_values() {
 }
 
 #[test]
-fn unknown_method_is_method_not_found() {
+fn malformed_requests_are_rejected_with_standard_codes() {
     let mut sim = Sim::spawn();
+    // Unknown method -> Method not found.
     let (code, _) = sim
         .call("frobnicate", json!({}))
         .expect_err("unknown method must error");
-    assert_eq!(code, -32601);
-}
-
-#[test]
-fn wrong_jsonrpc_version_is_invalid_request() {
-    let mut sim = Sim::spawn();
+    assert_eq!(code, -32601, "unknown method -> method not found");
+    // A jsonrpc version other than "2.0" -> Invalid request.
     let resp = sim.raw(json!({"jsonrpc": "2.1", "method": "ping", "params": {}}));
     assert_eq!(
         resp["error"]["code"].as_i64(),

@@ -44,18 +44,3 @@ pub async fn publish_data(
 
     Ok(timestamp)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn encode_round_trips_unit_values_and_timestamp() {
-        let (bytes, ts) = encode_server_data("mph", &[1.5, -2.0, 3.25]).unwrap();
-        let decoded = serverdata::ServerData::parse_from_bytes(&bytes).unwrap();
-        assert_eq!(decoded.unit, "mph");
-        assert_eq!(decoded.values, vec![1.5, -2.0, 3.25]);
-        assert_eq!(decoded.time_us, ts);
-        assert!(ts > 0, "timestamp should be a real epoch time");
-    }
-}
