@@ -1,5 +1,5 @@
 use crate::CANGEN_SPEC_PATH;
-use crate::can_types::{BidirMode, OdysseyMsg, Sim};
+use definition_rs::{BidirMode, OdysseyMsg, Sim};
 use regex::Regex;
 use std::collections::HashSet;
 use std::fs;

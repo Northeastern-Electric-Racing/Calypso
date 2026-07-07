@@ -1,7 +1,7 @@
 use std::{env, fs::File, io::Read};
 
-use calypso_cangen::can_types::{CANMsg, CANPoint, Formatter, NetField, Sim};
 use can_dbc::{ByteOrder, NumericValue};
+use definition_rs::{CANMsg, CANPoint, Formatter, NetField, Sim};
 
 /// decode a DBC file and paste (mostly) compliant JSON to stdout
 fn main() {
@@ -97,7 +97,7 @@ fn main() {
             is_ext: None,
             sim_freq: None,
             clients: None,
-            bidir_mode: calypso_cangen::can_types::BidirMode::Broadcast,
+            bidir_mode: definition_rs::BidirMode::Broadcast,
         });
     }
 

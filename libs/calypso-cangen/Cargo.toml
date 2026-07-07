@@ -12,3 +12,4 @@ serde_json = { workspace = true }
 thiserror = "2.0.18"
 schemars = { workspace = true }
 serde_path_to_error = "0.1.20"
+definition-rs.workspace = true

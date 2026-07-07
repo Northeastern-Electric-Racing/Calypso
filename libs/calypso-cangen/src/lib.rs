@@ -1,7 +1,6 @@
 pub mod can_gen_decode;
 pub mod can_gen_encode;
 pub mod can_gen_simulate;
-pub mod can_types;
 pub mod validate;
 /**
  *  Path to CAN spec JSON files
