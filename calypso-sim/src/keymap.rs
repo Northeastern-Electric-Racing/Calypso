@@ -4,7 +4,6 @@ use std::time::Duration;
 
 use crate::simulatable_message::{SimComponent, SimValue};
 use crate::simulate_data::create_simulated_components;
-use rand::prelude::*;
 use rumqttc::v5::AsyncClient;
 use serde::Deserialize;
 
@@ -52,8 +51,9 @@ pub async fn claim_keymap_topics(states: &HashMap<char, KeyState>, registry: &Sh
 ///   list.
 /// * Object with `step` — increment mode. Publishes `value` (or `min`, or 0)
 ///   on first press, then advances by `step` each press, wrapping
-///   independently when each bound is supplied. `unit` falls back to the sim
-///   component's unit if the topic is known.
+///   independently when each bound is supplied. As with pinned mode, a known
+///   topic uses the sim component's unit; the `unit` field applies only to
+///   topics not in the generated simulated-components list.
 /// * Object with `sequence` — publishes a scripted series of (topic, value)
 ///   pairs on each keypress, with optional per-step `delay_ms` before publish.
 ///
@@ -250,39 +250,18 @@ pub fn build_topic_states(key_map: HashMap<char, KeyEntry>) -> HashMap<char, Key
     result
 }
 
-/// Generate a fresh random value within each point's defined bounds.
+/// Generate a fresh random value within each point's defined bounds. Delegates
+/// to `SimValue::initialize` (which ignores any `default` and always
+/// randomizes), then clamps `Range` values back into `[min, max]` in case the
+/// inc/round snapping pushed them just outside.
 pub fn randomize_component(component: &mut SimComponent) {
-    let mut rng = rand::rng();
     for point in &mut component.points {
-        match &mut point.value {
-            SimValue::Range {
-                min,
-                max,
-                inc_min,
-                round,
-                current,
-                ..
-            } => {
-                if (*max - *min).abs() < f32::EPSILON {
-                    *current = *min;
-                } else {
-                    *current = rng.random_range(*min..*max);
-                }
-                if *inc_min != 0.0 {
-                    *current = (*current / *inc_min).round() * *inc_min;
-                }
-                if *round {
-                    *current = current.round();
-                }
-                *current = current.clamp(*min, *max);
-            }
-            SimValue::Discrete {
-                options, current, ..
-            } => {
-                if let Some(&(v, _)) = options.choose(&mut rng) {
-                    *current = v;
-                }
-            }
+        point.value.initialize();
+        if let SimValue::Range {
+            min, max, current, ..
+        } = &mut point.value
+        {
+            *current = current.clamp(*min, *max);
         }
     }
 }

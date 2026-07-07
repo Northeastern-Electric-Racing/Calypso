@@ -67,6 +67,13 @@ async fn main() {
 
     let foreground = run_foreground(&cli, &token, &client, &registry).await;
 
+    // Let the MQTT eventloop drain any just-enqueued publishes before we cancel
+    // it. `AsyncClient::publish` only enqueues; the eventloop's `poll()` is what
+    // writes to the socket. Cancelling first drops the eventloop with the queue
+    // unflushed — best-effort for QoS0, but this lets the last messages of a
+    // clean stream-EOF / Ctrl+C shutdown actually land.
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
     token.cancel();
     if let Some(h) = auto_handle
         && let Err(e) = h.await
@@ -76,7 +83,6 @@ async fn main() {
     if let Err(e) = poll_handle.await {
         tracing::error!("MQTT eventloop task panicked: {e}");
     }
-    tokio::time::sleep(Duration::from_millis(50)).await;
 
     if let Err(err) = foreground {
         eprintln!("Error: {err}");
@@ -93,10 +99,12 @@ async fn run_foreground(
     if cli.stream {
         modes::stream::run(token.clone(), client.clone(), registry.clone()).await
     } else if let Some(script_path) = &cli.script {
+        // clap enforces `--script requires --key-map` (see cli.rs), so a missing
+        // key map here is an impossible state, not a reachable runtime error.
         let key_map_path = cli
             .key_map
             .as_deref()
-            .ok_or_else(|| "--script requires --key-map".to_string())?;
+            .expect("clap enforces --script requires --key-map");
         modes::auto_script::run(client.clone(), key_map_path, script_path, registry.clone()).await
     } else if let Some(key_map_path) = &cli.key_map {
         modes::interactive::run(
