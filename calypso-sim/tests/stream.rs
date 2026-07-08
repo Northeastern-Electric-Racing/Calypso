@@ -178,6 +178,13 @@ fn malformed_requests_are_rejected_with_standard_codes() {
         Some(-32600),
         "jsonrpc != 2.0 must be rejected, got {resp}"
     );
+    // A request missing `method` is valid JSON but not a valid JSON-RPC call.
+    let resp = sim.raw(json!({"jsonrpc": "2.0", "params": {}}));
+    assert_eq!(
+        resp["error"]["code"].as_i64(),
+        Some(-32600),
+        "missing method must be rejected as invalid request, got {resp}"
+    );
 }
 
 #[test]

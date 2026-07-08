@@ -55,7 +55,8 @@ struct Request {
     jsonrpc: Option<String>,
     #[serde(default)]
     id: Option<Value>,
-    method: String,
+    #[serde(default)]
+    method: Option<String>,
     #[serde(default)]
     params: Value,
 }
@@ -83,7 +84,13 @@ async fn handle_line(line: &str, client: &AsyncClient, registry: &SharedRegistry
     }
     let id = request.id.unwrap_or(Value::Null);
 
-    match request.method.as_str() {
+    // A request with no `method` is well-formed JSON but not a valid JSON-RPC
+    // call, so it is an Invalid Request (-32600), not a parse error (-32700).
+    let Some(method) = request.method else {
+        return error(id, ERR_INVALID_REQUEST, "missing `method`");
+    };
+
+    match method.as_str() {
         "publish" => handle_publish(id, request.params, client, registry).await,
         "claim" => handle_set(id, request.params, registry, Owner::Stream).await,
         "release" => handle_set(id, request.params, registry, Owner::Mock).await,

@@ -90,7 +90,7 @@ JSON-RPC 2.0 over stdio — one request per line on stdin, one response per line
 
 | Method | Params | Result |
 |---|---|---|
-| `publish` | `{topic, value? \| values?, unit?}` | `{ts_us}` |
+| `publish` | `{topic, value? \| values?, unit?}` | `{ts_us}`, or `{skipped: "silenced"}` on a silenced topic |
 | `claim` | `{topic}` | `{topic, previous_owner, owner}` |
 | `release` | `{topic}` | `{topic, previous_owner, owner: "mock"}` |
 | `silence` | `{topic}` | `{topic, previous_owner, owner: "silenced"}` |
