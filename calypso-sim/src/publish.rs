@@ -10,10 +10,7 @@ use rumqttc::v5::mqttbytes::QoS;
 /// that timestamp. Split out from [`publish_data`] so the encoding can be unit
 /// tested without a broker or client.
 fn encode_server_data(unit: &str, values: &[f32]) -> Result<(Vec<u8>, u64), String> {
-    let timestamp = UNIX_EPOCH
-        .elapsed()
-        .map(|d| d.as_micros() as u64)
-        .unwrap_or(0);
+    let timestamp = UNIX_EPOCH.elapsed().map_or(0, |d| d.as_micros() as u64);
 
     let mut payload = serverdata::ServerData::new();
     payload.unit = unit.to_string();

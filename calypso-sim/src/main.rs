@@ -160,8 +160,7 @@ fn connect_mqtt(host_url: &str) -> Result<(AsyncClient, EventLoop), String> {
         "Calypso-Sim-{}",
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_millis())
-            .unwrap_or(0)
+            .map_or(0, |d| d.as_millis())
     );
 
     let mut mqtt_opts = MqttOptions::new(client_id, host, port);
