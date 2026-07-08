@@ -2,7 +2,7 @@ use calypso_cangen::CANGEN_SPEC_PATH;
 use calypso_cangen::can_types::OdysseyMsg;
 
 /// Print a comma-separated list of CAN message topics that have no
-/// `sim_freq` in the spec — these are invisible to the autonomous simulator
+/// `sim_freq` in the spec — these are invisible to the mock simulator
 /// and can only be published via `--key-map` / `--script` / `--stream`.
 ///
 /// Resolves the spec path relative to the current working directory; emits

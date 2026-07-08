@@ -22,23 +22,23 @@ struct Sim {
 }
 
 impl Sim {
-    /// Spawn the sim in stream mode with the autonomous heartbeat off.
+    /// Spawn the sim in stream mode with the mock heartbeat off.
     fn spawn() -> Self {
         Self::spawn_inner(false)
     }
 
-    /// Spawn with `--auto` so the heartbeat runs alongside the stream driver.
-    fn spawn_with_auto() -> Self {
+    /// Spawn with `--mock` so the heartbeat runs alongside the stream driver.
+    fn spawn_with_mock() -> Self {
         Self::spawn_inner(true)
     }
 
-    fn spawn_inner(with_auto: bool) -> Self {
+    fn spawn_inner(with_mock: bool) -> Self {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_calypso-sim"));
         // A closed port: no broker is needed, and this keeps the sim off any
         // real broker a developer happens to be running.
         cmd.arg("-u").arg("127.0.0.1:47654").arg("--stream");
-        if with_auto {
-            cmd.arg("--auto");
+        if with_mock {
+            cmd.arg("--mock");
         }
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -108,7 +108,7 @@ impl Sim {
             .unwrap_or_else(|(code, msg)| panic!("{method} failed: [{code}] {msg}"))
     }
 
-    /// Owner string for `topic` per `status`, or `None` when it is still `auto`.
+    /// Owner string for `topic` per `status`, or `None` when it is still `mock`.
     fn owner_of(&mut self, topic: &str) -> Option<String> {
         self.ok("status", json!({}))["overrides"]
             .as_array()
@@ -182,10 +182,10 @@ fn malformed_requests_are_rejected_with_standard_codes() {
 
 #[test]
 fn ownership_isolation_through_claim_silence_release() {
-    // With the autonomous heartbeat running: a claimed topic is `stream`-owned
+    // With the mock heartbeat running: a claimed topic is `stream`-owned
     // (so the heartbeat yields), a silenced topic rejects even the driver, and
-    // release returns it to `auto`.
-    let mut sim = Sim::spawn_with_auto();
+    // release returns it to `mock`.
+    let mut sim = Sim::spawn_with_mock();
     let topic = "VCU/CarState/torque_limit_percentage";
 
     sim.ok("claim", json!({"topic": topic}));
@@ -213,7 +213,7 @@ fn ownership_isolation_through_claim_silence_release() {
     assert_eq!(
         sim.owner_of(topic),
         None,
-        "release returns the topic to auto (no override)"
+        "release returns the topic to mock (no override)"
     );
     assert!(
         sim.ok("publish", json!({"topic": topic, "value": 0.5}))["ts_us"]

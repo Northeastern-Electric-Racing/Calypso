@@ -14,7 +14,7 @@ use crate::registry::{Owner, SharedRegistry};
 /// Methods:
 /// * `publish` — `{topic, value | values, unit?}` → `{ts_us}`
 /// * `claim` — `{topic}` → `{previous_owner, owner}`
-/// * `release` — `{topic}` → `{previous_owner, owner}` (sets owner=auto)
+/// * `release` — `{topic}` → `{previous_owner, owner}` (sets owner=mock)
 /// * `silence` — `{topic}` → `{previous_owner, owner}`
 /// * `status` — `{}` → `{overrides: [{topic, owner}, ...]}`
 /// * `list_topics` — `{}` → `{topics: [{name, unit}, ...]}`
@@ -86,7 +86,7 @@ async fn handle_line(line: &str, client: &AsyncClient, registry: &SharedRegistry
     match request.method.as_str() {
         "publish" => handle_publish(id, request.params, client, registry).await,
         "claim" => handle_set(id, request.params, registry, Owner::Stream).await,
-        "release" => handle_set(id, request.params, registry, Owner::Auto).await,
+        "release" => handle_set(id, request.params, registry, Owner::Mock).await,
         "silence" => handle_set(id, request.params, registry, Owner::Silenced).await,
         "status" => handle_status(id, registry).await,
         "list_topics" => handle_list_topics(id),

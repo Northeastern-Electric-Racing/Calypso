@@ -14,7 +14,7 @@ use crate::raw_mode::{RawModeGuard, line_end};
 use crate::registry::SharedRegistry;
 
 /// Run the interactive raw-mode keypress loop. Claims every keymap topic in
-/// the registry so the autonomous loop (if running) yields ownership.
+/// the registry so the mock loop (if running) yields ownership.
 pub async fn run(
     token: CancellationToken,
     client: AsyncClient,

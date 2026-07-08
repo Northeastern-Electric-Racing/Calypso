@@ -48,16 +48,16 @@ async fn main() {
 
     let registry = TopicRegistry::shared();
 
-    let auto_handle = if cli.run_autonomous() {
+    let mock_handle = if cli.run_mock() {
         // Validate the enable/disable regex patterns up front so a bad pattern
         // fails fast with a non-zero exit instead of silently disabling the
-        // entire autonomous heartbeat inside the spawned task.
-        let filter = modes::autonomous::FilterMode::build(&cli.enable_topic, &cli.disable_topic)
+        // entire mock heartbeat inside the spawned task.
+        let filter = modes::mock::FilterMode::build(&cli.enable_topic, &cli.disable_topic)
             .unwrap_or_else(|err| {
                 eprintln!("Error: {err}");
                 exit(1);
             });
-        Some(tokio::spawn(modes::autonomous::run(
+        Some(tokio::spawn(modes::mock::run(
             token.clone(),
             client.clone(),
             registry.clone(),
@@ -77,10 +77,10 @@ async fn main() {
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     token.cancel();
-    if let Some(h) = auto_handle
+    if let Some(h) = mock_handle
         && let Err(e) = h.await
     {
-        tracing::error!("autonomous task panicked: {e}");
+        tracing::error!("mock task panicked: {e}");
     }
     if let Err(e) = poll_handle.await {
         tracing::error!("MQTT eventloop task panicked: {e}");
@@ -117,7 +117,7 @@ async fn run_foreground(
         )
         .await
     } else {
-        // Pure --auto: wait for SIGINT, then exit.
+        // Pure --mock: wait for SIGINT, then exit.
         tokio::signal::ctrl_c()
             .await
             .map_err(|e| format!("ctrl+c handler failed: {e}"))

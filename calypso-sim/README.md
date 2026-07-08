@@ -15,30 +15,30 @@ cargo build --release
 
 | Mode | Flag | What it does |
 |---|---|---|
-| **Autonomous** | `--auto` | Heartbeat publishes for every CAN message with a `sim_freq` in the spec, at its configured frequency. Default when no other mode is chosen; defaults OFF when paired with `--key-map`, `--script`, or `--stream`. |
+| **Mock** | `--mock` | Heartbeat publishes for every CAN message with a `sim_freq` in the spec, at its configured frequency. Default when no other mode is chosen; defaults OFF when paired with `--key-map`, `--script`, or `--stream`. |
 | **Interactive** | `--key-map FILE` | Raw-mode terminal — each keypress fires a configured topic. Press `Ctrl+C` to exit. |
 | **Script** | `--script FILE` (with `--key-map`) | Replay a sequence of keymap keys / `sleep N` lines from a text file, then exit. |
 | **Stream** | `--stream` | JSON-RPC 2.0 over stdin/stdout — for agent-driven injection. |
 
-Pick at most one foreground mode: `--key-map` (with optional `--script`) or `--stream`. `--auto` may run alongside either as a background heartbeat — set it explicitly to override the default-off behavior in those modes.
+Pick at most one foreground mode: `--key-map` (with optional `--script`) or `--stream`. `--mock` may run alongside either as a background heartbeat — set it explicitly to override the default-off behavior in those modes.
 
 ## Quick reference
 
 ```
 cargo run -- --list-topics                       # enumerate topics, exit
-cargo run                                        # autonomous heartbeat
+cargo run                                        # mock heartbeat
 cargo run -- --key-map manual_sim_keymap.example.json
-cargo run -- --key-map keys.json --auto          # background heartbeat + interactive
+cargo run -- --key-map keys.json --mock          # background heartbeat + interactive
 cargo run -- --key-map keys.json --script play.txt
 cargo run -- --stream                            # JSON-RPC over stdio
 cargo run -- -u 10.0.0.5:1883 ...                # remote broker
 ```
 
-The `--enable-topic <REGEX>` and `--disable-topic <REGEX>` flags filter which topics the autonomous heartbeat publishes (whitelist / blacklist; mutually exclusive). Topics that lack a `sim_freq` in the CAN spec are listed at startup as a `Warning topics (not simulated): ...` line and can only be reached via `--key-map` or `--stream`.
+The `--enable-topic <REGEX>` and `--disable-topic <REGEX>` flags filter which topics the mock heartbeat publishes (whitelist / blacklist; mutually exclusive). Topics that lack a `sim_freq` in the CAN spec are listed at startup as a `Warning topics (not simulated): ...` line and can only be reached via `--key-map` or `--stream`.
 
 ## Topic-ownership model
 
-Every topic has an owner: `auto` (default — autonomous publishes), `stream` (claimed by stream/keymap), or `silenced` (nobody publishes). The autonomous loop checks ownership before each publish, so claims from `--stream` or keymap modes cleanly override the heartbeat without fighting it. Releasing a topic returns it to `auto`.
+Every topic has an owner: `mock` (default — mock publishes), `stream` (claimed by stream/keymap), or `silenced` (nobody publishes). The mock loop checks ownership before each publish, so claims from `--stream` or keymap modes cleanly override the heartbeat without fighting it. Releasing a topic returns it to `mock`.
 
 ## Keymap format (`--key-map` and `--script`)
 
@@ -84,7 +84,7 @@ JSON-RPC 2.0 over stdio — one request per line on stdin, one response per line
 
 // stdout
 {"jsonrpc":"2.0","id":1,"result":{"ts_us":1735347123456789}}
-{"jsonrpc":"2.0","id":2,"result":{"topic":"...","previous_owner":"auto","owner":"stream"}}
+{"jsonrpc":"2.0","id":2,"result":{"topic":"...","previous_owner":"mock","owner":"stream"}}
 ...
 ```
 
@@ -92,7 +92,7 @@ JSON-RPC 2.0 over stdio — one request per line on stdin, one response per line
 |---|---|---|
 | `publish` | `{topic, value? \| values?, unit?}` | `{ts_us}` |
 | `claim` | `{topic}` | `{topic, previous_owner, owner}` |
-| `release` | `{topic}` | `{topic, previous_owner, owner: "auto"}` |
+| `release` | `{topic}` | `{topic, previous_owner, owner: "mock"}` |
 | `silence` | `{topic}` | `{topic, previous_owner, owner: "silenced"}` |
 | `status` | `{}` | `{overrides: [{topic, owner}, ...]}` |
 | `list_topics` | `{}` | `{topics: [{name, unit}, ...]}` |
@@ -112,8 +112,8 @@ cargo test
 | Layer | Where | What it checks |
 |---|---|---|
 | Unit — keymap | `src/tests/keymap.rs` | The two fragile pieces of keymap logic: increment emit-then-wrap/saturate (`advance_increment`), and the serde `untagged` shape disambiguation, whose result depends on variant *order* (`step` → increment beats `value` → pinned; `sequence` wins). |
-| Unit — CLI modes | `src/tests/cli.rs` | `run_autonomous` arbitration: heartbeat on by default, off under a foreground mode or `--list-topics`, forced on by explicit `--auto`. |
-| Integration — stream | `tests/stream.rs` | Spawns the real `calypso-sim --stream` binary and checks the JSON-RPC contract (`list_topics` is non-empty, `publish` requires exactly one of `value`/`values`, malformed requests get `-32601`/`-32600`) plus an end-to-end ownership flow — claim → silence → release with the heartbeat running, which doubles as the regression guard for the `auto`/`stream`/`silenced` arbitration. |
+| Unit — CLI modes | `src/tests/cli.rs` | `run_mock` arbitration: heartbeat on by default, off under a foreground mode or `--list-topics`, forced on by explicit `--mock`. |
+| Integration — stream | `tests/stream.rs` | Spawns the real `calypso-sim --stream` binary and checks the JSON-RPC contract (`list_topics` is non-empty, `publish` requires exactly one of `value`/`values`, malformed requests get `-32601`/`-32600`) plus an end-to-end ownership flow — claim → silence → release with the heartbeat running, which doubles as the regression guard for the `mock`/`stream`/`silenced` arbitration. |
 
 The suite is deliberately small: each test guards logic a future change could silently break, not code that is obvious by reading it. Unit tests live in `src/tests/` — compiled into the crate under `cfg(test)`, so they reach internals via `use crate::…`; binary-driven tests live in the crate-root `tests/` dir, the only place Cargo sets `CARGO_BIN_EXE_calypso-sim`.
 

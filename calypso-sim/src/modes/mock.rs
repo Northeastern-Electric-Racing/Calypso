@@ -44,7 +44,7 @@ fn compile_patterns(patterns: &[String]) -> Result<Vec<Regex>, String> {
 }
 
 /// Background task: every 5ms, walk the simulated components and publish any
-/// that are due (per `sim_freq`) AND owned by `Owner::Auto` in the registry.
+/// that are due (per `sim_freq`) AND owned by `Owner::Mock` in the registry.
 ///
 /// Components owned by `Stream` or `Silenced` are skipped without advancing
 /// internal state, so they pick up where they would have been on `release`.
@@ -60,9 +60,9 @@ pub async fn run(
         .collect();
 
     if components.is_empty() {
-        info!("Autonomous: no components match the filter; nothing to simulate.");
+        info!("Mock: no components match the filter; nothing to simulate.");
     } else {
-        info!("Autonomous: simulating {} components", components.len());
+        info!("Mock: simulating {} components", components.len());
     }
 
     let mut interval = tokio::time::interval(Duration::from_millis(5));
@@ -70,7 +70,7 @@ pub async fn run(
     loop {
         tokio::select! {
             () = token.cancelled() => {
-                debug!("Autonomous: shutting down.");
+                debug!("Mock: shutting down.");
                 break;
             }
             _ = interval.tick() => {
@@ -78,13 +78,13 @@ pub async fn run(
                     if !component.should_update() {
                         continue;
                     }
-                    if !registry.read().await.auto_may_publish(&component.name) {
+                    if !registry.read().await.mock_may_publish(&component.name) {
                         continue;
                     }
                     component.update();
                     let data = component.get_decode_data();
                     if let Err(e) = publish_data(&client, &data.topic, &data.unit, &data.value).await {
-                        warn!("Autonomous publish failed for {}: {e}", data.topic);
+                        warn!("Mock publish failed for {}: {e}", data.topic);
                     }
                 }
             }

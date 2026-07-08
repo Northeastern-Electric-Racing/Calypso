@@ -26,7 +26,7 @@ pub fn load_states(key_map_path: &str) -> Result<HashMap<char, KeyState>, String
 }
 
 /// Claim every topic referenced by `states` for `Owner::Stream` so the
-/// autonomous heartbeat (if running) yields ownership.
+/// mock heartbeat (if running) yields ownership.
 pub async fn claim_keymap_topics(states: &HashMap<char, KeyState>, registry: &SharedRegistry) {
     let mut reg = registry.write().await;
     for state in states.values() {

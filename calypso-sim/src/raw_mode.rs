@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 
 /// In raw mode the tty driver does not translate `\n` to `\r\n`, so we must
-/// emit `\r\n` ourselves. In cooked mode (script / autonomous / stream) a
+/// emit `\r\n` ourselves. In cooked mode (script / mock / stream) a
 /// literal `\r` renders as staircase output / `^M`, so we must emit `\n`.
 static RAW_MODE_ACTIVE: AtomicBool = AtomicBool::new(false);
 

@@ -1,6 +1,6 @@
 pub mod auto_script;
-pub mod autonomous;
 pub mod interactive;
+pub mod mock;
 pub mod stream;
 
 use std::time::Duration;
