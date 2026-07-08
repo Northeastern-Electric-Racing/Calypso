@@ -1,6 +1,10 @@
-#![allow(dead_code)]
-// Vendored from main calypso (src/data.rs). Some helpers are unused here;
-// keep the file in sync with the upstream copy rather than trimming.
+//! Shared CAN data-model types produced by this crate's generated code.
+//!
+//! `DecodeData` (off-car), `EncodeData` (into-car), and `FormatData` (value
+//! transforms) live here so they can be shared: the `calypso` decoder re-exports
+//! them through its own `crate::data` module (keeping the decode/encode codegen
+//! macros unchanged), and `calypso-sim` — which can't depend on the `calypso`
+//! crate, since that doesn't build off-Linux — imports `DecodeData` directly.
 
 use std::fmt;
 

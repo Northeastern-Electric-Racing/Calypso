@@ -5,7 +5,7 @@
 // `create_simulated_components` initializer, not by hand-written sim code
 // paths — hence the crate-level dead_code allow.
 
-use super::data::DecodeData;
+use calypso_cangen::data::DecodeData;
 use rand::prelude::*;
 use regex::Regex;
 use std::sync::LazyLock;

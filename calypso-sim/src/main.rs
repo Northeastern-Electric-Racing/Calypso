@@ -1,5 +1,4 @@
 mod cli;
-mod data;
 mod keymap;
 mod modes;
 #[allow(clippy::all, clippy::pedantic)]
