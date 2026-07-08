@@ -1,7 +1,9 @@
 #![allow(dead_code)]
-// Vendored from main calypso (src/simulatable_message.rs). Some struct
-// fields are read only by the codegen-expanded `create_simulated_components`
-// initializer and not by sim code paths.
+// The simulation data model. This lives only in calypso-sim: the main calypso
+// decoder never drove the simulate path, so it was removed there when the sim
+// was extracted. Some struct fields are read only by the codegen-expanded
+// `create_simulated_components` initializer, not by hand-written sim code
+// paths — hence the crate-level dead_code allow.
 
 use super::data::DecodeData;
 use rand::prelude::*;
