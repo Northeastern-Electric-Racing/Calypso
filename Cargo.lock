@@ -1111,7 +1111,7 @@ dependencies = [
 [[package]]
 name = "pythia-db"
 version = "0.1.0"
-source = "git+ssh://git@github.com/Northeastern-Electric-Racing/Pythia.git?branch=main#542c792b54b157ecb399d1c2a91c4bf0621491f4"
+source = "git+https://github.com/Northeastern-Electric-Racing/Pythia.git#542c792b54b157ecb399d1c2a91c4bf0621491f4"
 dependencies = [
  "diesel",
  "dotenvy",
