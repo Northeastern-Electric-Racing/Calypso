@@ -9,7 +9,7 @@ use calypso::{
     }
 };
 use calypso_cangen::can_types::BidirMode;
-use calypso_testmode_db::{TestCanMessageEntry, TestModeDb};
+use pythia_db::{TestCanMessageEntry, TestModeDb};
 use clap::Parser;
 use futures_util::StreamExt;
 use protobuf::Message;

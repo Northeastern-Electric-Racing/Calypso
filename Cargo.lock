@@ -134,7 +134,6 @@ version = "0.1.0"
 dependencies = [
  "bitstream-io",
  "calypso-cangen",
- "calypso-testmode-db",
  "can-dbc",
  "clap",
  "daedalus",
@@ -143,6 +142,7 @@ dependencies = [
  "phf",
  "protobuf",
  "protobuf-codegen",
+ "pythia-db",
  "rand",
  "regex",
  "rumqttc",
@@ -166,15 +166,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_path_to_error",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "calypso-testmode-db"
-version = "0.1.0"
-dependencies = [
- "diesel",
- "dotenvy",
  "thiserror 2.0.18",
 ]
 
@@ -1115,6 +1106,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e36c2f31e0a47f9280fb347ef5e461ffcd2c52dd520d8e216b52f93b0b0d7d6"
 dependencies = [
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "pythia-db"
+version = "0.1.0"
+source = "git+ssh://git@github.com/Northeastern-Electric-Racing/Pythia.git?branch=main#542c792b54b157ecb399d1c2a91c4bf0621491f4"
+dependencies = [
+ "diesel",
+ "dotenvy",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

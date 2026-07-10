@@ -25,3 +25,6 @@ serverdata.rs
 
 # private testing 
 /privatetest/
+
+# env
+.env

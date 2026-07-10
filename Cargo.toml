@@ -15,7 +15,7 @@ cast_precision_loss = "allow"
 cast_sign_loss = "allow"
 
 [workspace]
-members = ["libs/daedalus", "libs/calypso-cangen", "libs/calypso-testmode-db"]
+members = ["libs/daedalus", "libs/calypso-cangen"]
 
 [workspace.dependencies]
 proc-macro2 = "1.0.106"
@@ -35,7 +35,7 @@ rand = "0.9.2"
 regex = { workspace = true }
 phf = { version = "0.13.1", features = ["macros"] }
 calypso-cangen = { path = "./libs/calypso-cangen" }
-calypso-testmode-db = { path = "./libs/calypso-testmode-db" }
+pythia-db = { git = "ssh://git@github.com/Northeastern-Electric-Racing/Pythia.git", branch = "main" }
 daedalus = { path = "./libs/daedalus" }
 tokio = { version = "1.47.1", features = ["full"] }
 futures-util = "0.3.31"
