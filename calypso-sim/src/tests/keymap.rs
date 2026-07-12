@@ -1,75 +1,85 @@
-//! Keymap logic that is fragile under refactoring: the increment
-//! emit-then-advance arithmetic, and the serde `untagged` shape disambiguation
-//! (whose behavior depends on variant *order*, which the type alone doesn't
-//! make obvious).
+//! Scenario logic that a refactor could silently break: the `untagged` step
+//! shape disambiguation, and the load-time validation (unknown/looping invokes,
+//! publish value-arity) that keeps replays terminating and well-formed.
 
-use crate::keymap::{KeyEntry, advance_increment, parse_key_map};
-
-/// Press an increment state `presses` times, collecting the value emitted on
-/// each press. Increment emits the current value *before* advancing.
-fn press_sequence(
-    start: f32,
-    step: f32,
-    min: Option<f32>,
-    max: Option<f32>,
-    presses: usize,
-) -> Vec<f32> {
-    let mut current = start;
-    (0..presses)
-        .map(|_| advance_increment(&mut current, step, min, max))
-        .collect()
-}
+use crate::keymap::{Step, collect_topics, parse_scenario, validate};
 
 #[test]
-fn advance_increment_emits_then_wraps_or_saturates() {
-    // Exact, deterministic values; compared through `Vec<f32>` (element-wise
-    // `PartialEq`) to stay clear of clippy's pedantic `float_cmp`.
-    assert_eq!(
-        press_sequence(0.0, 1.0, Some(0.0), Some(2.0), 5),
-        vec![0.0, 1.0, 2.0, 0.0, 1.0],
-        "with a min, climbing past max wraps back to min"
-    );
-    assert_eq!(
-        press_sequence(0.0, 1.0, None, Some(2.0), 5),
-        vec![0.0, 1.0, 2.0, 2.0, 2.0],
-        "with no min, the value saturates at max"
-    );
-    assert_eq!(
-        press_sequence(2.0, -1.0, Some(0.0), Some(2.0), 5),
-        vec![2.0, 1.0, 0.0, 2.0, 1.0],
-        "a negative step wraps min back up to max"
-    );
-}
-
-#[test]
-fn parse_disambiguates_the_four_entry_shapes() {
-    let map = parse_key_map(
+fn step_shapes_are_unambiguous() {
+    let scenario = parse_scenario(
         r#"{
-            "r": "Some/Topic",
-            "p": {"topic": "T", "value": 1.0},
-            "i": {"topic": "T", "value": 0.0, "step": 1.0},
-            "s": {"sequence": [{"topic": "T", "value": 1.0}]}
+            "a": { "steps": ["other", {"topic": "T", "value": 1.0}, {"sleep_ms": 50}] },
+            "other": { "steps": [{"topic": "U", "value": 0.0}] }
         }"#,
     )
-    .expect("valid keymap");
+    .expect("valid scenario");
 
-    // Order matters in the `untagged` enum: `step` must win over `value`
-    // (Increment before Pinned), and `sequence` must be recognized ahead of the
-    // other object forms. Reordering the variants would silently break this.
+    // A bare string is an invoke, an object with `topic` is a publish, and an
+    // object with `sleep_ms` is a sleep — distinguished by shape, so unlike the
+    // old keymap enum this does not depend on variant order.
+    let steps = &scenario["a"].steps;
+    assert!(matches!(steps[0], Step::Invoke(_)), "bare string -> invoke");
     assert!(
-        matches!(map.get(&'r'), Some(KeyEntry::TopicOnly(_))),
-        "bare string should be random-mode"
+        matches!(steps[1], Step::Publish { .. }),
+        "object with topic -> publish"
     );
     assert!(
-        matches!(map.get(&'p'), Some(KeyEntry::Pinned { .. })),
-        "`value` without `step` should be pinned"
+        matches!(steps[2], Step::Sleep { .. }),
+        "object with sleep_ms -> sleep"
     );
+}
+
+#[test]
+fn validate_rejects_unknown_invoke_and_cycles() {
+    let unknown = parse_scenario(r#"{ "a": { "steps": ["ghost"] } }"#).unwrap();
     assert!(
-        matches!(map.get(&'i'), Some(KeyEntry::Increment { .. })),
-        "`step` should select increment even with `value` present"
+        validate(&unknown).is_err(),
+        "invoking a missing action must fail"
     );
+
+    let self_cycle = parse_scenario(r#"{ "a": { "steps": ["a"] } }"#).unwrap();
     assert!(
-        matches!(map.get(&'s'), Some(KeyEntry::Sequence { .. })),
-        "`sequence` should select sequence mode"
+        validate(&self_cycle).is_err(),
+        "a self-invoking action is a cycle"
+    );
+
+    let indirect = parse_scenario(r#"{ "a": {"steps":["b"]}, "b": {"steps":["a"]} }"#).unwrap();
+    assert!(validate(&indirect).is_err(), "a -> b -> a is a cycle");
+}
+
+#[test]
+fn validate_requires_exactly_one_of_value_or_values() {
+    let both =
+        parse_scenario(r#"{ "a": {"steps":[{"topic":"T","value":1.0,"values":[1.0]}]} }"#).unwrap();
+    assert!(
+        validate(&both).is_err(),
+        "value + values together must fail"
+    );
+
+    let neither = parse_scenario(r#"{ "a": {"steps":[{"topic":"T"}]} }"#).unwrap();
+    assert!(
+        validate(&neither).is_err(),
+        "neither value nor values must fail"
+    );
+
+    let ok = parse_scenario(r#"{ "a": {"steps":[{"topic":"T","values":[1.0,2.0]}]} }"#).unwrap();
+    assert!(validate(&ok).is_ok(), "values alone is valid");
+}
+
+#[test]
+fn collect_topics_follows_invokes() {
+    let scenario = parse_scenario(
+        r#"{
+            "big": { "steps": ["small", {"topic": "A", "value": 1.0}] },
+            "small": { "steps": [{"topic": "B", "value": 1.0}, {"sleep_ms": 5}] }
+        }"#,
+    )
+    .unwrap();
+    validate(&scenario).unwrap();
+
+    let topics = collect_topics(&scenario, "big");
+    assert!(
+        topics.contains("A") && topics.contains("B"),
+        "topics must be gathered through invoked actions, got {topics:?}"
     );
 }

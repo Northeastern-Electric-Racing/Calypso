@@ -100,14 +100,14 @@ async fn run_foreground(
 ) -> Result<(), String> {
     if cli.stream {
         modes::stream::run(token.clone(), client.clone(), registry.clone()).await
-    } else if let Some(script_path) = &cli.script {
-        // clap enforces `--script requires --key-map` (see cli.rs), so a missing
+    } else if let Some(action) = &cli.play {
+        // clap enforces `--play requires --key-map` (see cli.rs), so a missing
         // key map here is an impossible state, not a reachable runtime error.
         let key_map_path = cli
             .key_map
             .as_deref()
-            .expect("clap enforces --script requires --key-map");
-        modes::auto_script::run(client.clone(), key_map_path, script_path, registry.clone()).await
+            .expect("clap enforces --play requires --key-map");
+        modes::replay::run(client.clone(), key_map_path, action, registry.clone()).await
     } else if let Some(key_map_path) = &cli.key_map {
         modes::interactive::run(
             token.clone(),

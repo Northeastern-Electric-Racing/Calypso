@@ -1,6 +1,5 @@
 {
-  "v": "BMS/Pack/Voltage",
-  "c": "BMS/Pack/Current",
-  "s": "BMS/Pack/SOC",
-  "h": "BMS/Pack/Health"
+  "voltage": { "key": "v", "steps": [{ "topic": "BMS/Pack/Voltage", "value": 400, "unit": "V" }] },
+  "current": { "key": "c", "steps": [{ "topic": "BMS/Pack/Current", "value": 10, "unit": "A" }] },
+  "soc":     { "key": "s", "steps": [{ "topic": "BMS/Pack/SOC", "value": 80, "unit": "%" }] }
 }

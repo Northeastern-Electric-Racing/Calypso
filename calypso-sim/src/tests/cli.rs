@@ -16,6 +16,7 @@ fn run_mock_arbitrates_the_heartbeat_against_other_modes() {
     // A foreground mode or --list-topics turns the heartbeat off...
     assert!(!cli(&["calypso-sim", "--stream"]).run_mock());
     assert!(!cli(&["calypso-sim", "--key-map", "keys.json"]).run_mock());
+    assert!(!cli(&["calypso-sim", "--key-map", "keys.json", "--play", "demo"]).run_mock());
     assert!(!cli(&["calypso-sim", "--list-topics"]).run_mock());
     // ...unless --mock forces it back on alongside that mode.
     assert!(cli(&["calypso-sim", "--mock"]).run_mock());

@@ -15,23 +15,23 @@ cargo build --release
 
 | Mode | Flag | What it does |
 |---|---|---|
-| **Mock** | `--mock` | Heartbeat publishes for every CAN message with a `sim_freq` in the spec, at its configured frequency. Default when no other mode is chosen; defaults OFF when paired with `--key-map`, `--script`, or `--stream`. |
-| **Interactive** | `--key-map FILE` | Raw-mode terminal — each keypress fires a configured topic. Press `Ctrl+C` to exit. |
-| **Script** | `--script FILE` (with `--key-map`) | Replay a sequence of keymap keys / `sleep N` lines from a text file, then exit. |
+| **Mock** | `--mock` | Heartbeat publishes for every CAN message with a `sim_freq` in the spec, at its configured frequency. Default when no other mode is chosen; defaults OFF when paired with `--key-map` or `--stream`. |
+| **Interactive** | `--key-map FILE` | Raw-mode terminal — each keypress fires its bound action. Press `Ctrl+C` to exit. |
+| **Replay** | `--play ACTION` (with `--key-map`) | Run one named action from the scenario file to completion (following invokes and sleeps), then exit. |
 | **Stream** | `--stream` | JSON-RPC 2.0 over stdin/stdout — for agent-driven injection. |
 
-Pick at most one foreground mode: `--key-map` (with optional `--script`) or `--stream`. `--mock` may run alongside either as a background heartbeat — set it explicitly to override the default-off behavior in those modes.
+Pick at most one foreground mode: `--key-map` (interactive, or replay with `--play ACTION`) or `--stream`. `--mock` may run alongside either as a background heartbeat — set it explicitly to override the default-off behavior in those modes.
 
 ## Quick reference
 
 ```
-cargo run -- --list-topics                       # enumerate topics, exit
-cargo run                                        # mock heartbeat
-cargo run -- --key-map manual_sim_keymap.example.json
-cargo run -- --key-map keys.json --mock          # background heartbeat + interactive
-cargo run -- --key-map keys.json --script play.txt
-cargo run -- --stream                            # JSON-RPC over stdio
-cargo run -- -u 10.0.0.5:1883 ...                # remote broker
+cargo run -- --list-topics                                        # enumerate topics, exit
+cargo run                                                         # mock heartbeat
+cargo run -- --key-map manual_sim_buttons.keymap.json             # interactive
+cargo run -- --key-map manual_sim_buttons.keymap.json --mock      # + background heartbeat
+cargo run -- --key-map manual_sim_buttons.keymap.json --play demo # replay the "demo" action
+cargo run -- --stream                                             # JSON-RPC over stdio
+cargo run -- -u 10.0.0.5:1883 ...                                 # remote broker
 ```
 
 The `--enable-topic <REGEX>` and `--disable-topic <REGEX>` flags filter which topics the mock heartbeat publishes (whitelist / blacklist; mutually exclusive). Topics that lack a `sim_freq` in the CAN spec are listed at startup as a `Warning topics (not simulated): ...` line and can only be reached via `--key-map` or `--stream`.
@@ -40,36 +40,39 @@ The `--enable-topic <REGEX>` and `--disable-topic <REGEX>` flags filter which to
 
 Every topic has an owner: `mock` (default — mock publishes), `stream` (claimed by stream/keymap), or `silenced` (nobody publishes). The mock loop checks ownership before each publish, so claims from `--stream` or keymap modes cleanly override the heartbeat without fighting it. Releasing a topic returns it to `mock`.
 
-## Keymap format (`--key-map` and `--script`)
+## Scenario file (`--key-map` and `--play`)
 
-A keymap is a JSON object mapping single-character keys to one of four entry shapes:
+A scenario is a JSON object mapping action names to **actions**. An action is an ordered list of **steps**, optionally bound to a keyboard `key` and given a `desc`:
 
 ```json
 {
-  "v": "BMS/Pack/Voltage",
-  "p": {"topic": "VCU/CarState/home_mode", "value": 1, "desc": "home pulse"},
-  "n": {"topic": "VCU/CarState/nero_index", "value": 0, "step": 1, "max": 5, "desc": "cycle nero"},
-  "w": {
-    "desc": "wrap menu",
-    "sequence": [
-      {"topic": "VCU/CarState/nero_index", "value": 0},
-      {"topic": "VCU/CarState/home_mode", "value": 1, "delay_ms": 10},
-      {"topic": "VCU/CarState/home_mode", "value": 0, "delay_ms": 100}
+  "enter": { "key": "e", "steps": [{"topic": "Wheel/Buttons/button_id", "value": 5}] },
+  "home": {
+    "key": "h",
+    "desc": "home pulse",
+    "steps": [
+      {"topic": "VCU/CarState/home_mode", "value": 1},
+      {"sleep_ms": 10},
+      {"topic": "VCU/CarState/home_mode", "value": 0}
     ]
-  }
+  },
+  "menu_wrap": { "key": "w", "steps": ["enter", "home"] },
+  "demo": { "desc": "run via --play demo", "steps": ["menu_wrap", {"sleep_ms": 500}, "menu_wrap"] }
 }
 ```
 
-| Form | What it does |
-|---|---|
-| Bare topic string | **Random** — publishes a fresh randomized value within the topic's sim bounds. Entries whose topic isn't in the spec are warned about on stderr and skipped at load. |
-| Object with `value` | **Pinned** — publishes that exact number every keypress. `unit` is required for unknown topics. |
-| Object with `step` | **Increment** — emits the starting value first, then advances by `step` each keypress. Start is `value` if set, else `min`, else `0`. `min`/`max` wrap independently when supplied. |
-| Object with `sequence` | **Sequence** — publishes a scripted series of `(topic, value)` pairs with optional per-step `delay_ms`. |
+Each **step** is one of three shapes, disambiguated purely by form (so there is no order-dependent parsing):
 
-Every object form accepts an optional `desc` for the startup listing and inline log line.
+| Step | Shape | What it does |
+|---|---|---|
+| **Publish** | `{"topic": …, "value": N}` or `{"topic": …, "values": [...]}` | Publish to a topic. Exactly one of `value` / `values`; optional `unit`. |
+| **Sleep** | `{"sleep_ms": N}` | Wait N milliseconds before the next step. |
+| **Invoke** | `"other_action"` (bare string) | Run another action's steps here — the reuse / composition primitive. |
 
-Script files (`--script`) contain one command per line: a single character (fires that key) or `sleep <ms>`. Blank lines and `#` comments are ignored.
+- **Interactive** (`--key-map FILE`): each action with a `key` fires on that keypress.
+- **Replay** (`--key-map FILE --play ACTION`): run `ACTION` to completion — following its invokes and `sleep_ms` waits — then exit. A replay program is just an action, so there is no separate script file.
+
+The scenario is validated at load: every publish sets exactly one of `value` / `values`, every invoke names an action that exists, the invoke graph must be acyclic (so replays always terminate), and no two actions may claim the same `key`.
 
 ## Stream mode protocol (`--stream`)
 
@@ -111,7 +114,7 @@ cargo test
 
 | Layer | Where | What it checks |
 |---|---|---|
-| Unit — keymap | `src/tests/keymap.rs` | The two fragile pieces of keymap logic: increment emit-then-wrap/saturate (`advance_increment`), and the serde `untagged` shape disambiguation, whose result depends on variant *order* (`step` → increment beats `value` → pinned; `sequence` wins). |
+| Unit — scenario | `src/tests/keymap.rs` | The fragile scenario logic: the serde `untagged` step-shape disambiguation (invoke / publish / sleep, by shape not order), and load-time validation — unknown or cyclic invokes are rejected, and publishes must set exactly one of `value` / `values`. |
 | Unit — CLI modes | `src/tests/cli.rs` | `run_mock` arbitration: heartbeat on by default, off under a foreground mode or `--list-topics`, forced on by explicit `--mock`. |
 | Integration — stream | `tests/stream.rs` | Spawns the real `calypso-sim --stream` binary and checks the JSON-RPC contract (`list_topics` is non-empty, `publish` requires exactly one of `value`/`values`, malformed requests get `-32601`/`-32600`) plus an end-to-end ownership flow — claim → silence → release with the heartbeat running, which doubles as the regression guard for the `mock`/`stream`/`silenced` arbitration. |
 

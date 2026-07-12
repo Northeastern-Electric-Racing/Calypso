@@ -3,7 +3,7 @@ use calypso_cangen::can_types::OdysseyMsg;
 
 /// Print a comma-separated list of CAN message topics that have no
 /// `sim_freq` in the spec — these are invisible to the mock simulator
-/// and can only be published via `--key-map` / `--script` / `--stream`.
+/// and can only be published via `--key-map` / `--play` / `--stream`.
 ///
 /// Resolves the spec path relative to the current working directory; emits
 /// nothing if the spec dir is missing.
