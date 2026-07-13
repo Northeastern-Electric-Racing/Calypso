@@ -51,15 +51,16 @@ pub fn validate(scenario: &Scenario) -> Result<(), String> {
                     value,
                     values,
                     ..
-                } => resolve_values(*value, values.clone())
+                } => resolve_values(*value, values.as_deref())
                     .map(|_| ())
                     .map_err(|e| format!("action '{name}': step for '{topic}': {e}"))?,
                 Step::Invoke(_) | Step::Sleep { .. } => {}
             }
         }
     }
+    let mut verified = BTreeSet::new();
     for name in scenario.keys() {
-        detect_cycle(scenario, name, &mut Vec::new())?;
+        detect_cycle(scenario, name, &mut Vec::new(), &mut verified)?;
     }
     // Reject two actions binding the same interactive key. Irrelevant to
     // `--play`, but keeps "well-formed" a single notion decided at load time.
@@ -70,7 +71,19 @@ pub fn validate(scenario: &Scenario) -> Result<(), String> {
 /// Depth-first search tracking the current invoke path; a name already on the
 /// path is a cycle. Runs before any action executes, so [`flatten`] can then
 /// recurse without a visited-set.
-fn detect_cycle(scenario: &Scenario, name: &str, path: &mut Vec<String>) -> Result<(), String> {
+///
+/// `verified` accumulates names whose whole reachable subgraph is already proven
+/// acyclic, so an action reused by many others is walked once, not once per path
+/// that reaches it (otherwise a diamond-shaped invoke graph is exponential).
+fn detect_cycle(
+    scenario: &Scenario,
+    name: &str,
+    path: &mut Vec<String>,
+    verified: &mut BTreeSet<String>,
+) -> Result<(), String> {
+    if verified.contains(name) {
+        return Ok(());
+    }
     if path.iter().any(|n| n == name) {
         path.push(name.to_string());
         return Err(format!("cyclic action invocation: {}", path.join(" -> ")));
@@ -79,11 +92,12 @@ fn detect_cycle(scenario: &Scenario, name: &str, path: &mut Vec<String>) -> Resu
     if let Some(action) = scenario.get(name) {
         for step in &action.steps {
             if let Step::Invoke(target) = step {
-                detect_cycle(scenario, target, path)?;
+                detect_cycle(scenario, target, path, verified)?;
             }
         }
     }
     path.pop();
+    verified.insert(name.to_string());
     Ok(())
 }
 
@@ -116,7 +130,7 @@ pub(crate) fn flatten(scenario: &Scenario, name: &str, out: &mut Vec<Prim>) {
                 unit,
             } => out.push(Prim::Publish {
                 topic: topic.clone(),
-                values: resolve_values(*value, values.clone()).unwrap_or_default(),
+                values: resolve_values(*value, values.as_deref()).unwrap_or_default(),
                 unit: unit.clone().unwrap_or_default(),
             }),
             Step::Sleep { sleep_ms } => out.push(Prim::Sleep(*sleep_ms)),

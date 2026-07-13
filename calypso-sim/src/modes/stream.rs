@@ -117,7 +117,7 @@ async fn handle_publish(id: Value, params: Value, client: &AsyncClient) -> Value
         Err(e) => return error(id, ERR_INVALID_PARAMS, &format!("Invalid params: {e}")),
     };
 
-    let values = match resolve_values(p.value, p.values) {
+    let values = match resolve_values(p.value, p.values.as_deref()) {
         Ok(vs) => vs,
         Err(e) => return error(id, ERR_INVALID_PARAMS, &e),
     };
@@ -147,12 +147,18 @@ fn handle_list_topics(id: Value) -> Value {
     ok(id, json!({"topics": topics}))
 }
 
-#[allow(clippy::needless_pass_by_value)]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "id is moved into the json! payload"
+)]
 fn ok(id: Value, result: impl serde::Serialize) -> Value {
     json!({"jsonrpc": "2.0", "id": id, "result": result})
 }
 
-#[allow(clippy::needless_pass_by_value)]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "id is moved into the json! payload"
+)]
 fn error(id: Value, code: i32, message: &str) -> Value {
     json!({"jsonrpc": "2.0", "id": id, "error": {"code": code, "message": message}})
 }

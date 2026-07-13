@@ -47,11 +47,11 @@ pub async fn publish_data(
 /// One rule for every input path (scenario load, replay, and the stream RPC):
 /// exactly one of `value` (scalar) or `values` (array) must be set, and `values`
 /// must be non-empty. On violation returns a bare reason; callers add context.
-pub fn resolve_values(value: Option<f32>, values: Option<Vec<f32>>) -> Result<Vec<f32>, String> {
+pub fn resolve_values(value: Option<f32>, values: Option<&[f32]>) -> Result<Vec<f32>, String> {
     match (value, values) {
         (Some(_), Some(_)) => Err("set exactly one of `value` or `values`, not both".into()),
         (Some(v), None) => Ok(vec![v]),
-        (None, Some(vs)) if !vs.is_empty() => Ok(vs),
+        (None, Some(vs)) if !vs.is_empty() => Ok(vs.to_vec()),
         (None, Some(_)) => Err("`values` must be non-empty".into()),
         (None, None) => Err("set `value` or `values`".into()),
     }
