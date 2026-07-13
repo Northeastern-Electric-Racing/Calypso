@@ -55,8 +55,6 @@ pub struct Cli {
 
 impl Cli {
     /// Whether the mock heartbeat should run.
-    /// True if `--mock` was set, OR no other input mode was chosen and
-    /// `--list-topics` wasn't requested.
     pub fn run_mock(&self) -> bool {
         let any_other_mode = self.stream || self.key_map.is_some() || self.play.is_some();
         self.mock || (!any_other_mode && !self.list_topics)

@@ -11,8 +11,6 @@ use regex::Regex;
 use std::sync::LazyLock;
 use std::time::Instant;
 
-/********************* SIMULATE_MESSAGE.H *********************/
-
 /**
  * A `SimComponent` roughly corresponds to a `NetField` with properties inherited from `CANMsg`
  */
@@ -62,8 +60,6 @@ pub enum SimValue {
         current: f32,             // currently selected option
     },
 }
-
-/********************* SIMULATE_MESSAGE.C *********************/
 
 impl SimComponent {
     pub fn initialize(&mut self) {
@@ -132,20 +128,8 @@ impl SimValue {
                 current,
                 ..
             } => {
-                // Guard a degenerate (min == max) or inverted (min > max) range:
-                // `random_range` panics on an empty or backwards range, and the
-                // spec validator does not reject either.
-                *current = if *max - *min > f32::EPSILON {
-                    rng.random_range(*min..*max)
-                } else {
-                    *min
-                };
-                if *inc_min != 0.0 {
-                    *current = (*current / *inc_min).round() * *inc_min; // Round to nearest inc_min
-                }
-                if *round {
-                    *current = current.round(); // Round to nearest whole number
-                }
+                let sampled = Self::sample_range_or_low(&mut rng, *min, *max, f32::EPSILON);
+                *current = Self::quantize(sampled, *inc_min, *round);
             }
             SimValue::Discrete { options, current } => {
                 // `choose` is empty-safe (returns None); direct indexing panics.
@@ -163,28 +147,36 @@ impl SimValue {
         }
     }
 
-    /**
-     * Get a random offset within the range of `sim_inc_min` and `sim_inc_max` with a random sign.
-     * Use `sim_inc_min` as the offset if `sim_inc_min` == `sim_inc_max`.
-     * Rounds the offset to the nearest `sim_inc_min` if `sim_inc_min` is not 0.
-     */
+    /// Snap `value` to the nearest multiple of `inc_min` (a no-op when `inc_min`
+    /// is 0), then optionally round to a whole number.
+    fn quantize(value: f32, inc_min: f32, round: bool) -> f32 {
+        let snapped = if inc_min == 0.0 {
+            value
+        } else {
+            (value / inc_min).round() * inc_min
+        };
+        if round { snapped.round() } else { snapped }
+    }
+
+    /// Sample uniformly from `lo..hi`, falling back to `lo` when the range is
+    /// empty or inverted — `random_range` panics on those, and the spec
+    /// validator rejects neither. `eps` is the width below which the range is
+    /// treated as degenerate.
+    fn sample_range_or_low(rng: &mut impl Rng, lo: f32, hi: f32, eps: f32) -> f32 {
+        if hi - lo > eps {
+            rng.random_range(lo..hi)
+        } else {
+            lo
+        }
+    }
+
+    /// A random offset in `inc_min..inc_max` with a random sign, snapped to a
+    /// multiple of `inc_min` (or just `inc_min` when the range is degenerate).
     fn get_rand_offset(inc_min: f32, inc_max: f32) -> f32 {
         let mut rng = rand::rng();
         let sign = if rng.random_bool(0.5) { 1.0 } else { -1.0 };
-
-        let offset: f32 = if inc_max - inc_min > 0.0001 {
-            let rand_offset = rng.random_range(inc_min..inc_max);
-            if inc_min == 0.0 {
-                rand_offset
-            } else {
-                (rand_offset / inc_min).round() * inc_min
-            }
-        } else {
-            // Degenerate (inc_min == inc_max) or inverted range: use inc_min
-            // instead of sampling an empty/backwards range (which panics).
-            inc_min
-        };
-        offset * sign
+        let sampled = Self::sample_range_or_low(&mut rng, inc_min, inc_max, 0.0001);
+        Self::quantize(sampled, inc_min, false) * sign
     }
 
     fn update(&mut self) {
@@ -199,35 +191,19 @@ impl SimValue {
             } => {
                 const MAX_ATTEMPTS: u8 = 10;
 
-                let cur = *current;
-                let min_val = *min;
-                let max_val = *max;
-                let inc_min_val = *inc_min;
-                let inc_max_val = *inc_max;
-
-                // First, call get_rand_offset without partially borrowing each field
-                // let mut new_value = cur + SimValue::get_rand_offset(inc_min_val, inc_max_val);
-                let mut new_value = cur + SimValue::get_rand_offset(inc_min_val, inc_max_val);
-
+                let mut new_value = *current + SimValue::get_rand_offset(*inc_min, *inc_max);
                 let mut attempts = 0;
-                while (new_value < min_val || new_value > max_val) && attempts < MAX_ATTEMPTS {
-                    new_value = cur + SimValue::get_rand_offset(inc_min_val, inc_max_val);
+                while (new_value < *min || new_value > *max) && attempts < MAX_ATTEMPTS {
+                    new_value = *current + SimValue::get_rand_offset(*inc_min, *inc_max);
                     attempts += 1;
                 }
 
+                // Range too tight to land in; keep the current value.
                 if attempts >= MAX_ATTEMPTS {
                     return;
                 }
 
-                if inc_min_val != 0.0 {
-                    new_value = (new_value / inc_min_val).round() * inc_min_val;
-                }
-
-                if *round {
-                    new_value = new_value.round();
-                }
-
-                *current = new_value;
+                *current = Self::quantize(new_value, *inc_min, *round);
             }
             SimValue::Discrete { options, current } => {
                 let mut rng = rand::rng();
@@ -249,9 +225,7 @@ impl SimValue {
     }
 }
 
-/// Placeholder pattern (`{}`) for in-topic value injection. Compiled once and
-/// reused, unlike the upstream copy in `calypso`'s `src/simulatable_message.rs`
-/// which recompiles it on every call; mirror this hoist if you optimize upstream.
+/// Placeholder pattern (`{}`) for in-topic value injection, compiled once and reused.
 static PLACEHOLDER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\}").unwrap());
 
 /**

@@ -116,8 +116,7 @@ async fn run_foreground(
     if cli.stream {
         modes::stream::run(token.clone(), client.clone()).await
     } else if let Some(action) = &cli.play {
-        // clap enforces `--play requires --key-map`, so `main` has loaded the
-        // scenario; a missing one here is an impossible state, not a runtime error.
+        // A missing scenario here is an impossible state, not a runtime error.
         let scenario = scenario.expect("clap enforces --play requires --key-map");
         modes::replay::run(client.clone(), scenario, action).await
     } else if cli.key_map.is_some() {

@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio_util::sync::CancellationToken;
 
-use crate::publish::publish_data;
+use crate::publish::{publish_data, resolve_values};
 
 /// JSON-RPC 2.0 over stdio. Reads one request per line from stdin, writes
 /// one response per line to stdout. Diagnostics go to stderr.
@@ -117,18 +117,9 @@ async fn handle_publish(id: Value, params: Value, client: &AsyncClient) -> Value
         Err(e) => return error(id, ERR_INVALID_PARAMS, &format!("Invalid params: {e}")),
     };
 
-    let values = match (p.value, p.values) {
-        (Some(_), Some(_)) => {
-            return error(
-                id,
-                ERR_INVALID_PARAMS,
-                "specify `value` or `values`, not both",
-            );
-        }
-        (Some(v), None) => vec![v],
-        (None, Some(vs)) if !vs.is_empty() => vs,
-        (None, Some(_)) => return error(id, ERR_INVALID_PARAMS, "`values` must be non-empty"),
-        (None, None) => return error(id, ERR_INVALID_PARAMS, "missing `value` or `values`"),
+    let values = match resolve_values(p.value, p.values) {
+        Ok(vs) => vs,
+        Err(e) => return error(id, ERR_INVALID_PARAMS, &e),
     };
 
     let unit = p.unit.unwrap_or_default();

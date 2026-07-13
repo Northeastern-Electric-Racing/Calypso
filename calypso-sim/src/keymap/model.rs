@@ -3,28 +3,18 @@
 //!
 //! A scenario is a JSON object mapping action names to [`Action`]s. Each action
 //! is an ordered list of [`Step`]s, optionally bound to a keyboard `key` and
-//! given a `desc`:
+//! given a `desc`. A step publishes to a topic, sleeps, or invokes another
+//! action by name:
 //!
 //! ```json
 //! {
-//!   "enter": { "key": "e", "steps": [{"topic": "Wheel/Buttons/button_id", "value": 5}] },
-//!   "home": {
-//!     "key": "h",
-//!     "desc": "home pulse",
-//!     "steps": [
-//!       {"topic": "VCU/CarState/home_mode", "value": 1},
-//!       {"sleep_ms": 10},
-//!       {"topic": "VCU/CarState/home_mode", "value": 0}
-//!     ]
-//!   },
-//!   "menu_wrap": { "key": "w", "steps": ["enter", "home"] },
-//!   "demo": { "desc": "run via --play demo", "steps": ["menu_wrap", {"sleep_ms": 500}, "menu_wrap"] }
+//!   "home":  { "key": "h", "steps": [{"topic": "VCU/CarState/home_mode", "value": 1}] },
+//!   "combo": { "steps": ["home", {"sleep_ms": 10}, "home"] }
 //! }
 //! ```
 //!
-//! Here `enter` and `home` are leaf actions (publish/sleep steps), `menu_wrap`
-//! reuses them via bare-string invoke steps, and `demo` is a keyless replay
-//! program run with `--play demo`. See `README.md` for the full format.
+//! Here `home` is a leaf action bound to a key, and `combo` reuses it via a
+//! bare-string invoke step. See `README.md` for the full format.
 
 use std::collections::HashMap;
 
@@ -44,12 +34,10 @@ pub struct Action {
     /// Keyboard key that fires this action in interactive mode. Actions with
     /// no `key` are still reachable via `--play` or another action's invoke
     /// step, so pure replay programs need no key.
-    #[serde(default)]
     pub key: Option<char>,
 
     /// Human-readable label shown in the interactive listing and in the log
     /// line printed when the action fires.
-    #[serde(default)]
     pub desc: Option<String>,
 
     /// The steps run, in order, each time the action fires.
@@ -69,11 +57,8 @@ pub enum Step {
     /// must be set; `unit` defaults to empty. This is validated at load.
     Publish {
         topic: String,
-        #[serde(default)]
         value: Option<f32>,
-        #[serde(default)]
         values: Option<Vec<f32>>,
-        #[serde(default)]
         unit: Option<String>,
     },
 

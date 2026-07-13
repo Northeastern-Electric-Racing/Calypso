@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use rumqttc::v5::AsyncClient;
 
-use crate::publish::publish_data;
+use crate::publish::{publish_data, resolve_values};
 use crate::raw_mode::line_end;
 
 /// Parse a scenario from JSON. Does not validate — call [`validate`] (or use
@@ -51,7 +51,9 @@ pub fn validate(scenario: &Scenario) -> Result<(), String> {
                     value,
                     values,
                     ..
-                } => check_publish(name, topic, value.as_ref(), values.as_deref())?,
+                } => resolve_values(*value, values.clone())
+                    .map(|_| ())
+                    .map_err(|e| format!("action '{name}': step for '{topic}': {e}"))?,
                 Step::Invoke(_) | Step::Sleep { .. } => {}
             }
         }
@@ -63,26 +65,6 @@ pub fn validate(scenario: &Scenario) -> Result<(), String> {
     // `--play`, but keeps "well-formed" a single notion decided at load time.
     key_bindings(scenario)?;
     Ok(())
-}
-
-fn check_publish(
-    action: &str,
-    topic: &str,
-    value: Option<&f32>,
-    values: Option<&[f32]>,
-) -> Result<(), String> {
-    match (value, values) {
-        (Some(_), Some(_)) => Err(format!(
-            "action '{action}': step for '{topic}' sets both `value` and `values`"
-        )),
-        (None, None) => Err(format!(
-            "action '{action}': step for '{topic}' sets neither `value` nor `values`"
-        )),
-        (None, Some([])) => Err(format!(
-            "action '{action}': step for '{topic}' has empty `values`"
-        )),
-        _ => Ok(()),
-    }
 }
 
 /// Depth-first search tracking the current invoke path; a name already on the
@@ -134,10 +116,7 @@ pub(crate) fn flatten(scenario: &Scenario, name: &str, out: &mut Vec<Prim>) {
                 unit,
             } => out.push(Prim::Publish {
                 topic: topic.clone(),
-                values: values
-                    .clone()
-                    .or_else(|| value.map(|v| vec![v]))
-                    .unwrap_or_default(),
+                values: resolve_values(*value, values.clone()).unwrap_or_default(),
                 unit: unit.clone().unwrap_or_default(),
             }),
             Step::Sleep { sleep_ms } => out.push(Prim::Sleep(*sleep_ms)),
