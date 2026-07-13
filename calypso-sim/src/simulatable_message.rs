@@ -132,12 +132,13 @@ impl SimValue {
                 current,
                 ..
             } => {
-                // Guard a degenerate (min == max) range: `random_range` panics
-                // on an empty range. Mirrors `keymap::randomize_component`.
-                *current = if (*max - *min).abs() < f32::EPSILON {
-                    *min
-                } else {
+                // Guard a degenerate (min == max) or inverted (min > max) range:
+                // `random_range` panics on an empty or backwards range, and the
+                // spec validator does not reject either.
+                *current = if *max - *min > f32::EPSILON {
                     rng.random_range(*min..*max)
+                } else {
+                    *min
                 };
                 if *inc_min != 0.0 {
                     *current = (*current / *inc_min).round() * *inc_min; // Round to nearest inc_min
@@ -171,15 +172,17 @@ impl SimValue {
         let mut rng = rand::rng();
         let sign = if rng.random_bool(0.5) { 1.0 } else { -1.0 };
 
-        let offset: f32 = if (inc_min - inc_max).abs() < 0.0001 {
-            inc_min
-        } else {
+        let offset: f32 = if inc_max - inc_min > 0.0001 {
             let rand_offset = rng.random_range(inc_min..inc_max);
             if inc_min == 0.0 {
                 rand_offset
             } else {
                 (rand_offset / inc_min).round() * inc_min
             }
+        } else {
+            // Degenerate (inc_min == inc_max) or inverted range: use inc_min
+            // instead of sampling an empty/backwards range (which panics).
+            inc_min
         };
         offset * sign
     }

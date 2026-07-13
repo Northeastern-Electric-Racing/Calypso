@@ -33,8 +33,9 @@ pub fn load_scenario(path: &str) -> Result<Scenario, String> {
 /// instead of misbehaving mid-run:
 /// * the scenario is non-empty,
 /// * every publish step sets exactly one of `value` / `values`,
-/// * every invoke step names an action that exists, and
-/// * the invoke graph is acyclic, so every action terminates.
+/// * every invoke step names an action that exists,
+/// * the invoke graph is acyclic, so every action terminates, and
+/// * no two actions bind the same interactive `key`.
 pub fn validate(scenario: &Scenario) -> Result<(), String> {
     if scenario.is_empty() {
         return Err("Scenario is empty".into());
@@ -58,6 +59,9 @@ pub fn validate(scenario: &Scenario) -> Result<(), String> {
     for name in scenario.keys() {
         detect_cycle(scenario, name, &mut Vec::new())?;
     }
+    // Reject two actions binding the same interactive key. Irrelevant to
+    // `--play`, but keeps "well-formed" a single notion decided at load time.
+    key_bindings(scenario)?;
     Ok(())
 }
 
@@ -157,20 +161,21 @@ pub fn key_bindings(scenario: &Scenario) -> Result<HashMap<char, String>, String
     Ok(map)
 }
 
-/// Every topic the scenario can publish, following invokes across all actions.
+/// Every topic the scenario can publish, across all actions. Every invoke target
+/// is itself a top-level action, so unioning each action's own publish steps
+/// already covers everything reachable — no need to follow invokes (or require a
+/// validated/acyclic scenario) here.
+///
 /// Resolved once at startup so the mock heartbeat can cede these topics to the
 /// keymap/replay driver (see [`crate::ownership`]).
 #[must_use]
 pub fn scenario_topics(scenario: &Scenario) -> BTreeSet<String> {
-    let mut prims = Vec::new();
-    for name in scenario.keys() {
-        flatten(scenario, name, &mut prims);
-    }
-    prims
-        .into_iter()
-        .filter_map(|p| match p {
-            Prim::Publish { topic, .. } => Some(topic),
-            Prim::Sleep(_) => None,
+    scenario
+        .values()
+        .flat_map(|action| &action.steps)
+        .filter_map(|step| match step {
+            Step::Publish { topic, .. } => Some(topic.clone()),
+            Step::Invoke(_) | Step::Sleep { .. } => None,
         })
         .collect()
 }

@@ -48,6 +48,21 @@ fn validate_rejects_unknown_invoke_and_cycles() {
 }
 
 #[test]
+fn validate_rejects_duplicate_keys() {
+    let dup = parse_scenario(
+        r#"{ "a": {"key":"x","steps":[{"topic":"T","value":1.0}]},
+             "b": {"key":"x","steps":[{"topic":"U","value":2.0}]} }"#,
+    )
+    .unwrap();
+    // Two actions on the same key is rejected at load, not just in interactive
+    // mode, so the invariant holds for `--play` too.
+    assert!(
+        validate(&dup).is_err(),
+        "two actions bound to the same key must fail validation"
+    );
+}
+
+#[test]
 fn validate_requires_exactly_one_of_value_or_values() {
     let both =
         parse_scenario(r#"{ "a": {"steps":[{"topic":"T","value":1.0,"values":[1.0]}]} }"#).unwrap();

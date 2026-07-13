@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use crate::simulate_data::create_simulated_components;
 use rumqttc::v5::AsyncClient;
 use serde::Deserialize;
@@ -125,8 +127,8 @@ async fn handle_publish(id: Value, params: Value, client: &AsyncClient) -> Value
         }
         (Some(v), None) => vec![v],
         (None, Some(vs)) if !vs.is_empty() => vs,
-        // None/None or None/Some(empty)
-        _ => return error(id, ERR_INVALID_PARAMS, "missing `value` or `values`"),
+        (None, Some(_)) => return error(id, ERR_INVALID_PARAMS, "`values` must be non-empty"),
+        (None, None) => return error(id, ERR_INVALID_PARAMS, "missing `value` or `values`"),
     };
 
     let unit = p.unit.unwrap_or_default();
@@ -136,11 +138,20 @@ async fn handle_publish(id: Value, params: Value, client: &AsyncClient) -> Value
     }
 }
 
+/// Topic (name, unit) pairs for `list_topics`, computed once. Building the full
+/// component set runs each component's RNG initializer — wasted work for the
+/// static name/unit returned here — so cache it rather than rebuilding per call.
+static TOPICS: LazyLock<Vec<(String, String)>> = LazyLock::new(|| {
+    create_simulated_components()
+        .into_iter()
+        .map(|c| (c.name, c.unit))
+        .collect()
+});
+
 fn handle_list_topics(id: Value) -> Value {
-    let components = create_simulated_components();
-    let topics: Vec<_> = components
+    let topics: Vec<Value> = TOPICS
         .iter()
-        .map(|c| json!({"name": c.name, "unit": c.unit}))
+        .map(|(name, unit)| json!({"name": name, "unit": unit}))
         .collect();
     ok(id, json!({"topics": topics}))
 }
