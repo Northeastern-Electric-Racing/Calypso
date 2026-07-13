@@ -28,18 +28,22 @@ pub async fn run(token: CancellationToken, client: AsyncClient, mut components: 
                 debug!("Mock: shutting down.");
                 break;
             }
-            _ = interval.tick() => {
-                for component in &mut components {
-                    if !component.should_update() {
-                        continue;
-                    }
-                    component.update();
-                    let data = component.get_decode_data();
-                    if let Err(e) = publish_data(&client, &data.topic, &data.unit, &data.value).await {
-                        warn!("Mock publish failed for {}: {e}", data.topic);
-                    }
-                }
-            }
+            _ = interval.tick() => publish_due(&mut components, &client).await,
+        }
+    }
+}
+
+/// Publish every component that is due for an update (per its `sim_freq`),
+/// advancing its simulated value first.
+async fn publish_due(components: &mut [SimComponent], client: &AsyncClient) {
+    for component in components {
+        if !component.should_update() {
+            continue;
+        }
+        component.update();
+        let data = component.get_decode_data();
+        if let Err(e) = publish_data(client, &data.topic, &data.unit, &data.value).await {
+            warn!("Mock publish failed for {}: {e}", data.topic);
         }
     }
 }

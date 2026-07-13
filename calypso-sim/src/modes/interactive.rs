@@ -33,29 +33,19 @@ pub async fn run(
     loop {
         tokio::select! {
             () = token.cancelled() => break,
-            event = reader.next() => match event {
-                Some(Ok(Event::Key(KeyEvent {
-                    code: KeyCode::Char('c'),
-                    modifiers,
-                    kind: KeyEventKind::Press,
-                    ..
-                }))) if modifiers.contains(KeyModifiers::CONTROL) => break,
-                Some(Ok(Event::Key(KeyEvent {
-                    code: KeyCode::Char(ch),
-                    kind: KeyEventKind::Press,
-                    ..
-                }))) => {
-                    if let Some(name) = keys.get(&ch) {
-                        run_action(&scenario, name, &client).await;
-                    }
-                }
-                Some(Err(e)) => {
+            event = reader.next() => match classify(event) {
+                Input::Quit => break,
+                Input::Error(e) => {
                     print!("Terminal event error: {e}{}", line_end());
                     let _ = std::io::stdout().flush();
                     break;
                 }
-                None => break,
-                _ => {}
+                Input::Key(ch) => {
+                    if let Some(name) = keys.get(&ch) {
+                        run_action(&scenario, name, &client).await;
+                    }
+                }
+                Input::Ignore => {}
             }
         }
     }
@@ -64,4 +54,38 @@ pub async fn run(
     println!();
     println!("Shutting down...");
     Ok(())
+}
+
+/// What the interactive loop should do with one terminal event.
+enum Input {
+    /// A printable key was pressed — run its bound action, if any.
+    Key(char),
+    /// Ctrl+C or end-of-stream: leave the loop.
+    Quit,
+    /// The event stream errored; report and leave.
+    Error(String),
+    /// Anything else (key release, resize, non-char key): ignore.
+    Ignore,
+}
+
+/// Classify one [`EventStream`] item into the loop's vocabulary, hiding the
+/// crossterm `KeyEvent` destructuring.
+fn classify(event: Option<std::io::Result<Event>>) -> Input {
+    match event {
+        None => Input::Quit,
+        Some(Err(e)) => Input::Error(e.to_string()),
+        Some(Ok(Event::Key(KeyEvent {
+            code: KeyCode::Char(ch),
+            modifiers,
+            kind: KeyEventKind::Press,
+            ..
+        }))) => {
+            if ch == 'c' && modifiers.contains(KeyModifiers::CONTROL) {
+                Input::Quit
+            } else {
+                Input::Key(ch)
+            }
+        }
+        _ => Input::Ignore,
+    }
 }

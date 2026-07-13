@@ -56,31 +56,7 @@ async fn main() {
     let token = CancellationToken::new();
     let poll_handle = tokio::spawn(modes::poll_eventloop(token.clone(), eventloop));
 
-    let mock_handle = if cli.run_mock() {
-        // Validate the enable/disable regex patterns up front so a bad pattern
-        // fails fast with a non-zero exit instead of silently disabling the
-        // entire mock heartbeat inside the spawned task.
-        let filter = ownership::FilterMode::build(&cli.enable_topic, &cli.disable_topic)
-            .unwrap_or_else(|err| {
-                eprintln!("Error: {err}");
-                exit(1);
-            });
-        // Reserve the driver's topics (a scenario's, if any) from the heartbeat,
-        // then print the resulting split so it's clear who drives what.
-        let driver_owned = scenario
-            .as_ref()
-            .map(keymap::scenario_topics)
-            .unwrap_or_default();
-        let partition = ownership::Partition::resolve(&filter, driver_owned);
-        partition.print_summary();
-        Some(tokio::spawn(modes::mock::run(
-            token.clone(),
-            client.clone(),
-            partition.heartbeat,
-        )))
-    } else {
-        None
-    };
+    let mock_handle = spawn_mock(&cli, scenario.as_ref(), &client, &token);
 
     let foreground = run_foreground(&cli, &token, &client, scenario).await;
 
@@ -128,6 +104,34 @@ async fn run_foreground(
             .await
             .map_err(|e| format!("ctrl+c handler failed: {e}"))
     }
+}
+
+/// If the mock heartbeat is enabled, resolve its share of the topic space
+/// against the driver (a scenario's topics, if any), print the split, and spawn
+/// the task. Exits on a bad enable/disable pattern — fail fast, before spawning
+/// (rather than silently disabling the heartbeat inside the spawned task).
+fn spawn_mock(
+    cli: &Cli,
+    scenario: Option<&keymap::Scenario>,
+    client: &AsyncClient,
+    token: &CancellationToken,
+) -> Option<tokio::task::JoinHandle<()>> {
+    if !cli.run_mock() {
+        return None;
+    }
+    let filter = ownership::FilterMode::build(&cli.enable_topic, &cli.disable_topic)
+        .unwrap_or_else(|err| {
+            eprintln!("Error: {err}");
+            exit(1);
+        });
+    let driver_owned = scenario.map(keymap::scenario_topics).unwrap_or_default();
+    let partition = ownership::Partition::resolve(&filter, driver_owned);
+    partition.print_summary();
+    Some(tokio::spawn(modes::mock::run(
+        token.clone(),
+        client.clone(),
+        partition.heartbeat,
+    )))
 }
 
 fn init_tracing() {
