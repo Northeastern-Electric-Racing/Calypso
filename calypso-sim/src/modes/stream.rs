@@ -6,24 +6,20 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio_util::sync::CancellationToken;
 
 use crate::publish::publish_data;
-use crate::registry::{Owner, SharedRegistry};
 
 /// JSON-RPC 2.0 over stdio. Reads one request per line from stdin, writes
 /// one response per line to stdout. Diagnostics go to stderr.
 ///
+/// Ownership is a startup partition (see [`crate::ownership`]), not a runtime
+/// negotiation, so there are no claim/release/silence methods — a stream driver
+/// carves its topics out of the mock heartbeat with `--disable-topic`, then just
+/// publishes.
+///
 /// Methods:
 /// * `publish` — `{topic, value | values, unit?}` → `{ts_us}`
-/// * `claim` — `{topic}` → `{previous_owner, owner}`
-/// * `release` — `{topic}` → `{previous_owner, owner}` (sets owner=mock)
-/// * `silence` — `{topic}` → `{previous_owner, owner}`
-/// * `status` — `{}` → `{overrides: [{topic, owner}, ...]}`
 /// * `list_topics` — `{}` → `{topics: [{name, unit}, ...]}`
 /// * `ping` — `{}` → `{ok: true}`
-pub async fn run(
-    token: CancellationToken,
-    client: AsyncClient,
-    registry: SharedRegistry,
-) -> Result<(), String> {
+pub async fn run(token: CancellationToken, client: AsyncClient) -> Result<(), String> {
     let stdin = tokio::io::stdin();
     let mut reader = BufReader::new(stdin).lines();
 
@@ -35,7 +31,7 @@ pub async fn run(
                     if line.trim().is_empty() {
                         continue;
                     }
-                    let resp = handle_line(&line, &client, &registry).await;
+                    let resp = handle_line(&line, &client).await;
                     write_line(&resp).await;
                 }
                 Ok(None) => break, // stdin closed
@@ -67,7 +63,7 @@ const ERR_METHOD_NOT_FOUND: i32 = -32601;
 const ERR_INVALID_PARAMS: i32 = -32602;
 const ERR_INTERNAL: i32 = -32603;
 
-async fn handle_line(line: &str, client: &AsyncClient, registry: &SharedRegistry) -> Value {
+async fn handle_line(line: &str, client: &AsyncClient) -> Value {
     let request: Request = match serde_json::from_str(line) {
         Ok(r) => r,
         Err(e) => return error(Value::Null, ERR_PARSE, &format!("Parse error: {e}")),
@@ -91,11 +87,7 @@ async fn handle_line(line: &str, client: &AsyncClient, registry: &SharedRegistry
     };
 
     match method.as_str() {
-        "publish" => handle_publish(id, request.params, client, registry).await,
-        "claim" => handle_set(id, request.params, registry, Owner::Stream).await,
-        "release" => handle_set(id, request.params, registry, Owner::Mock).await,
-        "silence" => handle_set(id, request.params, registry, Owner::Silenced).await,
-        "status" => handle_status(id, registry).await,
+        "publish" => handle_publish(id, request.params, client).await,
         "list_topics" => handle_list_topics(id),
         "ping" => ok(id, json!({"ok": true})),
         other => error(
@@ -117,12 +109,7 @@ struct PublishParams {
     unit: Option<String>,
 }
 
-async fn handle_publish(
-    id: Value,
-    params: Value,
-    client: &AsyncClient,
-    registry: &SharedRegistry,
-) -> Value {
+async fn handle_publish(id: Value, params: Value, client: &AsyncClient) -> Value {
     let p: PublishParams = match serde_json::from_value(params) {
         Ok(v) => v,
         Err(e) => return error(id, ERR_INVALID_PARAMS, &format!("Invalid params: {e}")),
@@ -142,42 +129,11 @@ async fn handle_publish(
         _ => return error(id, ERR_INVALID_PARAMS, "missing `value` or `values`"),
     };
 
-    if !registry.read().await.driver_may_publish(&p.topic) {
-        return ok(id, json!({"skipped": "silenced"}));
-    }
-
     let unit = p.unit.unwrap_or_default();
     match publish_data(client, &p.topic, &unit, &values).await {
         Ok(ts_us) => ok(id, json!({"ts_us": ts_us})),
         Err(e) => error(id, ERR_INTERNAL, &format!("publish failed: {e}")),
     }
-}
-
-#[derive(Deserialize)]
-struct TopicParam {
-    topic: String,
-}
-
-async fn handle_set(id: Value, params: Value, registry: &SharedRegistry, owner: Owner) -> Value {
-    let p: TopicParam = match serde_json::from_value(params) {
-        Ok(v) => v,
-        Err(e) => return error(id, ERR_INVALID_PARAMS, &format!("Invalid params: {e}")),
-    };
-
-    let prev = registry.write().await.set(&p.topic, owner);
-    ok(
-        id,
-        json!({"topic": p.topic, "previous_owner": prev.as_str(), "owner": owner.as_str()}),
-    )
-}
-
-async fn handle_status(id: Value, registry: &SharedRegistry) -> Value {
-    let snap = registry.read().await.snapshot();
-    let entries: Vec<_> = snap
-        .into_iter()
-        .map(|(t, o)| json!({"topic": t, "owner": o.as_str()}))
-        .collect();
-    ok(id, json!({"overrides": entries}))
 }
 
 fn handle_list_topics(id: Value) -> Value {

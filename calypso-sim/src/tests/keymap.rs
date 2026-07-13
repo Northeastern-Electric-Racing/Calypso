@@ -2,7 +2,7 @@
 //! shape disambiguation, and the load-time validation (unknown/looping invokes,
 //! publish value-arity) that keeps replays terminating and well-formed.
 
-use crate::keymap::{Step, collect_topics, parse_scenario, validate};
+use crate::keymap::{Prim, Step, flatten, parse_scenario, validate};
 
 #[test]
 fn step_shapes_are_unambiguous() {
@@ -67,7 +67,7 @@ fn validate_requires_exactly_one_of_value_or_values() {
 }
 
 #[test]
-fn collect_topics_follows_invokes() {
+fn flatten_inlines_invoked_actions() {
     let scenario = parse_scenario(
         r#"{
             "big": { "steps": ["small", {"topic": "A", "value": 1.0}] },
@@ -77,9 +77,24 @@ fn collect_topics_follows_invokes() {
     .unwrap();
     validate(&scenario).unwrap();
 
-    let topics = collect_topics(&scenario, "big");
+    // Flattening "big" must inline "small"'s steps in place, so a replay runs
+    // an invoked action's publishes and sleeps, not just the invoker's own.
+    let mut prims = Vec::new();
+    flatten(&scenario, "big", &mut prims);
+    let topics: Vec<&str> = prims
+        .iter()
+        .filter_map(|p| match p {
+            Prim::Publish { topic, .. } => Some(topic.as_str()),
+            Prim::Sleep(_) => None,
+        })
+        .collect();
+    assert_eq!(
+        topics,
+        ["B", "A"],
+        "invoked action's publish must be inlined before the invoker's own"
+    );
     assert!(
-        topics.contains("A") && topics.contains("B"),
-        "topics must be gathered through invoked actions, got {topics:?}"
+        prims.iter().any(|p| matches!(p, Prim::Sleep(5))),
+        "invoked action's sleep must be inlined too, got {prims:?}"
     );
 }

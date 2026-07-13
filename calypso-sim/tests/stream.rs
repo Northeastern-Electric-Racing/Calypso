@@ -3,10 +3,9 @@
 //!
 //! No broker required. `AsyncClient::publish` only enqueues, and the sim's
 //! eventloop poller retries a missing broker instead of dropping the queue (see
-//! `modes::poll_eventloop`), so every `publish` still returns a `ts_us`, and
-//! ownership is answered from the JSON-RPC responses. Observing the actual bytes
-//! on the wire needs a live broker (Siren, in the Docker compose stack) and is
-//! intentionally out of scope — see `README.md`.
+//! `modes::poll_eventloop`), so every `publish` still returns a `ts_us`.
+//! Observing the actual bytes on the wire needs a live broker (Siren, in the
+//! Docker compose stack) and is intentionally out of scope — see `README.md`.
 
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
@@ -24,22 +23,10 @@ struct Sim {
 impl Sim {
     /// Spawn the sim in stream mode with the mock heartbeat off.
     fn spawn() -> Self {
-        Self::spawn_inner(false)
-    }
-
-    /// Spawn with `--mock` so the heartbeat runs alongside the stream driver.
-    fn spawn_with_mock() -> Self {
-        Self::spawn_inner(true)
-    }
-
-    fn spawn_inner(with_mock: bool) -> Self {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_calypso-sim"));
         // A closed port: no broker is needed, and this keeps the sim off any
         // real broker a developer happens to be running.
         cmd.arg("-u").arg("127.0.0.1:47654").arg("--stream");
-        if with_mock {
-            cmd.arg("--mock");
-        }
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
@@ -107,16 +94,6 @@ impl Sim {
         self.call(method, params)
             .unwrap_or_else(|(code, msg)| panic!("{method} failed: [{code}] {msg}"))
     }
-
-    /// Owner string for `topic` per `status`, or `None` when it is still `mock`.
-    fn owner_of(&mut self, topic: &str) -> Option<String> {
-        self.ok("status", json!({}))["overrides"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .find(|o| o["topic"] == json!(topic))
-            .map(|o| o["owner"].as_str().unwrap_or_default().to_string())
-    }
 }
 
 impl Drop for Sim {
@@ -161,6 +138,15 @@ fn publish_requires_exactly_one_of_value_or_values() {
         )
         .expect_err("value + values together must error");
     assert_eq!(code, -32602);
+    // Exactly one -> accepted, returns a timestamp (publish only enqueues, so no
+    // broker is needed for this to succeed).
+    assert!(
+        sim.ok("publish", json!({"topic": "T", "value": 1.0}))["ts_us"]
+            .as_u64()
+            .unwrap_or(0)
+            > 0,
+        "a well-formed publish must return a ts_us"
+    );
 }
 
 #[test]
@@ -184,49 +170,5 @@ fn malformed_requests_are_rejected_with_standard_codes() {
         resp["error"]["code"].as_i64(),
         Some(-32600),
         "missing method must be rejected as invalid request, got {resp}"
-    );
-}
-
-#[test]
-fn ownership_isolation_through_claim_silence_release() {
-    // With the mock heartbeat running: a claimed topic is `stream`-owned
-    // (so the heartbeat yields), a silenced topic rejects even the driver, and
-    // release returns it to `mock`.
-    let mut sim = Sim::spawn_with_mock();
-    let topic = "VCU/CarState/torque_limit_percentage";
-
-    sim.ok("claim", json!({"topic": topic}));
-    assert_eq!(
-        sim.owner_of(topic).as_deref(),
-        Some("stream"),
-        "claim must mark the topic stream-owned"
-    );
-    assert!(
-        sim.ok("publish", json!({"topic": topic, "value": 0.42}))["ts_us"]
-            .as_u64()
-            .unwrap_or(0)
-            > 0,
-        "driver publish accepted while claimed"
-    );
-
-    sim.ok("silence", json!({"topic": topic}));
-    assert_eq!(
-        sim.ok("publish", json!({"topic": topic, "value": 0.99}))["skipped"].as_str(),
-        Some("silenced"),
-        "silenced topics reject even the driver"
-    );
-
-    sim.ok("release", json!({"topic": topic}));
-    assert_eq!(
-        sim.owner_of(topic),
-        None,
-        "release returns the topic to mock (no override)"
-    );
-    assert!(
-        sim.ok("publish", json!({"topic": topic, "value": 0.5}))["ts_us"]
-            .as_u64()
-            .unwrap_or(0)
-            > 0,
-        "driver publish accepted again after release"
     );
 }

@@ -1,5 +1,30 @@
 //! The scenario data model — plain deserialized types, no logic. The functions
 //! that load, validate, and run these live in the parent `keymap` module.
+//!
+//! A scenario is a JSON object mapping action names to [`Action`]s. Each action
+//! is an ordered list of [`Step`]s, optionally bound to a keyboard `key` and
+//! given a `desc`:
+//!
+//! ```json
+//! {
+//!   "enter": { "key": "e", "steps": [{"topic": "Wheel/Buttons/button_id", "value": 5}] },
+//!   "home": {
+//!     "key": "h",
+//!     "desc": "home pulse",
+//!     "steps": [
+//!       {"topic": "VCU/CarState/home_mode", "value": 1},
+//!       {"sleep_ms": 10},
+//!       {"topic": "VCU/CarState/home_mode", "value": 0}
+//!     ]
+//!   },
+//!   "menu_wrap": { "key": "w", "steps": ["enter", "home"] },
+//!   "demo": { "desc": "run via --play demo", "steps": ["menu_wrap", {"sleep_ms": 500}, "menu_wrap"] }
+//! }
+//! ```
+//!
+//! Here `enter` and `home` are leaf actions (publish/sleep steps), `menu_wrap`
+//! reuses them via bare-string invoke steps, and `demo` is a keyless replay
+//! program run with `--play demo`. See `README.md` for the full format.
 
 use std::collections::HashMap;
 

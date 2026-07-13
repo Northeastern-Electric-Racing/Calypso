@@ -1,66 +1,21 @@
 use std::time::Duration;
 
-use crate::simulate_data::create_simulated_components;
-use regex::Regex;
 use rumqttc::v5::AsyncClient;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 
 use crate::publish::publish_data;
-use crate::registry::SharedRegistry;
+use crate::simulatable_message::SimComponent;
 
-#[derive(Debug)]
-pub(crate) enum FilterMode {
-    Disabled,
-    Blacklist(Vec<Regex>),
-    Whitelist(Vec<Regex>),
-}
-
-impl FilterMode {
-    pub(crate) fn build(enable: &[String], disable: &[String]) -> Result<Self, String> {
-        if !disable.is_empty() {
-            Ok(Self::Blacklist(compile_patterns(disable)?))
-        } else if !enable.is_empty() {
-            Ok(Self::Whitelist(compile_patterns(enable)?))
-        } else {
-            Ok(Self::Disabled)
-        }
-    }
-
-    fn allows(&self, topic: &str) -> bool {
-        match self {
-            FilterMode::Disabled => true,
-            FilterMode::Blacklist(p) => !p.iter().any(|re| re.is_match(topic)),
-            FilterMode::Whitelist(p) => p.iter().any(|re| re.is_match(topic)),
-        }
-    }
-}
-
-fn compile_patterns(patterns: &[String]) -> Result<Vec<Regex>, String> {
-    patterns
-        .iter()
-        .map(|p| Regex::new(p).map_err(|e| format!("Invalid regex '{p}': {e}")))
-        .collect()
-}
-
-/// Background task: every 5ms, walk the simulated components and publish any
-/// that are due (per `sim_freq`) AND owned by `Owner::Mock` in the registry.
+/// Background task: every 5ms, walk `components` and publish any that are due
+/// (per `sim_freq`).
 ///
-/// Components owned by `Stream` or `Silenced` are skipped without advancing
-/// internal state, so they pick up where they would have been on `release`.
-pub async fn run(
-    token: CancellationToken,
-    client: AsyncClient,
-    registry: SharedRegistry,
-    filter: FilterMode,
-) {
-    let mut components: Vec<_> = create_simulated_components()
-        .into_iter()
-        .filter(|c| filter.allows(&c.name))
-        .collect();
-
+/// `components` is already the heartbeat's share of the topic space — the
+/// startup [`crate::ownership::Partition`] has removed anything a driver owns —
+/// so there is no per-publish ownership check here.
+pub async fn run(token: CancellationToken, client: AsyncClient, mut components: Vec<SimComponent>) {
     if components.is_empty() {
-        info!("Mock: no components match the filter; nothing to simulate.");
+        info!("Mock: no components to simulate.");
     } else {
         info!("Mock: simulating {} components", components.len());
     }
@@ -76,9 +31,6 @@ pub async fn run(
             _ = interval.tick() => {
                 for component in &mut components {
                     if !component.should_update() {
-                        continue;
-                    }
-                    if !registry.read().await.mock_may_publish(&component.name) {
                         continue;
                     }
                     component.update();

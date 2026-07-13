@@ -36,9 +36,15 @@ cargo run -- -u 10.0.0.5:1883 ...                                 # remote broke
 
 The `--enable-topic <REGEX>` and `--disable-topic <REGEX>` flags filter which topics the mock heartbeat publishes (whitelist / blacklist; mutually exclusive). Topics that lack a `sim_freq` in the CAN spec are listed at startup as a `Warning topics (not simulated): ...` line and can only be reached via `--key-map` or `--stream`.
 
-## Topic-ownership model
+## Ownership (static partition)
 
-Every topic has an owner: `mock` (default — mock publishes), `stream` (claimed by stream/keymap), or `silenced` (nobody publishes). The mock loop checks ownership before each publish, so claims from `--stream` or keymap modes cleanly override the heartbeat without fighting it. Releasing a topic returns it to `mock`.
+The mock heartbeat and a foreground driver (interactive / replay / stream) can both publish, so they must never target the same topic. Rather than negotiate at runtime, ownership is a **partition resolved once at startup**: any topic the driver owns is removed from the heartbeat's set up front, so the two publish disjoint topics by construction. The split is printed before anything publishes (`Ownership: mock heartbeat drives N topic(s); …`).
+
+- **`--key-map` / `--play`:** the driver owns every topic its scenario publishes (known at load); the heartbeat cedes them automatically.
+- **`--stream`:** nothing is auto-reserved (its topics aren't known up front) — carve topics out of the heartbeat explicitly with `--disable-topic`.
+- **Pure `--mock`:** the heartbeat owns every topic its filter allows.
+
+There is no runtime claim/release/silence. To keep the heartbeat off a topic, use `--disable-topic` (or `--enable-topic` to whitelist).
 
 ## Scenario file (`--key-map` and `--play`)
 
@@ -81,25 +87,21 @@ JSON-RPC 2.0 over stdio — one request per line on stdin, one response per line
 ```jsonc
 // stdin
 {"jsonrpc":"2.0","id":1,"method":"publish","params":{"topic":"Wheel/Buttons/button_id","value":5}}
-{"jsonrpc":"2.0","id":2,"method":"claim","params":{"topic":"VCU/CarState/home_mode"}}
-{"jsonrpc":"2.0","id":3,"method":"publish","params":{"topic":"VCU/CarState/home_mode","value":1}}
-{"jsonrpc":"2.0","id":4,"method":"release","params":{"topic":"VCU/CarState/home_mode"}}
+{"jsonrpc":"2.0","id":2,"method":"publish","params":{"topic":"VCU/CarState/home_mode","values":[1,0]}}
 
 // stdout
 {"jsonrpc":"2.0","id":1,"result":{"ts_us":1735347123456789}}
-{"jsonrpc":"2.0","id":2,"result":{"topic":"...","previous_owner":"mock","owner":"stream"}}
+{"jsonrpc":"2.0","id":2,"result":{"ts_us":1735347123456999}}
 ...
 ```
 
 | Method | Params | Result |
 |---|---|---|
-| `publish` | `{topic, value? \| values?, unit?}` | `{ts_us}`, or `{skipped: "silenced"}` on a silenced topic |
-| `claim` | `{topic}` | `{topic, previous_owner, owner}` |
-| `release` | `{topic}` | `{topic, previous_owner, owner: "mock"}` |
-| `silence` | `{topic}` | `{topic, previous_owner, owner: "silenced"}` |
-| `status` | `{}` | `{overrides: [{topic, owner}, ...]}` |
+| `publish` | `{topic, value? \| values?, unit?}` | `{ts_us}` |
 | `list_topics` | `{}` | `{topics: [{name, unit}, ...]}` |
 | `ping` | `{}` | `{ok: true}` |
+
+Ownership is a startup partition, not a runtime negotiation, so there are no `claim`/`release`/`silence` methods — reserve a stream driver's topics from the heartbeat with `--disable-topic`.
 
 Errors follow JSON-RPC 2.0 (`{error: {code, message}}`) with the standard codes: `-32700` (parse), `-32600` (invalid request), `-32601` (method not found), `-32602` (invalid params), and `-32603` (internal).
 
@@ -116,10 +118,10 @@ cargo test
 |---|---|---|
 | Unit — scenario | `src/tests/keymap.rs` | The fragile scenario logic: the serde `untagged` step-shape disambiguation (invoke / publish / sleep, by shape not order), and load-time validation — unknown or cyclic invokes are rejected, and publishes must set exactly one of `value` / `values`. |
 | Unit — CLI modes | `src/tests/cli.rs` | `run_mock` arbitration: heartbeat on by default, off under a foreground mode or `--list-topics`, forced on by explicit `--mock`. |
-| Integration — stream | `tests/stream.rs` | Spawns the real `calypso-sim --stream` binary and checks the JSON-RPC contract (`list_topics` is non-empty, `publish` requires exactly one of `value`/`values`, malformed requests get `-32601`/`-32600`) plus an end-to-end ownership flow — claim → silence → release with the heartbeat running, which doubles as the regression guard for the `mock`/`stream`/`silenced` arbitration. |
+| Integration — stream | `tests/stream.rs` | Spawns the real `calypso-sim --stream` binary and checks the JSON-RPC contract: `list_topics` is non-empty and well-formed, `publish` requires exactly one of `value`/`values` (and a well-formed one returns a `ts_us`), and malformed requests get `-32601`/`-32600`. |
 
 The suite is deliberately small: each test guards logic a future change could silently break, not code that is obvious by reading it. Unit tests live in `src/tests/` — compiled into the crate under `cfg(test)`, so they reach internals via `use crate::…`; binary-driven tests live in the crate-root `tests/` dir, the only place Cargo sets `CARGO_BIN_EXE_calypso-sim`.
 
-No broker is needed because `publish` only enqueues (the eventloop retries a missing broker rather than dropping the queue), so it still returns a `ts_us`, and ownership arbitration is answered entirely from the JSON-RPC responses. Observing the actual *bytes on the wire* — that a payload reaches a subscriber — needs a live broker, which in practice is **Siren** in the Docker compose stack (see the repo `Dockerfile`); a standalone end-to-end test broker is intentionally out of scope.
+No broker is needed because `publish` only enqueues (the eventloop retries a missing broker rather than dropping the queue), so it still returns a `ts_us`. Observing the actual *bytes on the wire* — that a payload reaches a subscriber — needs a live broker, which in practice is **Siren** in the Docker compose stack (see the repo `Dockerfile`); a standalone end-to-end test broker is intentionally out of scope.
 
 CI (`.github/workflows/calypso-sim-ci.yml`) runs the suite on any change under `calypso-sim/**` or its path-dependencies.

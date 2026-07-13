@@ -5,28 +5,23 @@ use futures_util::StreamExt;
 use rumqttc::v5::AsyncClient;
 use tokio_util::sync::CancellationToken;
 
-use crate::keymap::{claim_topics, key_bindings, load_scenario, print_listing, run_action};
+use crate::keymap::{Scenario, key_bindings, print_listing, run_action};
 use crate::raw_mode::{RawModeGuard, line_end};
-use crate::registry::SharedRegistry;
 
 /// Run the interactive raw-mode keypress loop. Each key-bound action fires on
-/// its key; the action's topics are claimed in the registry so the mock loop
-/// (if running) yields ownership.
+/// its key. The heartbeat (if running) has already ceded this scenario's topics
+/// up front, so keypresses never fight it (see [`crate::ownership`]).
 pub async fn run(
     token: CancellationToken,
     client: AsyncClient,
-    scenario_path: &str,
-    registry: SharedRegistry,
+    scenario: Scenario,
 ) -> Result<(), String> {
-    let scenario = load_scenario(scenario_path)?;
     let keys = key_bindings(&scenario)?;
     if keys.is_empty() {
         return Err(
             "Scenario has no key-bound actions; add a `key` to an action, or use --play".into(),
         );
     }
-    claim_topics(&scenario, keys.values().map(String::as_str), &registry).await;
-
     print_listing(&scenario, &keys);
     println!("Press mapped keys to inject. Ctrl+C to exit.");
     println!();
@@ -51,7 +46,7 @@ pub async fn run(
                     ..
                 }))) => {
                     if let Some(name) = keys.get(&ch) {
-                        run_action(&scenario, name, &client, &registry).await;
+                        run_action(&scenario, name, &client).await;
                     }
                 }
                 Some(Err(e)) => {

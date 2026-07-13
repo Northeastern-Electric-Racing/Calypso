@@ -1,11 +1,11 @@
 mod cli;
 mod keymap;
 mod modes;
+mod ownership;
 #[allow(clippy::all, clippy::pedantic)]
 mod proto;
 mod publish;
 mod raw_mode;
-mod registry;
 mod simulatable_message;
 mod simulate_data;
 mod warnings;
@@ -24,7 +24,6 @@ use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
 use cli::Cli;
-use registry::TopicRegistry;
 
 #[tokio::main]
 async fn main() {
@@ -38,6 +37,17 @@ async fn main() {
 
     warnings::print_unsimulated();
 
+    // Load the scenario once, up front (for --key-map / --play). This fails fast
+    // on a bad file, and lets us reserve the scenario's topics from the mock
+    // heartbeat before anything publishes (ownership is a startup partition, not
+    // a runtime negotiation — see `ownership`).
+    let scenario = cli.key_map.as_deref().map(|path| {
+        keymap::load_scenario(path).unwrap_or_else(|err| {
+            eprintln!("Error: {err}");
+            exit(1);
+        })
+    });
+
     let (client, eventloop) = connect_mqtt(&cli.siren_host_url).unwrap_or_else(|err| {
         eprintln!("Error: {err}");
         exit(1);
@@ -46,28 +56,33 @@ async fn main() {
     let token = CancellationToken::new();
     let poll_handle = tokio::spawn(modes::poll_eventloop(token.clone(), eventloop));
 
-    let registry = TopicRegistry::shared();
-
     let mock_handle = if cli.run_mock() {
         // Validate the enable/disable regex patterns up front so a bad pattern
         // fails fast with a non-zero exit instead of silently disabling the
         // entire mock heartbeat inside the spawned task.
-        let filter = modes::mock::FilterMode::build(&cli.enable_topic, &cli.disable_topic)
+        let filter = ownership::FilterMode::build(&cli.enable_topic, &cli.disable_topic)
             .unwrap_or_else(|err| {
                 eprintln!("Error: {err}");
                 exit(1);
             });
+        // Reserve the driver's topics (a scenario's, if any) from the heartbeat,
+        // then print the resulting split so it's clear who drives what.
+        let driver_owned = scenario
+            .as_ref()
+            .map(keymap::scenario_topics)
+            .unwrap_or_default();
+        let partition = ownership::Partition::resolve(&filter, driver_owned);
+        partition.print_summary();
         Some(tokio::spawn(modes::mock::run(
             token.clone(),
             client.clone(),
-            registry.clone(),
-            filter,
+            partition.heartbeat,
         )))
     } else {
         None
     };
 
-    let foreground = run_foreground(&cli, &token, &client, &registry).await;
+    let foreground = run_foreground(&cli, &token, &client, scenario).await;
 
     // Let the MQTT eventloop drain any just-enqueued publishes before we cancel
     // it. `AsyncClient::publish` only enqueues; the eventloop's `poll()` is what
@@ -96,26 +111,18 @@ async fn run_foreground(
     cli: &Cli,
     token: &CancellationToken,
     client: &AsyncClient,
-    registry: &registry::SharedRegistry,
+    scenario: Option<keymap::Scenario>,
 ) -> Result<(), String> {
     if cli.stream {
-        modes::stream::run(token.clone(), client.clone(), registry.clone()).await
+        modes::stream::run(token.clone(), client.clone()).await
     } else if let Some(action) = &cli.play {
-        // clap enforces `--play requires --key-map` (see cli.rs), so a missing
-        // key map here is an impossible state, not a reachable runtime error.
-        let key_map_path = cli
-            .key_map
-            .as_deref()
-            .expect("clap enforces --play requires --key-map");
-        modes::replay::run(client.clone(), key_map_path, action, registry.clone()).await
-    } else if let Some(key_map_path) = &cli.key_map {
-        modes::interactive::run(
-            token.clone(),
-            client.clone(),
-            key_map_path,
-            registry.clone(),
-        )
-        .await
+        // clap enforces `--play requires --key-map`, so `main` has loaded the
+        // scenario; a missing one here is an impossible state, not a runtime error.
+        let scenario = scenario.expect("clap enforces --play requires --key-map");
+        modes::replay::run(client.clone(), scenario, action).await
+    } else if cli.key_map.is_some() {
+        let scenario = scenario.expect("--key-map implies main loaded the scenario");
+        modes::interactive::run(token.clone(), client.clone(), scenario).await
     } else {
         // Pure --mock: wait for SIGINT, then exit.
         tokio::signal::ctrl_c()

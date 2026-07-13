@@ -13,7 +13,6 @@ use rumqttc::v5::AsyncClient;
 
 use crate::publish::publish_data;
 use crate::raw_mode::line_end;
-use crate::registry::{Owner, SharedRegistry};
 
 /// Parse a scenario from JSON. Does not validate — call [`validate`] (or use
 /// [`load_scenario`], which does both) before running it.
@@ -103,8 +102,9 @@ fn detect_cycle(scenario: &Scenario, name: &str, path: &mut Vec<String>) -> Resu
 }
 
 /// A flattened, executable step: invokes have been resolved away, leaving only
-/// publishes and waits.
-enum Prim {
+/// publishes and waits. `pub(crate)` only so the flatten test can inspect it.
+#[derive(Debug)]
+pub(crate) enum Prim {
     Publish {
         topic: String,
         values: Vec<f32>,
@@ -116,7 +116,7 @@ enum Prim {
 /// Expand `name` into a linear list of [`Prim`]s, inlining every invoked
 /// action. Safe against infinite recursion because [`validate`] has already
 /// proven the graph acyclic and every invoke target present.
-fn flatten(scenario: &Scenario, name: &str, out: &mut Vec<Prim>) {
+pub(crate) fn flatten(scenario: &Scenario, name: &str, out: &mut Vec<Prim>) {
     let Some(action) = scenario.get(name) else {
         return;
     };
@@ -141,21 +141,6 @@ fn flatten(scenario: &Scenario, name: &str, out: &mut Vec<Prim>) {
     }
 }
 
-/// Every topic `name` publishes to, following invokes. Used to claim ownership
-/// so the mock heartbeat yields those topics.
-#[must_use]
-pub fn collect_topics(scenario: &Scenario, name: &str) -> BTreeSet<String> {
-    let mut prims = Vec::new();
-    flatten(scenario, name, &mut prims);
-    prims
-        .into_iter()
-        .filter_map(|p| match p {
-            Prim::Publish { topic, .. } => Some(topic),
-            Prim::Sleep(_) => None,
-        })
-        .collect()
-}
-
 /// The `key -> action name` bindings for interactive mode, erroring if two
 /// actions claim the same key.
 pub fn key_bindings(scenario: &Scenario) -> Result<HashMap<char, String>, String> {
@@ -172,32 +157,28 @@ pub fn key_bindings(scenario: &Scenario) -> Result<HashMap<char, String>, String
     Ok(map)
 }
 
-/// Claim every topic reachable from `action_names` for [`Owner::Stream`], so a
-/// running mock heartbeat yields those topics to this driver.
-pub async fn claim_topics<'a>(
-    scenario: &Scenario,
-    action_names: impl IntoIterator<Item = &'a str>,
-    registry: &SharedRegistry,
-) {
-    let mut topics = BTreeSet::new();
-    for name in action_names {
-        topics.extend(collect_topics(scenario, name));
+/// Every topic the scenario can publish, following invokes across all actions.
+/// Resolved once at startup so the mock heartbeat can cede these topics to the
+/// keymap/replay driver (see [`crate::ownership`]).
+#[must_use]
+pub fn scenario_topics(scenario: &Scenario) -> BTreeSet<String> {
+    let mut prims = Vec::new();
+    for name in scenario.keys() {
+        flatten(scenario, name, &mut prims);
     }
-    let mut reg = registry.write().await;
-    for topic in &topics {
-        reg.set(topic, Owner::Stream);
-    }
+    prims
+        .into_iter()
+        .filter_map(|p| match p {
+            Prim::Publish { topic, .. } => Some(topic),
+            Prim::Sleep(_) => None,
+        })
+        .collect()
 }
 
-/// Run `name`'s steps in order: publishes go to the broker (skipping any topic
-/// the registry has silenced), sleeps wait, invokes are inlined. Logs each
-/// publish to stdout.
-pub async fn run_action(
-    scenario: &Scenario,
-    name: &str,
-    client: &AsyncClient,
-    registry: &SharedRegistry,
-) {
+/// Run `name`'s steps in order: publishes go to the broker, sleeps wait, invokes
+/// are inlined. Logs each publish to stdout. No ownership check — the heartbeat
+/// has already ceded this driver's topics up front (see [`scenario_topics`]).
+pub async fn run_action(scenario: &Scenario, name: &str, client: &AsyncClient) {
     if let Some(desc) = scenario.get(name).and_then(|a| a.desc.as_deref()) {
         print!("[{name}] {desc}{}", line_end());
         let _ = std::io::stdout().flush();
@@ -213,11 +194,7 @@ pub async fn run_action(
                 topic,
                 values,
                 unit,
-            } => {
-                if registry.read().await.driver_may_publish(&topic) {
-                    log_and_publish(name, &topic, &unit, &values, client).await;
-                }
-            }
+            } => log_and_publish(name, &topic, &unit, &values, client).await,
         }
     }
 }
