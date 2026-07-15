@@ -71,6 +71,9 @@ pub enum CANSpecError {
     #[error("Duplicate topic names {0}, last seen at message {1}")]
     DuplicateTopicNames(String, String),
 
+    #[error("Invalid topic name {0}")]
+    InvalidTopicName(String),
+
     #[error(transparent)] // Pass-through for IO error
     IOError(#[from] std::io::Error),
 }
@@ -314,6 +317,12 @@ fn validate_msg(
                         _msg.desc.clone(),
                     ));
                 }
+
+                // check topic contains valid chars
+                if _field.name.chars().any(|c| "?#*.".contains(c)) {
+                    _errors.push(CANSpecError::InvalidTopicName(_field.name.clone()));
+                }
+
                 _topics.insert(_field.name.clone());
             }
 
