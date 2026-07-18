@@ -1,0 +1,45 @@
+# Empty [workspace] makes this its own workspace root, independent of the
+# parent calypso workspace at /Cargo.toml.
+[workspace]
+
+[package]
+name = "calypso-sim"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+cast_possible_truncation = "allow"
+too_many_lines = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"
+
+[dependencies]
+rumqttc = "0.25.0"
+protobuf = "3.7.2"
+clap = { version = "4.5.43", features = ["derive", "env"] }
+rand = "0.9.2"
+regex = "1.12.3"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+tokio = { version = "1.47.1", features = ["full"] }
+tokio-util = { version = "0.7.16", features = ["full"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["ansi", "env-filter"] }
+crossterm = { version = "0.28", features = ["event-stream"] }
+futures-util = "0.3.31"
+daedalus = { path = "../libs/daedalus" }
+calypso-cangen = { path = "../libs/calypso-cangen" }
+
+[dev-dependencies]
+# Used by the integration tests in `tests/` to build/parse JSON-RPC lines.
+serde_json = "1.0.149"
+
+[build-dependencies]
+protobuf-codegen = "3.7.2"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
