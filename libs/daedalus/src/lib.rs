@@ -5,7 +5,7 @@ use calypso_cangen::CANGEN_SPEC_PATH;
 use calypso_cangen::can_gen_decode::gen_decoder_fn;
 use calypso_cangen::can_gen_encode::gen_encoder_fn;
 use calypso_cangen::can_gen_simulate::gen_simulate_canmsg;
-use calypso_cangen::can_types::{BidirMode, OdysseyMsg};
+use definition_rs::{BidirMode, OdysseyMsg};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
 use quote::{format_ident, quote};
@@ -23,7 +23,7 @@ pub fn gen_decode_data(_item: TokenStream) -> TokenStream {
         use std::io::Cursor;
         use bitstream_io::{BigEndian, LittleEndian, BitReader, BitRead};
         use phf::phf_map;
-        use calypso_cangen::can_types::*;
+        use definition_rs::*;
         use crate::data::{DecodeData, FormatData};
     };
     let mut __decode_functions = quote! {};
@@ -137,7 +137,7 @@ pub fn gen_encode_data(_item: TokenStream) -> TokenStream {
     let __encode_prelude = quote! {
         use bitstream_io::{BigEndian, LittleEndian, BitWriter, BitWrite};
         use phf::phf_map;
-        use calypso_cangen::can_types::*;
+        use definition_rs::*;
         use crate::data::{EncodeData, FormatData};
     };
     let mut __encode_functions = quote! {};

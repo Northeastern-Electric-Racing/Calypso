@@ -140,6 +140,7 @@ dependencies = [
  "can-dbc",
  "clap",
  "daedalus",
+ "definition-rs",
  "futures-util",
  "num_enum",
  "phf",
@@ -161,6 +162,7 @@ dependencies = [
 name = "calypso-cangen"
 version = "0.1.0"
 dependencies = [
+ "definition-rs",
  "proc-macro2",
  "quote",
  "regex",
@@ -333,9 +335,20 @@ name = "daedalus"
 version = "0.1.0"
 dependencies = [
  "calypso-cangen",
+ "definition-rs",
  "proc-macro2",
  "quote",
  "serde_json",
+]
+
+[[package]]
+name = "definition-rs"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "schemars",
+ "serde",
 ]
 
 [[package]]

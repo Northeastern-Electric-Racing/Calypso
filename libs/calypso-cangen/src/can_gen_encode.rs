@@ -1,4 +1,4 @@
-use crate::can_types::{CANMsg, CANPoint};
+use definition_rs::{CANMsg, CANPoint};
 use proc_macro2::Literal;
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
 use quote::{format_ident, quote};

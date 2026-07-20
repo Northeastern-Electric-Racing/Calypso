@@ -13,8 +13,8 @@ use calypso::{
         serverdata::{self, ServerData},
     },
 };
-use calypso_cangen::can_types::BidirMode;
 use clap::Parser;
+use definition_rs::BidirMode;
 use protobuf::Message;
 use rumqttc::v5::{
     AsyncClient, Event, EventLoop, MqttOptions,
