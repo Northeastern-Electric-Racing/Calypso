@@ -17,6 +17,7 @@ use calypso::{
     zenoh_handler::ZenohProcessor,
 };
 use clap::Parser;
+use definition_rs::BidirMode;
 use socketcan::{
     CanDataFrame, CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions, tokio::CanSocket,
 };
