@@ -46,6 +46,7 @@ can-dbc = "9.1.0"
 serde_json.workspace = true
 schemars.workspace = true
 num_enum = "0.7.5"
+zenoh = "1.9.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 socketcan = { version = "3.6.1", features = ["tokio"] }
