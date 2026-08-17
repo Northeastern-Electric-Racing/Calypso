@@ -325,11 +325,12 @@ dependencies = [
 
 [[package]]
 name = "can-dbc"
-version = "10.0.0"
+version = "9.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e39bde77280df32da397aaabc992cd252639af9cec2dff19f293668a9c0c162f"
+checksum = "9f7a2ee20067a5d9cdcb6df568549a14230a037129713ee20fea6b3fd23e50aa"
 dependencies = [
  "can-dbc-pest",
+ "encoding_rs",
  "serde",
  "thiserror 2.0.20",
 ]
@@ -3332,9 +3333,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.18"
+version = "0.7.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ae9cec805b01e8fc3fd2fe289f89149a9b66dd16786abd8b19cfa7b48cb0098"
+checksum = "494815d09bf52b5548659851081238f0ca39ff638363907596da739561c62c52"
 dependencies = [
  "bytes",
  "futures-core",
@@ -3342,6 +3343,7 @@ dependencies = [
  "futures-sink",
  "futures-util",
  "hashbrown 0.15.5",
+ "libc",
  "pin-project-lite",
  "slab",
  "tokio",
