@@ -24,6 +24,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 regex = "1.12.3"
 schemars = "1.2.1"
+definition-rs = { path = "./Odyssey-Definitions/definition-rs"}
 
 [dependencies]
 rumqttc = "0.25.0"
@@ -45,9 +46,12 @@ can-dbc = "9.1.0"
 serde_json.workspace = true
 schemars.workspace = true
 num_enum = "0.7.5"
+zenoh = "1.9.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 socketcan = { version = "3.6.1", features = ["tokio"] }
+
+definition-rs.workspace = true
 
 
 [build-dependencies]

@@ -4,6 +4,39 @@ use crate::proto::serverdata;
 use protobuf::Message;
 use rumqttc::v5::AsyncClient;
 use rumqttc::v5::mqttbytes::QoS;
+use zenoh::{Session, bytes::Encoding};
+
+/// The wire the simulator publishes on. Chosen once at startup (`--zenoh`) and
+/// then cloned into every mode, so no mode has to know which one it got.
+///
+/// Both variants are cheap to clone: `AsyncClient` clones an internal channel
+/// handle, and `Session` is reference-counted.
+#[derive(Clone)]
+pub enum Transport {
+    Mqtt(AsyncClient),
+    Zenoh(Session),
+}
+
+impl Transport {
+    /// Hand `bytes` to the underlying wire under `topic`.
+    ///
+    /// Note the two are not symmetric in delivery: the MQTT arm only *enqueues*
+    /// (the eventloop task does the socket write, hence the shutdown drain in
+    /// `main`), while the Zenoh arm has published by the time it returns.
+    async fn send(&self, topic: &str, bytes: Vec<u8>) -> Result<(), String> {
+        match self {
+            Self::Mqtt(client) => client
+                .publish(topic, QoS::AtMostOnce, false, bytes)
+                .await
+                .map_err(|e| format!("publish: {e}")),
+            Self::Zenoh(session) => session
+                .put(topic, bytes)
+                .encoding(Encoding::APPLICATION_PROTOBUF)
+                .await
+                .map_err(|e| format!("publish: {e}")),
+        }
+    }
+}
 
 /// Encode a `ServerData` payload for `unit`/`values`, stamped with the current
 /// time (microseconds since the UNIX epoch). Returns the serialized bytes and
@@ -24,20 +57,17 @@ fn encode_server_data(unit: &str, values: &[f32]) -> Result<(Vec<u8>, u64), Stri
     Ok((bytes, timestamp))
 }
 
-/// Encode a `ServerData` payload and publish it to the broker. Returns the
+/// Encode a `ServerData` payload and publish it on `transport`. Returns the
 /// timestamp (microseconds since UNIX epoch) embedded in the payload.
 pub async fn publish_data(
-    client: &AsyncClient,
+    transport: &Transport,
     topic: &str,
     unit: &str,
     values: &[f32],
 ) -> Result<u64, String> {
     let (bytes, timestamp) = encode_server_data(unit, values)?;
 
-    client
-        .publish(topic, QoS::AtMostOnce, false, bytes)
-        .await
-        .map_err(|e| format!("publish: {e}"))?;
+    transport.send(topic, bytes).await?;
 
     Ok(timestamp)
 }

@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    path::PathBuf,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -8,18 +9,15 @@ use calypso::{
     decode_data::DECODE_FUNCTION_MAP,
     encode_data::{ENCODABLE_KEY_LIST, ENCODE_FUNCTION_MAP},
     imd_poll::imd_poll_main,
+    mqtt_handler::{poll_stub, publish_stub, siren_creator},
     proto::{
-        command_data,
+        command_data::CommandData,
         serverdata::{self, ServerData},
     },
+    zenoh_handler::ZenohProcessor,
 };
-use calypso_cangen::can_types::BidirMode;
 use clap::Parser;
-use protobuf::Message;
-use rumqttc::v5::{
-    AsyncClient, Event, EventLoop, MqttOptions,
-    mqttbytes::v5::{Packet, Publish},
-};
+use definition_rs::BidirMode;
 use socketcan::{
     CanDataFrame, CanError, CanFrame, EmbeddedFrame, Frame, Id, SocketOptions, tokio::CanSocket,
 };
@@ -31,8 +29,6 @@ use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 use tracing::{debug, info, level_filters::LevelFilter, trace, warn};
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
-
-const ENCODER_MAP_SUB: &str = "Calypso/Bidir/Command/#";
 
 /// Calypso command line arguments
 #[derive(Parser, Debug)]
@@ -60,13 +56,17 @@ struct CalypsoArgs {
     )]
     socketcan_iface: String,
 
-    /// Whether to enable MQTT multi-client
-    #[arg(short = 'm', long, env = "CALYPSO_MQTT_MULTICLIENT")]
-    mqtt_multiclient: bool,
-
-    /// Whether to enable cyclic IMD polling
+    /// Whether to use
     #[arg(long, env = "CALYPSO_CAN_ENCODE")]
     imd: bool,
+
+    /// Use Zenoh instead of MQTT -- will eventually become default
+    #[arg(short = 'z', long, env = "CALYPSO_ZENOH")]
+    zenoh: bool,
+
+    /// Zenoh conf file
+    #[arg(long, env = "CALYPSO_ZENOH_CONF", default_value_os = "./zenoh.json5")]
+    zenoh_conf: PathBuf,
 }
 
 /**
@@ -247,157 +247,6 @@ async fn pub_frame(
 }
 
 /**
- * Inits siren communication, returning the main (1st) and priority (2nd) structs
- * `pub_path`:  The base URL (and port for main)
- */
-async fn siren_creator(pub_path: String) -> [(AsyncClient, EventLoop); 2] {
-    let mut mqtt_opts_main = MqttOptions::new(
-        format!(
-            "Calypso-Decoder-{}",
-            SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .expect("Time went backwards")
-                .as_millis()
-        ),
-        pub_path.split_once(':').expect("Invalid Siren URL").0,
-        pub_path
-            .split_once(':')
-            .unwrap()
-            .1
-            .parse::<u16>()
-            .expect("Invalid Siren port"),
-    );
-    mqtt_opts_main
-        .set_keep_alive(Duration::from_secs(20))
-        .set_clean_start(false)
-        .set_connection_timeout(3)
-        .set_session_expiry_interval(Some(u32::MAX));
-    let (main_client, main_eventloop) = rumqttc::v5::AsyncClient::new(mqtt_opts_main, 600);
-
-    let mut mqtt_opts_alt = MqttOptions::new(
-        format!(
-            "Calypso-Decoder-{}",
-            SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .expect("Time went backwards")
-                .as_millis()
-        ),
-        pub_path.split_once(':').expect("Invalid Siren URL").0,
-        1882,
-    );
-    mqtt_opts_alt
-        .set_keep_alive(Duration::from_secs(20))
-        .set_clean_start(false)
-        .set_connection_timeout(3)
-        .set_session_expiry_interval(Some(u32::MAX));
-    let (alt_client, alt_eventloop) = rumqttc::v5::AsyncClient::new(mqtt_opts_alt, 600);
-
-    // subscribe for bidirectionality
-    match main_client
-        .subscribe(ENCODER_MAP_SUB, rumqttc::v5::mqttbytes::QoS::ExactlyOnce)
-        .await
-    {
-        Ok(()) => (),
-        Err(err) => warn!("Error subscribing: {}", err),
-    }
-
-    // here we split into two threads, one owns the client the other owns the eventloop
-
-    [(main_client, main_eventloop), (alt_client, alt_eventloop)]
-}
-
-/**
- * A thread to publish messages to a MQTT client
- * client: The client to publish to
- * `recv_messages`: The channel to get the messages to publish
- */
-async fn publish_stub(
-    token: CancellationToken,
-    client: AsyncClient,
-    mut recv_messages: Receiver<(String, ServerData)>,
-) {
-    loop {
-        tokio::select! {
-            () = token.cancelled() => {
-                debug!("Shutting down PUB stub!");
-                break;
-            },
-             Some(new_msg) = recv_messages.recv() => {
-                pub_msg(new_msg.0, new_msg.1, &client).await;
-            }
-        }
-    }
-}
-
-/**
- * A thread to poll MQTT broker status, and relay incoming subscribed messages
- * eventloop: the eventloop to poll
- * `send_to_manager`: the channel to send recieved MQTT messages from (optional)
- */
-async fn poll_stub(
-    token: CancellationToken,
-    mut eventloop: EventLoop,
-    send_to_manager: Option<Sender<Publish>>,
-) {
-    if let Some(send_to) = send_to_manager {
-        loop {
-            tokio::select! {
-                    () = token.cancelled() => {
-                        debug!("Shutting down SIREN manager!");
-                        break;
-                    },
-                    msg = eventloop.poll() => match msg {
-                        Ok(Event::Incoming(Packet::Publish(msg))) => {
-                                debug!("Received mqtt message: {:?}", msg);
-                                    match send_to.send(msg).await {
-                                        Ok(()) => (),
-                                        Err(err) => warn!("Could not send MQTT message to bidir manager: {}", err),
-                                    }
-                        },
-                        Err(msg) => trace!("Received mqtt error: {:?}", msg),
-                        _ => trace!("Received misc mqtt: {:?}", msg),
-                    },
-            }
-        }
-    } else {
-        loop {
-            tokio::select! {
-            () = token.cancelled() => {
-                debug!("Shutting down SIREN manager!");
-                break;
-            },
-            _ = eventloop.poll() => {}
-            }
-        }
-    }
-}
-
-/**
- * Helper function to generate bytes and publish a MQTT message
- * topic: the topic to send
- * data: the data protobuf to send
- * client: the client to send data to
- */
-async fn pub_msg(topic: String, data: ServerData, client: &AsyncClient) {
-    let Ok(bytes) = data.write_to_bytes() else {
-        warn!("Could not generate protobuf!");
-        return;
-    };
-    let Ok(()) = client
-        .publish(
-            topic,
-            rumqttc::v5::mqttbytes::QoS::ExactlyOnce,
-            false,
-            bytes,
-        )
-        .await
-    else {
-        warn!("Could not publish message");
-        return;
-    };
-}
-
-/**
  * Thread to manage bidirectionality, both sending can messages and receiving MQTT messages from respective channels
  * `can_push_send`: the channel to send out CAN messages
  * `siren_recv`: the MQTT messages to receive
@@ -406,7 +255,7 @@ async fn pub_msg(topic: String, data: ServerData, client: &AsyncClient) {
 async fn bidir_manager(
     token: CancellationToken,
     can_push_send: Sender<CanFrame>,
-    mut siren_recv: Receiver<Publish>,
+    mut siren_recv: Receiver<(String, CommandData)>,
     encode: bool,
 ) {
     let mut send_interval = tokio::time::interval(Duration::from_millis(750));
@@ -436,7 +285,7 @@ async fn bidir_manager(
                 }
             }
             Some(msg) = siren_recv.recv() => {
-                if let Some(packet) = parse_msg(&msg, &mut send_map) { match can_push_send.send(packet).await {
+                if let Some(packet) = parse_msg(msg, &mut send_map) { match can_push_send.send(packet).await {
                 Ok(()) => (),
                 Err(err) => warn!("Error sending can command to can manager {}", err),
                 } }
@@ -496,29 +345,21 @@ async fn release_commands(send_map: &HashMap<u32, EncodeData>, can_push_send: &S
  *
  * Will return the can frame to send immediately, if available
  */
-fn parse_msg(msg: &Publish, send_map: &mut HashMap<u32, EncodeData>) -> Option<CanFrame> {
-    let buf = match command_data::CommandData::parse_from_bytes(&msg.payload) {
-        Ok(buf) => buf,
-        Err(err) => {
-            warn!("Could not decode command: {}", err);
-            return None;
-        }
-    };
-    let Ok(topic) = std::str::from_utf8(&msg.topic) else {
-        warn!("Could not parse topic, topic: {:?}", msg.topic);
-        return None;
-    };
-    let key = if let Some(key) = topic.split('/').next_back() {
+fn parse_msg(
+    msg: (String, CommandData),
+    send_map: &mut HashMap<u32, EncodeData>,
+) -> Option<CanFrame> {
+    let key = if let Some(key) = msg.0.split('/').next_back() {
         key.to_owned()
     } else {
-        warn!("Could not parse the key value in {}", topic);
+        warn!("Could not parse the key value in {}", msg.0);
         return None;
     };
 
     debug!("Parsing message with key {}", key);
 
     if let Some(func) = ENCODE_FUNCTION_MAP.get(&key) {
-        let ret = func.0(buf.data);
+        let ret = func.0(msg.1.data);
         if func.1 == BidirMode::Broadcast {
             send_map.insert(ret.id, ret);
             None
@@ -590,43 +431,28 @@ async fn main() {
     let (can_push_send, can_push_recv) = mpsc::channel::<CanFrame>(100);
 
     // a channel to give messages to the bidir manager
-    let (siren_recv_send, siren_recv_recv) = mpsc::channel::<Publish>(100);
+    let (siren_recv_send, siren_recv_recv) = mpsc::channel::<(String, CommandData)>(100);
 
-    // the actual client and eventloop handlers
-    let [main_broker, alt_broker] = siren_creator(cli.siren_host_url).await;
-
-    task_tracker.spawn(poll_stub(
-        token.clone(),
-        main_broker.1,
-        Some(siren_recv_send),
-    ));
-    task_tracker.spawn(publish_stub(token.clone(), main_broker.0, decoder_recv));
-
-    // only poll the other client if we are set to do so
-    if cli.mqtt_multiclient {
-        // a channel to give protobuf messages to be sent out over MQTT
-        let (decoder_send_alt, decoder_recv_alt) = mpsc::channel::<(String, ServerData)>(500);
-
-        task_tracker.spawn(poll_stub(token.clone(), alt_broker.1, None));
-        task_tracker.spawn(publish_stub(token.clone(), alt_broker.0, decoder_recv_alt));
-        task_tracker.spawn(can_manager(
-            token.clone(),
-            cli.socketcan_iface,
-            decoder_send.clone(),
-            Some(decoder_send_alt),
-            can_decoder_send,
-            can_push_recv,
-        ));
+    if cli.zenoh {
+        let zenoh =
+            ZenohProcessor::new(token.clone(), decoder_recv, siren_recv_send, cli.zenoh_conf).await;
+        task_tracker.spawn(zenoh.process_zenoh());
     } else {
-        task_tracker.spawn(can_manager(
-            token.clone(),
-            cli.socketcan_iface,
-            decoder_send.clone(),
-            None,
-            can_decoder_send,
-            can_push_recv,
-        ));
+        // the actual client and eventloop handlers
+        let main_broker = siren_creator(cli.siren_host_url).await;
+
+        task_tracker.spawn(poll_stub(token.clone(), main_broker.1, siren_recv_send));
+        task_tracker.spawn(publish_stub(token.clone(), main_broker.0, decoder_recv));
     }
+
+    task_tracker.spawn(can_manager(
+        token.clone(),
+        cli.socketcan_iface,
+        decoder_send.clone(),
+        None,
+        can_decoder_send,
+        can_push_recv,
+    ));
 
     task_tracker.spawn(bidir_manager(
         token.clone(),

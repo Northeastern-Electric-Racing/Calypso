@@ -1,6 +1,6 @@
 # calypso-sim
 
-Standalone MQTT simulation tool. Publishes simulated messages into the same broker the main `calypso` decoder uses, for testing UIs and dependent services without a live CAN bus.
+Standalone CAN simulation tool. Publishes simulated messages onto the same wire the main `calypso` decoder uses — MQTT by default, or Zenoh with `--zenoh` — for testing UIs and dependent services without a live CAN bus.
 
 `calypso-sim` is its own crate (separate from `calypso`); build and run it from this directory.
 
@@ -31,8 +31,23 @@ cargo run -- --key-map manual_sim_buttons.keymap.json             # interactive
 cargo run -- --key-map manual_sim_buttons.keymap.json --mock      # + background heartbeat
 cargo run -- --key-map manual_sim_buttons.keymap.json --play demo # replay the "demo" action
 cargo run -- --stream                                             # JSON-RPC over stdio
-cargo run -- -u 10.0.0.5:1883 ...                                 # remote broker
+cargo run -- -u 10.0.0.5:1883 ...                                 # remote MQTT broker
+cargo run -- --zenoh                                              # publish over Zenoh
+cargo run -- --zenoh --zenoh-conf zenoh.json5                     # ... with an explicit conf
 ```
+
+## Transport (`--zenoh`)
+
+Every mode above is transport-agnostic; the wire is chosen once at startup.
+
+| Flag | Wire |
+|---|---|
+| *(default)* | MQTT to `--siren-host-url` (`-u`, default `localhost:1883`), QoS 0. |
+| `--zenoh` / `-z` | Zenoh `put` on the topic as the key expression, encoded `application/protobuf`. |
+
+The payload is the same `ServerData` protobuf either way, so a Zenoh-mode sim feeds the `calypso` decoder's own `--zenoh` path. `--zenoh-conf FILE` (requires `--zenoh`) loads a JSON5 Zenoh config; omit it and the Zenoh defaults are used, so no conf file is needed to get running. `-u` is ignored under `--zenoh`.
+
+Both flags also read from the environment (`CALYPSO_ZENOH`, `CALYPSO_ZENOH_CONF`), matching the main `calypso` binary.
 
 The `--enable-topic <REGEX>` and `--disable-topic <REGEX>` flags filter which topics the mock heartbeat publishes (whitelist / blacklist; mutually exclusive). Topics that lack a `sim_freq` in the CAN spec are listed at startup as a `Warning topics (not simulated): ...` line and can only be reached via `--key-map` or `--stream`.
 
@@ -122,6 +137,6 @@ cargo test
 
 The suite is deliberately small: each test guards logic a future change could silently break, not code that is obvious by reading it. Unit tests live in `src/tests/` — compiled into the crate under `cfg(test)`, so they reach internals via `use crate::…`; binary-driven tests live in the crate-root `tests/` dir, the only place Cargo sets `CARGO_BIN_EXE_calypso-sim`.
 
-No broker is needed because `publish` only enqueues (the eventloop retries a missing broker rather than dropping the queue), so it still returns a `ts_us`. Observing the actual *bytes on the wire* — that a payload reaches a subscriber — needs a live broker, which in practice is **Siren** in the Docker compose stack (see the repo `Dockerfile`); a standalone end-to-end test broker is intentionally out of scope.
+No broker is needed because the MQTT `publish` only enqueues (the eventloop retries a missing broker rather than dropping the queue), so it still returns a `ts_us`. Observing the actual *bytes on the wire* — that a payload reaches a subscriber — needs a live broker, which in practice is **Siren** in the Docker compose stack (see the repo `Dockerfile`); a standalone end-to-end test broker is intentionally out of scope.
 
 CI (`.github/workflows/calypso-sim-ci.yml`) runs the suite on any change under `calypso-sim/**` or its path-dependencies.

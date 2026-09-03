@@ -1,13 +1,13 @@
 use std::sync::LazyLock;
 
 use crate::simulate_data::create_simulated_components;
-use rumqttc::v5::AsyncClient;
+
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio_util::sync::CancellationToken;
 
-use crate::publish::{publish_data, resolve_values};
+use crate::publish::{Transport, publish_data, resolve_values};
 
 /// JSON-RPC 2.0 over stdio. Reads one request per line from stdin, writes
 /// one response per line to stdout. Diagnostics go to stderr.
@@ -21,7 +21,7 @@ use crate::publish::{publish_data, resolve_values};
 /// * `publish` — `{topic, value | values, unit?}` → `{ts_us}`
 /// * `list_topics` — `{}` → `{topics: [{name, unit}, ...]}`
 /// * `ping` — `{}` → `{ok: true}`
-pub async fn run(token: CancellationToken, client: AsyncClient) -> Result<(), String> {
+pub async fn run(token: CancellationToken, transport: Transport) -> Result<(), String> {
     let stdin = tokio::io::stdin();
     let mut reader = BufReader::new(stdin).lines();
 
@@ -33,7 +33,7 @@ pub async fn run(token: CancellationToken, client: AsyncClient) -> Result<(), St
                     if line.trim().is_empty() {
                         continue;
                     }
-                    let resp = handle_line(&line, &client).await;
+                    let resp = handle_line(&line, &transport).await;
                     write_line(&resp).await;
                 }
                 Ok(None) => break, // stdin closed
@@ -65,7 +65,7 @@ const ERR_METHOD_NOT_FOUND: i32 = -32601;
 const ERR_INVALID_PARAMS: i32 = -32602;
 const ERR_INTERNAL: i32 = -32603;
 
-async fn handle_line(line: &str, client: &AsyncClient) -> Value {
+async fn handle_line(line: &str, transport: &Transport) -> Value {
     let request: Request = match serde_json::from_str(line) {
         Ok(r) => r,
         Err(e) => return error(Value::Null, ERR_PARSE, &format!("Parse error: {e}")),
@@ -89,7 +89,7 @@ async fn handle_line(line: &str, client: &AsyncClient) -> Value {
     };
 
     match method.as_str() {
-        "publish" => handle_publish(id, request.params, client).await,
+        "publish" => handle_publish(id, request.params, transport).await,
         "list_topics" => handle_list_topics(id),
         "ping" => ok(id, json!({"ok": true})),
         other => error(
@@ -111,7 +111,7 @@ struct PublishParams {
     unit: Option<String>,
 }
 
-async fn handle_publish(id: Value, params: Value, client: &AsyncClient) -> Value {
+async fn handle_publish(id: Value, params: Value, transport: &Transport) -> Value {
     let p: PublishParams = match serde_json::from_value(params) {
         Ok(v) => v,
         Err(e) => return error(id, ERR_INVALID_PARAMS, &format!("Invalid params: {e}")),
@@ -123,7 +123,7 @@ async fn handle_publish(id: Value, params: Value, client: &AsyncClient) -> Value
     };
 
     let unit = p.unit.unwrap_or_default();
-    match publish_data(client, &p.topic, &unit, &values).await {
+    match publish_data(transport, &p.topic, &unit, &values).await {
         Ok(ts_us) => ok(id, json!({"ts_us": ts_us})),
         Err(e) => error(id, ERR_INTERNAL, &format!("publish failed: {e}")),
     }

@@ -1,4 +1,4 @@
-use calypso_cangen::can_types::CANMsg;
+use definition_rs::CANMsg;
 use schemars::schema_for;
 
 fn main() {

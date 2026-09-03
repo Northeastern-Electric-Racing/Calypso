@@ -1,5 +1,5 @@
 use calypso_cangen::CANGEN_SPEC_PATH;
-use calypso_cangen::can_types::OdysseyMsg;
+use definition_rs::OdysseyMsg;
 
 /// Print a comma-separated list of CAN message topics that have no
 /// `sim_freq` in the spec — these are invisible to the mock simulator

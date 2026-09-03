@@ -9,9 +9,7 @@ use std::collections::{BTreeSet, HashMap};
 use std::io::Write;
 use std::time::Duration;
 
-use rumqttc::v5::AsyncClient;
-
-use crate::publish::{publish_data, resolve_values};
+use crate::publish::{Transport, publish_data, resolve_values};
 use crate::raw_mode::line_end;
 
 /// Parse a scenario from JSON. Does not validate — call [`validate`] (or use
@@ -173,10 +171,10 @@ pub fn scenario_topics(scenario: &Scenario) -> BTreeSet<String> {
         .collect()
 }
 
-/// Run `name`'s steps in order: publishes go to the broker, sleeps wait, invokes
+/// Run `name`'s steps in order: publishes go to the transport, sleeps wait, invokes
 /// are inlined. Logs each publish to stdout. No ownership check — the heartbeat
 /// has already ceded this driver's topics up front (see [`scenario_topics`]).
-pub async fn run_action(scenario: &Scenario, name: &str, client: &AsyncClient) {
+pub async fn run_action(scenario: &Scenario, name: &str, transport: &Transport) {
     if let Some(desc) = scenario.get(name).and_then(|a| a.desc.as_deref()) {
         print!("[{name}] {desc}{}", line_end());
         let _ = std::io::stdout().flush();
@@ -192,7 +190,7 @@ pub async fn run_action(scenario: &Scenario, name: &str, client: &AsyncClient) {
                 topic,
                 values,
                 unit,
-            } => log_and_publish(name, &topic, &unit, &values, client).await,
+            } => log_and_publish(name, &topic, &unit, &values, transport).await,
         }
     }
 }
@@ -202,7 +200,7 @@ async fn log_and_publish(
     topic: &str,
     unit: &str,
     values: &[f32],
-    client: &AsyncClient,
+    transport: &Transport,
 ) {
     let nl = line_end();
     let unit_s = if unit.is_empty() {
@@ -210,7 +208,7 @@ async fn log_and_publish(
     } else {
         format!(" {unit}")
     };
-    match publish_data(client, topic, unit, values).await {
+    match publish_data(transport, topic, unit, values).await {
         Ok(_) => {
             let vals: Vec<String> = values.iter().map(|v| format!("{v:.2}")).collect();
             print!("[{action}] {topic} = [{}]{unit_s}{nl}", vals.join(", "));

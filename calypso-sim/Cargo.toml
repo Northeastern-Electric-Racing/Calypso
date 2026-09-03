@@ -31,6 +31,8 @@ crossterm = { version = "0.28", features = ["event-stream"] }
 futures-util = "0.3.31"
 daedalus = { path = "../libs/daedalus" }
 calypso-cangen = { path = "../libs/calypso-cangen" }
+definition-rs = { path = "../Odyssey-Definitions/definition-rs" }
+zenoh = "1.9.0"
 
 [dev-dependencies]
 # Used by the integration tests in `tests/` to build/parse JSON-RPC lines.

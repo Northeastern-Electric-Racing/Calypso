@@ -1,5 +1,5 @@
 use crate::CANGEN_SPEC_PATH;
-use crate::can_types::{BidirMode, OdysseyMsg, Sim};
+use definition_rs::{BidirMode, OdysseyMsg, Sim};
 use regex::Regex;
 use std::collections::HashSet;
 use std::fs;
@@ -70,6 +70,14 @@ pub enum CANSpecError {
 
     #[error("Duplicate topic names {0}, last seen at message {1}")]
     DuplicateTopicNames(String, String),
+
+    #[error("Invalid topic name {0}")]
+    InvalidTopicName(String),
+
+    #[error(
+        "Message {0} CAN ID {1} is too large.  Did you mean to use an extended ID (is_ext=true) ?"
+    )]
+    CanIdTooLarge(String, String),
 
     #[error(transparent)] // Pass-through for IO error
     IOError(#[from] std::io::Error),
@@ -190,6 +198,15 @@ fn validate_msg(
                 _errors.push(CANSpecError::MessageDescIllegalChars(
                     _msg.id.clone(),
                     _desc,
+                ));
+            }
+
+            let _id_int = u32::from_str_radix(_msg.id.clone().trim_start_matches("0x"), 16)
+                .unwrap_or_else(|_| panic!("Invalid CAN ID for message {}", _msg.desc));
+            if !_msg.is_ext.unwrap_or(false) && _id_int > 0x7FF {
+                _errors.push(CANSpecError::CanIdTooLarge(
+                    _msg.desc.clone(),
+                    _msg.id.clone(),
                 ));
             }
 
@@ -314,6 +331,12 @@ fn validate_msg(
                         _msg.desc.clone(),
                     ));
                 }
+
+                // check topic contains valid chars
+                if _field.name.chars().any(|c| "?#*.".contains(c)) {
+                    _errors.push(CANSpecError::InvalidTopicName(_field.name.clone()));
+                }
+
                 _topics.insert(_field.name.clone());
             }
 

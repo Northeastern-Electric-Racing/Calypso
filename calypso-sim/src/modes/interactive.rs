@@ -2,10 +2,11 @@ use std::io::Write;
 
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use futures_util::StreamExt;
-use rumqttc::v5::AsyncClient;
+
 use tokio_util::sync::CancellationToken;
 
 use crate::keymap::{Scenario, key_bindings, print_listing, run_action};
+use crate::publish::Transport;
 use crate::raw_mode::{RawModeGuard, line_end};
 
 /// Run the interactive raw-mode keypress loop. Each key-bound action fires on
@@ -13,7 +14,7 @@ use crate::raw_mode::{RawModeGuard, line_end};
 /// up front, so keypresses never fight it (see [`crate::ownership`]).
 pub async fn run(
     token: CancellationToken,
-    client: AsyncClient,
+    transport: Transport,
     scenario: Scenario,
 ) -> Result<(), String> {
     let keys = key_bindings(&scenario)?;
@@ -42,7 +43,7 @@ pub async fn run(
                 }
                 Input::Key(ch) => {
                     if let Some(name) = keys.get(&ch) {
-                        run_action(&scenario, name, &client).await;
+                        run_action(&scenario, name, &transport).await;
                     }
                 }
                 Input::Ignore => {}

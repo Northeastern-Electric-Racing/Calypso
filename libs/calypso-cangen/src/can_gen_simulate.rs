@@ -1,4 +1,4 @@
-use crate::can_types::{CANMsg, CANPoint, NetField, Sim};
+use definition_rs::{CANMsg, CANPoint, NetField, Sim};
 use proc_macro2::TokenStream as ProcMacro2TokenStream;
 use quote::quote;
 use regex::Regex;

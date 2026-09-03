@@ -1,13 +1,20 @@
+use std::path::PathBuf;
+
 use clap::Parser;
 
 #[derive(Parser, Debug)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each bool is an independent CLI flag, not state that wants a mode enum; \
+              clap owns the parsing and `run_mock` owns the arbitration between them"
+)]
 #[command(
     name = "calypso-sim",
     version,
-    about = "MQTT simulation tool for Calypso (mock, interactive, replay, or streamed)"
+    about = "CAN simulation tool for Calypso over MQTT or Zenoh (mock, interactive, replay, or streamed)"
 )]
 pub struct Cli {
-    /// MQTT broker host:port
+    /// MQTT broker host:port. Ignored when `--zenoh` is set.
     #[arg(
         short = 'u',
         long,
@@ -15,6 +22,20 @@ pub struct Cli {
         default_value = "localhost:1883"
     )]
     pub siren_host_url: String,
+
+    /// Publish over Zenoh instead of MQTT -- will eventually become default
+    #[arg(short = 'z', long, env = "CALYPSO_ZENOH")]
+    pub zenoh: bool,
+
+    /// Zenoh conf file (JSON5). Requires `--zenoh`; when omitted the Zenoh
+    /// default config is used, so the sim needs no conf file to run.
+    #[arg(
+        long,
+        env = "CALYPSO_ZENOH_CONF",
+        value_name = "FILE",
+        requires = "zenoh"
+    )]
+    pub zenoh_conf: Option<PathBuf>,
 
     /// List all simulatable topics and exit
     #[arg(long)]
