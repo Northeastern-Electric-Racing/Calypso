@@ -27,14 +27,14 @@ pub struct Cli {
     #[arg(short = 'z', long, env = "CALYPSO_ZENOH")]
     pub zenoh: bool,
 
-    /// Zenoh conf file (JSON5). Requires `--zenoh`; when omitted the Zenoh
-    /// default config is used, so the sim needs no conf file to run.
-    #[arg(
-        long,
-        env = "CALYPSO_ZENOH_CONF",
-        value_name = "FILE",
-        requires = "zenoh"
-    )]
+    /// Zenoh conf file (JSON5). Only read under `--zenoh`; when omitted the
+    /// Zenoh default config is used, so the sim needs no conf file to run.
+    ///
+    /// Deliberately NOT `requires = "zenoh"`: clap applies `requires` to
+    /// env-provided values too, so an exported `CALYPSO_ZENOH_CONF` (how a
+    /// compose stack sets it, matching the main binary) would make every mode
+    /// refuse to start. `connect_transport` warns instead when it goes unused.
+    #[arg(long, env = "CALYPSO_ZENOH_CONF", value_name = "FILE")]
     pub zenoh_conf: Option<PathBuf>,
 
     /// List all simulatable topics and exit

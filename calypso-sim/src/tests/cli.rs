@@ -38,7 +38,9 @@ fn zenoh_conf_requires_the_zenoh_flag() {
             .is_some()
     );
 
-    // ...but it is meaningless without --zenoh, so clap must reject it rather
-    // than silently ignoring the file the user pointed at.
-    assert!(Cli::try_parse_from(["calypso-sim", "--zenoh-conf", "z.json5"]).is_err());
+    // ...and it must NOT be `requires = "zenoh"`. clap enforces `requires`
+    // against env-provided values too, so an exported CALYPSO_ZENOH_CONF would
+    // make every mode -- including --list-topics -- fail to start. Parsing it
+    // without --zenoh has to succeed; main warns that it is unused.
+    assert!(Cli::try_parse_from(["calypso-sim", "--zenoh-conf", "z.json5"]).is_ok());
 }

@@ -179,6 +179,12 @@ async fn connect_transport(cli: &Cli) -> Result<(Transport, Option<EventLoop>), 
         let session = connect_zenoh(cli.zenoh_conf.as_deref()).await?;
         return Ok((Transport::Zenoh(session), None));
     }
+    if let Some(path) = &cli.zenoh_conf {
+        tracing::warn!(
+            "Ignoring --zenoh-conf '{}': the transport is MQTT. Pass --zenoh to use it.",
+            path.display()
+        );
+    }
     let (client, eventloop) = connect_mqtt(&cli.siren_host_url)?;
     Ok((Transport::Mqtt(client), Some(eventloop)))
 }
