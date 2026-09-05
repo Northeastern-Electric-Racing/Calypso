@@ -4,8 +4,9 @@ use crate::keymap::{Scenario, run_action};
 use crate::publish::Transport;
 
 /// Deterministic replay (`--play <action>`): run one named action to completion
-/// — following its invokes and `sleep_ms` waits — then return. The heartbeat (if
-/// running) has already ceded the scenario's topics (see [`crate::ownership`]).
+/// — following its invokes and `sleep_ms` waits — then return. The heartbeat, if
+/// running, may publish some of the same topics; mute its copy with
+/// `--disable-topic` if that matters (see [`crate::filter`]).
 pub async fn run(transport: Transport, scenario: Scenario, action: &str) -> Result<(), String> {
     if !scenario.contains_key(action) {
         return Err(format!("no action named '{action}' in the scenario"));

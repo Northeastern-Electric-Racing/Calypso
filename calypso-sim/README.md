@@ -49,17 +49,49 @@ The payload is the same `ServerData` protobuf either way, so a Zenoh-mode sim fe
 
 Both flags also read from the environment (`CALYPSO_ZENOH`, `CALYPSO_ZENOH_CONF`), matching the main `calypso` binary.
 
-The `--enable-topic <REGEX>` and `--disable-topic <REGEX>` flags filter which topics the mock heartbeat publishes (whitelist / blacklist; mutually exclusive). Topics that lack a `sim_freq` in the CAN spec are listed at startup as a `Warning topics (not simulated): ...` line and can only be reached via `--key-map` or `--stream`.
+## Topic filtering (live)
 
-## Ownership (static partition)
+The mock heartbeat publishes randomized values for every topic with a `sim_freq`
+in the CAN spec. `--enable-topic <REGEX>` / `--disable-topic <REGEX>` restrict
+that set (whitelist / blacklist, mutually exclusive), and the active set is
+logged whenever it changes.
 
-The mock heartbeat and a foreground driver (interactive / replay / stream) can both publish, so they must never target the same topic. Rather than negotiate at runtime, ownership is a **partition resolved once at startup**: any topic the driver owns is removed from the heartbeat's set up front, so the two publish disjoint topics by construction. The split is printed before anything publishes (`Ownership: mock heartbeat drives N topic(s); …`).
+This is a **filter, not an ownership claim**. The heartbeat and a foreground
+driver may publish the same topic; nothing arbitrates between them. If the
+heartbeat overwriting your injected values matters for what you are testing,
+mute its copy — the shipped `manual_sim_buttons.keymap.json` overlaps the
+heartbeat on the three `VCU/CarState/*` topics, which republish every 250 ms:
 
-- **`--key-map` / `--play`:** the driver owns every topic its scenario publishes (known at load); the heartbeat cedes them automatically.
-- **`--stream`:** nothing is auto-reserved (its topics aren't known up front) — carve topics out of the heartbeat explicitly with `--disable-topic`.
-- **Pure `--mock`:** the heartbeat owns every topic its filter allows.
+```
+cargo run -- --key-map manual_sim_buttons.keymap.json --mock --disable-topic '^VCU/CarState/'
+```
 
-There is no runtime claim/release/silence. To keep the heartbeat off a topic, use `--disable-topic` (or `--enable-topic` to whitelist).
+The filter can be retuned **while the sim runs**, so you can mute a noisy
+subsystem without a restart. How depends on which mode owns stdin:
+
+| Mode | Control surface |
+|---|---|
+| plain `--mock` | line commands on stdin (stdin is otherwise unused) |
+| `--stream` | the `set_filter` JSON-RPC method |
+| `--key-map` | none — the terminal is in raw mode for keypresses |
+
+Stdin commands, one per line:
+
+```
+disable <regex>...   publish everything EXCEPT these
+enable  <regex>...   publish ONLY these
+clear                remove the filter (all topics)
+status               print the current filter
+help                 list these commands
+```
+
+`enable` and `disable` each replace the filter rather than accumulating, so one
+command always states the whole resulting filter — the same mutual exclusion the
+CLI flags have. A bad regex is reported and the previous filter stays in effect.
+
+Topics that lack a `sim_freq` in the CAN spec are listed at startup as a
+`Warning topics (not simulated): ...` line; the heartbeat never publishes them,
+so they are reachable only via `--key-map` / `--play` / `--stream`.
 
 ## Scenario file (`--key-map` and `--play`)
 
@@ -116,7 +148,7 @@ JSON-RPC 2.0 over stdio — one request per line on stdin, one response per line
 | `list_topics` | `{}` | `{topics: [{name, unit}, ...]}` |
 | `ping` | `{}` | `{ok: true}` |
 
-Ownership is a startup partition, not a runtime negotiation, so there are no `claim`/`release`/`silence` methods — reserve a stream driver's topics from the heartbeat with `--disable-topic`.
+There are no `claim`/`release`/`silence` methods: nothing arbitrates between the heartbeat and a driver. To keep the heartbeat off a stream driver's topics, mute them with `--disable-topic` at startup or `set_filter` while running.
 
 Errors follow JSON-RPC 2.0 (`{error: {code, message}}`) with the standard codes: `-32700` (parse), `-32600` (invalid request), `-32601` (method not found), `-32602` (invalid params), and `-32603` (internal).
 

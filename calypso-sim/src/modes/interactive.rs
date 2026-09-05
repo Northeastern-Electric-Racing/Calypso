@@ -10,8 +10,8 @@ use crate::publish::Transport;
 use crate::raw_mode::{RawModeGuard, line_end};
 
 /// Run the interactive raw-mode keypress loop. Each key-bound action fires on
-/// its key. The heartbeat (if running) has already ceded this scenario's topics
-/// up front, so keypresses never fight it (see [`crate::ownership`]).
+/// its key. The heartbeat, if running, may publish some of the same topics —
+/// mute its copy with `--disable-topic` if that matters (see [`crate::filter`]).
 pub async fn run(
     token: CancellationToken,
     transport: Transport,

@@ -7,4 +7,5 @@
 //! refactor could silently break, not code that is obvious by inspection.
 
 mod cli;
+mod filter;
 mod keymap;

@@ -152,28 +152,9 @@ pub fn key_bindings(scenario: &Scenario) -> Result<HashMap<char, String>, String
     Ok(map)
 }
 
-/// Every topic the scenario can publish, across all actions. Every invoke target
-/// is itself a top-level action, so unioning each action's own publish steps
-/// already covers everything reachable — no need to follow invokes (or require a
-/// validated/acyclic scenario) here.
-///
-/// Resolved once at startup so the mock heartbeat can cede these topics to the
-/// keymap/replay driver (see [`crate::ownership`]).
-#[must_use]
-pub fn scenario_topics(scenario: &Scenario) -> BTreeSet<String> {
-    scenario
-        .values()
-        .flat_map(|action| &action.steps)
-        .filter_map(|step| match step {
-            Step::Publish { topic, .. } => Some(topic.clone()),
-            Step::Invoke(_) | Step::Sleep { .. } => None,
-        })
-        .collect()
-}
-
-/// Run `name`'s steps in order: publishes go to the transport, sleeps wait, invokes
-/// are inlined. Logs each publish to stdout. No ownership check — the heartbeat
-/// has already ceded this driver's topics up front (see [`scenario_topics`]).
+/// Run `name`'s steps in order: publishes go to the transport, sleeps wait,
+/// invokes are inlined. Logs each publish to stdout. The mock heartbeat may be
+/// publishing some of the same topics — use `--disable-topic` to mute its copy.
 pub async fn run_action(scenario: &Scenario, name: &str, transport: &Transport) {
     if let Some(desc) = scenario.get(name).and_then(|a| a.desc.as_deref()) {
         print!("[{name}] {desc}{}", line_end());

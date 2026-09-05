@@ -1,7 +1,7 @@
 mod cli;
+mod filter;
 mod keymap;
 mod modes;
-mod ownership;
 #[allow(clippy::all, clippy::pedantic)]
 mod proto;
 mod publish;
@@ -17,6 +17,7 @@ use std::path::Path;
 use std::process::exit;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use crate::filter::{FilterMode, FilterTx};
 use crate::publish::Transport;
 use crate::simulate_data::create_simulated_components;
 use clap::Parser;
@@ -39,10 +40,8 @@ async fn main() {
 
     warnings::print_unsimulated();
 
-    // Load the scenario once, up front (for --key-map / --play). This fails fast
-    // on a bad file, and lets us reserve the scenario's topics from the mock
-    // heartbeat before anything publishes (ownership is a startup partition, not
-    // a runtime negotiation — see `ownership`).
+    // Load the scenario once, up front (for --key-map / --play), so a bad file
+    // is a startup error rather than a failure part-way through a run.
     let scenario = cli.key_map.as_deref().map(|path| {
         keymap::load_scenario(path).unwrap_or_else(|err| {
             eprintln!("Error: {err}");
@@ -61,9 +60,19 @@ async fn main() {
     // by this task. Zenoh publishes inline, so it has no eventloop to drive.
     let poll_handle = eventloop.map(|el| tokio::spawn(modes::poll_eventloop(token.clone(), el)));
 
-    let mock_handle = spawn_mock(&cli, scenario.as_ref(), &transport, &token);
+    // The heartbeat's topic filter lives in a watch channel so `--stream`'s
+    // `set_filter` RPC and the plain-`--mock` stdin commands can retune it
+    // while the sim runs. Built before anything spawns so a bad regex is a
+    // startup error, not a surprise mid-run.
+    let initial = FilterMode::build(&cli.enable_topic, &cli.disable_topic).unwrap_or_else(|err| {
+        eprintln!("Error: {err}");
+        exit(1);
+    });
+    let (filter_tx, filter_rx) = tokio::sync::watch::channel(initial);
 
-    let foreground = run_foreground(&cli, &token, &transport, scenario).await;
+    let mock_handle = spawn_mock(&cli, &transport, &token, filter_rx);
+
+    let foreground = run_foreground(&cli, &token, &transport, scenario, filter_tx).await;
 
     if let Some(poll_handle) = poll_handle {
         // Let the MQTT eventloop drain any just-enqueued publishes before we
@@ -99,9 +108,10 @@ async fn run_foreground(
     token: &CancellationToken,
     transport: &Transport,
     scenario: Option<keymap::Scenario>,
+    filter_tx: FilterTx,
 ) -> Result<(), String> {
     if cli.stream {
-        modes::stream::run(token.clone(), transport.clone()).await
+        modes::stream::run(token.clone(), transport.clone(), filter_tx).await
     } else if let Some(action) = &cli.play {
         // A missing scenario here is an impossible state, not a runtime error.
         let scenario = scenario.expect("clap enforces --play requires --key-map");
@@ -110,38 +120,28 @@ async fn run_foreground(
         let scenario = scenario.expect("--key-map implies main loaded the scenario");
         modes::interactive::run(token.clone(), transport.clone(), scenario).await
     } else {
-        // Pure --mock: wait for SIGINT, then exit.
-        tokio::signal::ctrl_c()
-            .await
-            .map_err(|e| format!("ctrl+c handler failed: {e}"))
+        // Pure --mock: stdin is free, so take live filter commands on it.
+        modes::control::run(token.clone(), filter_tx).await
     }
 }
 
-/// If the mock heartbeat is enabled, resolve its share of the topic space
-/// against the driver (a scenario's topics, if any), print the split, and spawn
-/// the task. Exits on a bad enable/disable pattern — fail fast, before spawning
-/// (rather than silently disabling the heartbeat inside the spawned task).
+/// Spawn the mock heartbeat over every simulatable topic, if it is enabled.
+/// Which of those topics it actually publishes is the filter's call, and the
+/// filter can change while running — so the task takes the whole set.
 fn spawn_mock(
     cli: &Cli,
-    scenario: Option<&keymap::Scenario>,
     transport: &Transport,
     token: &CancellationToken,
+    filter_rx: filter::FilterRx,
 ) -> Option<tokio::task::JoinHandle<()>> {
     if !cli.run_mock() {
         return None;
     }
-    let filter = ownership::FilterMode::build(&cli.enable_topic, &cli.disable_topic)
-        .unwrap_or_else(|err| {
-            eprintln!("Error: {err}");
-            exit(1);
-        });
-    let driver_owned = scenario.map(keymap::scenario_topics).unwrap_or_default();
-    let partition = ownership::Partition::resolve(&filter, driver_owned);
-    partition.print_summary();
     Some(tokio::spawn(modes::mock::run(
         token.clone(),
         transport.clone(),
-        partition.heartbeat,
+        create_simulated_components(),
+        filter_rx,
     )))
 }
 

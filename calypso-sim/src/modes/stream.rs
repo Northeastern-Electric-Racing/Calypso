@@ -7,21 +7,28 @@ use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio_util::sync::CancellationToken;
 
+use crate::filter::{FilterMode, FilterTx};
 use crate::publish::{Transport, publish_data, resolve_values};
 
 /// JSON-RPC 2.0 over stdio. Reads one request per line from stdin, writes
 /// one response per line to stdout. Diagnostics go to stderr.
 ///
-/// Ownership is a startup partition (see [`crate::ownership`]), not a runtime
-/// negotiation, so there are no claim/release/silence methods — a stream driver
-/// carves its topics out of the mock heartbeat with `--disable-topic`, then just
-/// publishes.
+/// Nothing arbitrates between this driver and the mock heartbeat, so there are
+/// no claim/release/silence methods. To keep the heartbeat off the topics this
+/// driver publishes, mute them with `--disable-topic` at startup or `set_filter`
+/// while running (see [`crate::filter`]).
 ///
 /// Methods:
 /// * `publish` — `{topic, value | values, unit?}` → `{ts_us}`
 /// * `list_topics` — `{}` → `{topics: [{name, unit}, ...]}`
+/// * `set_filter` — `{mode: "disable"|"enable"|"clear", patterns?: [regex]}` →
+///   `{filter}`; retunes which topics the mock heartbeat drives, live
 /// * `ping` — `{}` → `{ok: true}`
-pub async fn run(token: CancellationToken, transport: Transport) -> Result<(), String> {
+pub async fn run(
+    token: CancellationToken,
+    transport: Transport,
+    filter_tx: FilterTx,
+) -> Result<(), String> {
     let stdin = tokio::io::stdin();
     let mut reader = BufReader::new(stdin).lines();
 
@@ -33,7 +40,7 @@ pub async fn run(token: CancellationToken, transport: Transport) -> Result<(), S
                     if line.trim().is_empty() {
                         continue;
                     }
-                    let resp = handle_line(&line, &transport).await;
+                    let resp = handle_line(&line, &transport, &filter_tx).await;
                     write_line(&resp).await;
                 }
                 Ok(None) => break, // stdin closed
@@ -65,7 +72,7 @@ const ERR_METHOD_NOT_FOUND: i32 = -32601;
 const ERR_INVALID_PARAMS: i32 = -32602;
 const ERR_INTERNAL: i32 = -32603;
 
-async fn handle_line(line: &str, transport: &Transport) -> Value {
+async fn handle_line(line: &str, transport: &Transport, filter_tx: &FilterTx) -> Value {
     let request: Request = match serde_json::from_str(line) {
         Ok(r) => r,
         Err(e) => return error(Value::Null, ERR_PARSE, &format!("Parse error: {e}")),
@@ -91,6 +98,7 @@ async fn handle_line(line: &str, transport: &Transport) -> Value {
     match method.as_str() {
         "publish" => handle_publish(id, request.params, transport).await,
         "list_topics" => handle_list_topics(id),
+        "set_filter" => handle_set_filter(id, request.params, filter_tx),
         "ping" => ok(id, json!({"ok": true})),
         other => error(
             id,
@@ -126,6 +134,46 @@ async fn handle_publish(id: Value, params: Value, transport: &Transport) -> Valu
     match publish_data(transport, &p.topic, &unit, &values).await {
         Ok(ts_us) => ok(id, json!({"ts_us": ts_us})),
         Err(e) => error(id, ERR_INTERNAL, &format!("publish failed: {e}")),
+    }
+}
+
+#[derive(Deserialize)]
+struct FilterParams {
+    mode: String,
+    #[serde(default)]
+    patterns: Vec<String>,
+}
+
+/// Replace the mock heartbeat's topic filter while the sim runs. Declarative:
+/// each call states the whole resulting filter rather than accumulating, so a
+/// driver never has to track what it set before.
+fn handle_set_filter(id: Value, params: Value, filter_tx: &FilterTx) -> Value {
+    let p: FilterParams = match serde_json::from_value(params) {
+        Ok(v) => v,
+        Err(e) => return error(id, ERR_INVALID_PARAMS, &format!("Invalid params: {e}")),
+    };
+
+    let built = match p.mode.as_str() {
+        "clear" => Ok(FilterMode::Disabled),
+        "disable" | "enable" if p.patterns.is_empty() => {
+            Err(format!("`{}` requires a non-empty `patterns`", p.mode))
+        }
+        "disable" => FilterMode::build(&[], &p.patterns),
+        "enable" => FilterMode::build(&p.patterns, &[]),
+        other => Err(format!(
+            "unknown mode '{other}': expected \"disable\", \"enable\", or \"clear\""
+        )),
+    };
+
+    match built {
+        Ok(filter) => {
+            let described = filter.describe();
+            // The mock task may not be running (`--stream` without `--mock`);
+            // the filter is still recorded, so this is not an error.
+            let _ = filter_tx.send(filter);
+            ok(id, json!({"filter": described}))
+        }
+        Err(e) => error(id, ERR_INVALID_PARAMS, &e),
     }
 }
 
