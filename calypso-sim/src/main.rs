@@ -6,6 +6,7 @@ mod modes;
 mod proto;
 mod publish;
 mod raw_mode;
+mod runtime_topic;
 mod simulatable_message;
 mod simulate_data;
 mod warnings;
@@ -19,6 +20,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::filter::{FilterMode, FilterTx};
 use crate::publish::Transport;
+use crate::runtime_topic::SimCommandTx;
 use crate::simulate_data::create_simulated_components;
 use clap::Parser;
 use rumqttc::v5::{AsyncClient, EventLoop, MqttOptions};
@@ -70,9 +72,14 @@ async fn main() {
     });
     let (filter_tx, filter_rx) = tokio::sync::watch::channel(initial);
 
-    let mock_handle = spawn_mock(&cli, &transport, &token, filter_rx);
+    // Add/remove are events rather than state, so they get an mpsc: a watch
+    // would coalesce two adds into one. When the heartbeat is off nothing holds
+    // the receiver, and senders get a clear error instead of a silent no-op.
+    let (cmd_tx, cmd_rx) = tokio::sync::mpsc::channel(16);
 
-    let foreground = run_foreground(&cli, &token, &transport, scenario, filter_tx).await;
+    let mock_handle = spawn_mock(&cli, &transport, &token, filter_rx, cmd_rx);
+
+    let foreground = run_foreground(&cli, &token, &transport, scenario, filter_tx, cmd_tx).await;
 
     if let Some(poll_handle) = poll_handle {
         // Let the MQTT eventloop drain any just-enqueued publishes before we
@@ -109,9 +116,10 @@ async fn run_foreground(
     transport: &Transport,
     scenario: Option<keymap::Scenario>,
     filter_tx: FilterTx,
+    cmd_tx: SimCommandTx,
 ) -> Result<(), String> {
     if cli.stream {
-        modes::stream::run(token.clone(), transport.clone(), filter_tx).await
+        modes::stream::run(token.clone(), transport.clone(), filter_tx, cmd_tx).await
     } else if let Some(action) = &cli.play {
         // A missing scenario here is an impossible state, not a runtime error.
         let scenario = scenario.expect("clap enforces --play requires --key-map");
@@ -120,8 +128,8 @@ async fn run_foreground(
         let scenario = scenario.expect("--key-map implies main loaded the scenario");
         modes::interactive::run(token.clone(), transport.clone(), scenario).await
     } else {
-        // Pure --mock: stdin is free, so take live filter commands on it.
-        modes::control::run(token.clone(), filter_tx).await
+        // Pure --mock: stdin is free, so take live control commands on it.
+        modes::control::run(token.clone(), filter_tx, cmd_tx).await
     }
 }
 
@@ -133,6 +141,7 @@ fn spawn_mock(
     transport: &Transport,
     token: &CancellationToken,
     filter_rx: filter::FilterRx,
+    cmd_rx: runtime_topic::SimCommandRx,
 ) -> Option<tokio::task::JoinHandle<()>> {
     if !cli.run_mock() {
         return None;
@@ -142,6 +151,7 @@ fn spawn_mock(
         transport.clone(),
         create_simulated_components(),
         filter_rx,
+        cmd_rx,
     )))
 }
 

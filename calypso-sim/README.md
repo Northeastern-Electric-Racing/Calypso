@@ -34,6 +34,7 @@ cargo run -- --stream                                             # JSON-RPC ove
 cargo run -- -u 10.0.0.5:1883 ...                                 # remote MQTT broker
 cargo run -- --zenoh                                              # publish over Zenoh
 cargo run -- --zenoh --zenoh-conf zenoh.json5                     # ... with an explicit conf
+cargo run -- --stream --mock                                      # stream + live add/remove
 ```
 
 ## Transport (`--zenoh`)
@@ -90,8 +91,69 @@ command always states the whole resulting filter — the same mutual exclusion t
 CLI flags have. A bad regex is reported and the previous filter stays in effect.
 
 Topics that lack a `sim_freq` in the CAN spec are listed at startup as a
-`Warning topics (not simulated): ...` line; the heartbeat never publishes them,
-so they are reachable only via `--key-map` / `--play` / `--stream`.
+`Warning topics (not simulated): ...` line. They are not compiled into the
+binary at all, so no filter can reach them — see the next section.
+
+## Adding and removing simulated topics (live)
+
+The filter above can only mask topics the binary was **built** with. The
+`gen_simulate_data!()` macro skips any CAN message without a `sim_freq`, so a
+large share of the spec's fields never become components and cannot be enabled
+by any filter. To simulate one of those, add it at runtime.
+
+Parameters come from you rather than the CAN spec: the runtime Docker image
+ships only the binaries, so there is no spec to read where the sim actually
+runs. The value shapes mirror the spec's own `sim` block, so a definition can be
+copied straight out of Odyssey-Definitions.
+
+Both surfaces require the mock heartbeat (`--mock`) — it owns the component
+list. Without it you get `mock heartbeat is not running`.
+
+**Stream RPC:**
+
+```json
+{"method":"add_topic","params":{"topic":"BMS/Pack/SoC","unit":"%","sim_freq":750,
+  "sim":{"min":0,"max":100,"inc_min":1,"inc_max":5}}}
+
+{"method":"add_topic","params":{"topic":"BMS/Status/State","unit":"","sim_freq":250,
+  "sim":{"options":[[0,0.7],[1,0.2],[2,0.1]]}}}
+
+{"method":"remove_topic","params":{"topic":"BMS/Pack/SoC"}}
+```
+
+**Stdin** (plain `--mock`), continuous range only — a weighted option set is too
+unwieldy for a command line, so use the RPC for those:
+
+```
+add <topic> <unit> <freq_ms> <min> <max>
+remove <topic>
+```
+
+The two value shapes:
+
+| shape | for | fields |
+|---|---|---|
+| range | continuous sensors — voltage, temperature, RPM | `min`, `max`, `inc_min`, `inc_max`, `round?` |
+| discrete | states, modes, fault flags | `options: [[value, weight], ...]` |
+
+Discrete weights are relative and normalised, so `[[0,7],[1,3]]` and
+`[[0,0.7],[1,0.3]]` are the same distribution.
+
+Rejected up front: a topic already being simulated (this is add-only, not an
+upsert — `remove` then `add` to change one), a `sim_freq` of zero or less (zero
+would publish on every 5 ms tick), a name containing `{}` (those need in-topic
+placeholder interpolation a runtime topic cannot supply), and range bounds that
+are non-finite or too wide to sample.
+
+Two behaviours worth knowing:
+
+- **`remove` reports a count, which is not always 1.** Names are not unique in
+  the generated set — the `{}` placeholder topics repeat — and `remove` drops
+  every component under that name.
+- **Removed is not the same as filtered.** `remove` deletes the component; the
+  filter is untouched, so a later `clear` will not bring it back. An added topic
+  *is* subject to the current filter, so one added while a whitelist excludes it
+  sits inactive until the filter changes.
 
 ## Scenario file (`--key-map` and `--play`)
 
@@ -164,8 +226,10 @@ cargo test
 | Layer | Where | What it checks |
 |---|---|---|
 | Unit — scenario | `src/tests/keymap.rs` | The fragile scenario logic: the serde `untagged` step-shape disambiguation (invoke / publish / sleep, by shape not order), and load-time validation — unknown or cyclic invokes are rejected, and publishes must set exactly one of `value` / `values`. |
-| Unit — CLI modes | `src/tests/cli.rs` | `run_mock` arbitration: heartbeat on by default, off under a foreground mode or `--list-topics`, forced on by explicit `--mock`. |
-| Integration — stream | `tests/stream.rs` | Spawns the real `calypso-sim --stream` binary and checks the JSON-RPC contract: `list_topics` is non-empty and well-formed, `publish` requires exactly one of `value`/`values` (and a well-formed one returns a `ts_us`), and malformed requests get `-32601`/`-32600`. |
+| Unit — CLI modes | `src/tests/cli.rs` | `run_mock` arbitration: heartbeat on by default, off under a foreground mode or `--list-topics`, forced on by explicit `--mock`. Plus that `--zenoh-conf` is not `requires = "zenoh"`, so an exported `CALYPSO_ZENOH_CONF` cannot block startup. |
+| Unit — filter | `src/tests/filter.rs` | Whitelist / blacklist / no-filter selection, bad regexes rejected, and that an over-narrow whitelist silences the heartbeat rather than falling open. |
+| Unit — runtime topics | `src/tests/runtime_topic.rs` | That an unusable spec is rejected at build time rather than at the first publish tick — non-finite or over-wide range bounds (which would panic the sampler), a `sim_freq` of zero, `{}` in the name — and that discrete weights become the running ceilings `SimValue` expects, ending at exactly 1.0. |
+| Integration — stream | `tests/stream.rs` | Spawns the real `calypso-sim --stream` binary and checks the JSON-RPC contract: `list_topics` is non-empty and well-formed, `publish` requires exactly one of `value`/`values` (and a well-formed one returns a `ts_us`), and malformed requests get `-32601`/`-32600`. Also the runtime-topic lifecycle against a `--mock` sim — add, see it listed, remove — plus the rejections and the `--mock`-off error. |
 
 The suite is deliberately small: each test guards logic a future change could silently break, not code that is obvious by reading it. Unit tests live in `src/tests/` — compiled into the crate under `cfg(test)`, so they reach internals via `use crate::…`; binary-driven tests live in the crate-root `tests/` dir, the only place Cargo sets `CARGO_BIN_EXE_calypso-sim`.
 

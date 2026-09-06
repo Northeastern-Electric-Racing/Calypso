@@ -23,10 +23,20 @@ struct Sim {
 impl Sim {
     /// Spawn the sim in stream mode with the mock heartbeat off.
     fn spawn() -> Self {
+        Self::spawn_with(&[])
+    }
+
+    /// Spawn the sim in stream mode with `extra` flags appended.
+    ///
+    /// `add_topic` / `remove_topic` need `--mock`: the heartbeat task owns the
+    /// component list, so with it off there is no receiver and every mutation
+    /// fails as "not running".
+    fn spawn_with(extra: &[&str]) -> Self {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_calypso-sim"));
         // A closed port: no broker is needed, and this keeps the sim off any
         // real broker a developer happens to be running.
         cmd.arg("-u").arg("127.0.0.1:47654").arg("--stream");
+        cmd.args(extra);
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
@@ -171,4 +181,121 @@ fn malformed_requests_are_rejected_with_standard_codes() {
         Some(-32600),
         "missing method must be rejected as invalid request, got {resp}"
     );
+}
+
+/// The lifecycle the feature exists for: a topic the binary was not built with
+/// becomes simulatable, shows up in the topic list, and can be taken away again.
+#[test]
+fn a_runtime_topic_can_be_added_listed_and_removed() {
+    let mut sim = Sim::spawn_with(&["--mock"]);
+
+    let listed = |sim: &mut Sim| -> bool {
+        sim.ok("list_topics", Value::Null)["topics"]
+            .as_array()
+            .expect("topics array")
+            .iter()
+            .any(|t| t["name"] == "Runtime/Test/Value")
+    };
+
+    assert!(
+        !listed(&mut sim),
+        "topic should not exist before it is added"
+    );
+
+    let added = sim.ok(
+        "add_topic",
+        json!({
+            "topic": "Runtime/Test/Value", "unit": "V", "sim_freq": 100,
+            "sim": {"min": 0, "max": 10, "inc_min": 1, "inc_max": 2}
+        }),
+    );
+    assert_eq!(added["topic"], "Runtime/Test/Value");
+    assert!(listed(&mut sim), "topic should be listed once added");
+
+    let removed = sim.ok("remove_topic", json!({"topic": "Runtime/Test/Value"}));
+    assert_eq!(removed["removed"], 1);
+    assert!(!listed(&mut sim), "topic should be gone once removed");
+}
+
+/// A weighted option set is the other value shape, and the one whose conversion
+/// is easy to get wrong.
+#[test]
+fn a_discrete_runtime_topic_is_accepted() {
+    let mut sim = Sim::spawn_with(&["--mock"]);
+    let added = sim.ok(
+        "add_topic",
+        json!({
+            "topic": "Runtime/Test/State", "unit": "", "sim_freq": 250,
+            "sim": {"options": [[0, 0.7], [1, 0.2], [2, 0.1]]}
+        }),
+    );
+    assert_eq!(added["topic"], "Runtime/Test/State");
+}
+
+#[test]
+fn unusable_runtime_topics_are_rejected() {
+    let mut sim = Sim::spawn_with(&["--mock"]);
+    let good = json!({
+        "topic": "Runtime/Test/Dup", "unit": "V", "sim_freq": 100,
+        "sim": {"min": 0, "max": 10, "inc_min": 1, "inc_max": 2}
+    });
+    sim.ok("add_topic", good.clone());
+
+    // Adding the same name twice is add-only, not an upsert.
+    let (code, msg) = sim
+        .call("add_topic", good)
+        .expect_err("duplicate add should fail");
+    assert_eq!(code, -32602);
+    assert!(msg.contains("already simulated"), "{msg}");
+
+    // `{}` would publish a topic containing a literal `{}` — rejected up front.
+    let (code, _) = sim
+        .call(
+            "add_topic",
+            json!({
+                "topic": "Runtime/{}/Value", "unit": "V", "sim_freq": 100,
+                "sim": {"min": 0, "max": 10, "inc_min": 1, "inc_max": 2}
+            }),
+        )
+        .expect_err("placeholder name should fail");
+    assert_eq!(code, -32602);
+
+    // 0 means "publish every 5ms tick", so it is rejected rather than taken.
+    let (code, _) = sim
+        .call(
+            "add_topic",
+            json!({
+                "topic": "Runtime/Test/Zero", "unit": "V", "sim_freq": 0,
+                "sim": {"min": 0, "max": 10, "inc_min": 1, "inc_max": 2}
+            }),
+        )
+        .expect_err("zero sim_freq should fail");
+    assert_eq!(code, -32602);
+}
+
+/// Removing something that was never simulated is a no-op, not an error — the
+/// count is how the caller tells the difference.
+#[test]
+fn removing_an_unknown_topic_reports_zero() {
+    let mut sim = Sim::spawn_with(&["--mock"]);
+    let removed = sim.ok("remove_topic", json!({"topic": "Nope/Not/Here"}));
+    assert_eq!(removed["removed"], 0);
+}
+
+/// Without the heartbeat there is no component list to mutate, and the caller
+/// is told so rather than getting a silent success.
+#[test]
+fn adding_without_the_mock_heartbeat_is_an_error() {
+    let mut sim = Sim::spawn();
+    let (code, msg) = sim
+        .call(
+            "add_topic",
+            json!({
+                "topic": "Runtime/Test/NoMock", "unit": "V", "sim_freq": 100,
+                "sim": {"min": 0, "max": 10, "inc_min": 1, "inc_max": 2}
+            }),
+        )
+        .expect_err("add without --mock should fail");
+    assert_eq!(code, -32603);
+    assert!(msg.contains("--mock"), "{msg}");
 }
