@@ -2,7 +2,9 @@
 
 Standalone CAN simulation tool. Publishes simulated messages onto the same wire the main `calypso` decoder uses — MQTT by default, or Zenoh with `--zenoh` — for testing UIs and dependent services without a live CAN bus.
 
-`calypso-sim` is its own crate (separate from `calypso`); build and run it from this directory.
+`calypso-sim` is a member of the top-level workspace, so `cargo build --all` from
+the repo root covers it. The examples below run from this directory for brevity;
+`cargo <cmd> -p calypso-sim` from the root is equivalent.
 
 ## Build
 
@@ -235,4 +237,4 @@ The suite is deliberately small: each test guards logic a future change could si
 
 No broker is needed because the MQTT `publish` only enqueues (the eventloop retries a missing broker rather than dropping the queue), so it still returns a `ts_us`. Observing the actual *bytes on the wire* — that a payload reaches a subscriber — needs a live broker, which in practice is **Siren** in the Docker compose stack (see the repo `Dockerfile`); a standalone end-to-end test broker is intentionally out of scope.
 
-CI (`.github/workflows/calypso-sim-ci.yml`) runs the suite on any change under `calypso-sim/**` or its path-dependencies.
+CI runs the suite via the workspace-wide `cargo test --all` in `.github/workflows/rust-ci.yml`.

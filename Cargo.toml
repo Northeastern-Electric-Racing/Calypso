@@ -15,7 +15,7 @@ cast_precision_loss = "allow"
 cast_sign_loss = "allow"
 
 [workspace]
-members = ["libs/daedalus", "libs/calypso-cangen"]
+members = ["libs/daedalus", "libs/calypso-cangen", "calypso-sim"]
 
 [workspace.dependencies]
 proc-macro2 = "1.0.106"

@@ -1,7 +1,3 @@
-# Empty [workspace] makes this its own workspace root, independent of the
-# parent calypso workspace at /Cargo.toml.
-[workspace]
-
 [package]
 name = "calypso-sim"
 version = "0.1.0"
@@ -40,8 +36,3 @@ serde_json = "1.0.149"
 
 [build-dependencies]
 protobuf-codegen = "3.7.2"
-
-[profile.release]
-lto = true
-codegen-units = 1
-panic = "abort"
