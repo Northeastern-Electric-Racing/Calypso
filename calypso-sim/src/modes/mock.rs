@@ -29,8 +29,7 @@ pub async fn run(
     mut filter_rx: FilterRx,
     mut cmd_rx: SimCommandRx,
 ) {
-    let mut admitted = filter_rx.borrow_and_update().admits(&components);
-    log_active(&components, &admitted, &filter_rx.borrow());
+    let mut admitted = refresh(&components, &filter_rx.borrow_and_update());
 
     let mut interval = tokio::time::interval(Duration::from_millis(5));
 
@@ -46,23 +45,12 @@ pub async fn run(
                 if changed.is_err() {
                     break;
                 }
-                let filter = filter_rx.borrow_and_update().clone();
-                admitted = filter.admits(&components);
-                log_active(&components, &admitted, &filter);
+                admitted = refresh(&components, &filter_rx.borrow_and_update());
             }
             Some(cmd) = cmd_rx.recv() => {
                 // A list is a read; only a mutation needs the set recomputed.
-                if let SimCommand::List { reply } = cmd {
-                    let snapshot = components
-                        .iter()
-                        .map(|c| (c.name.clone(), c.unit.clone()))
-                        .collect();
-                    let _ = reply.send(snapshot);
-                } else {
-                    apply(&mut components, cmd);
-                    let filter = filter_rx.borrow().clone();
-                    admitted = filter.admits(&components);
-                    log_active(&components, &admitted, &filter);
+                if apply(&mut components, cmd) {
+                    admitted = refresh(&components, &filter_rx.borrow());
                 }
             }
             _ = interval.tick() => publish_due(&mut components, &admitted, &transport).await,
@@ -70,11 +58,13 @@ pub async fn run(
     }
 }
 
-/// Apply one add/remove to the component list and answer the caller.
+/// Handle one command against the component list and answer the caller.
+/// Returns whether the list changed, i.e. whether the admitted set needs
+/// recomputing — a `List` is a read, so it does not.
 ///
 /// A dropped reply channel means the caller gave up waiting; the mutation still
 /// stands, so there is nothing to do about it.
-fn apply(components: &mut Vec<SimComponent>, cmd: SimCommand) {
+fn apply(components: &mut Vec<SimComponent>, cmd: SimCommand) -> bool {
     match cmd {
         SimCommand::Add { component, reply } => {
             let result = if components.iter().any(|c| c.name == component.name) {
@@ -85,6 +75,7 @@ fn apply(components: &mut Vec<SimComponent>, cmd: SimCommand) {
                 Ok(())
             };
             let _ = reply.send(result);
+            true
         }
         SimCommand::Remove { name, reply } => {
             let before = components.len();
@@ -97,10 +88,25 @@ fn apply(components: &mut Vec<SimComponent>, cmd: SimCommand) {
                 info!("Mock: removed {removed} component(s) for topic {name}");
             }
             let _ = reply.send(removed);
+            true
         }
-        // Handled by the caller, which does not need the recompute below.
-        SimCommand::List { .. } => unreachable!("List is answered before apply"),
+        SimCommand::List { reply } => {
+            let snapshot = components
+                .iter()
+                .map(|c| (c.name.clone(), c.unit.clone()))
+                .collect();
+            let _ = reply.send(snapshot);
+            false
+        }
     }
+}
+
+/// Recompute which components the filter admits, and log the resulting active
+/// set. The two always go together: the mask and the log are the same answer.
+fn refresh(components: &[SimComponent], filter: &FilterMode) -> Vec<bool> {
+    let admitted = filter.admits(components);
+    log_active(components, &admitted, filter);
+    admitted
 }
 
 /// How many active topics to name before logging just the count. Naming a

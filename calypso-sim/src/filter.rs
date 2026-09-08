@@ -9,7 +9,7 @@
 //! The filter is held in a `watch` channel so it can be replaced while the sim
 //! runs; the heartbeat recomputes its active set whenever the value changes.
 
-use regex::Regex;
+use regex::RegexSet;
 
 use crate::simulatable_message::SimComponent;
 
@@ -21,15 +21,19 @@ pub type FilterRx = tokio::sync::watch::Receiver<FilterMode>;
 
 /// Which topics the mock heartbeat publishes, from the `--enable-topic` /
 /// `--disable-topic` flags (mutually exclusive) or a live update.
+///
+/// The patterns are held as a [`RegexSet`] rather than a `Vec<Regex>`: matching
+/// "any of these" is one fused automaton pass instead of one per pattern, and
+/// the set keeps the original pattern strings for [`describe`](Self::describe).
 #[derive(Debug, Clone, Default)]
 pub enum FilterMode {
     /// No filter — every simulatable topic is allowed.
     #[default]
     Disabled,
     /// Publish everything *except* topics matching these patterns.
-    Blacklist(Vec<Regex>),
+    Blacklist(RegexSet),
     /// Publish *only* topics matching these patterns.
-    Whitelist(Vec<Regex>),
+    Whitelist(RegexSet),
 }
 
 impl FilterMode {
@@ -40,11 +44,29 @@ impl FilterMode {
     /// exclusive, and the live commands only ever set one.
     pub fn build(enable: &[String], disable: &[String]) -> Result<Self, String> {
         if !disable.is_empty() {
-            Ok(Self::Blacklist(compile_patterns(disable)?))
+            Ok(Self::Blacklist(compile(disable)?))
         } else if !enable.is_empty() {
-            Ok(Self::Whitelist(compile_patterns(enable)?))
+            Ok(Self::Whitelist(compile(enable)?))
         } else {
             Ok(Self::Disabled)
+        }
+    }
+
+    /// Build from the `mode` + `patterns` vocabulary both live control surfaces
+    /// speak — `--stream`'s `set_filter` RPC and the plain-`--mock` stdin
+    /// commands. Kept here rather than in each caller so the mode names, the
+    /// empty-patterns rule, and the error wording are decided once.
+    pub fn from_command(mode: &str, patterns: &[String]) -> Result<Self, String> {
+        match mode {
+            "clear" => Ok(Self::Disabled),
+            "disable" | "enable" if patterns.is_empty() => {
+                Err(format!("`{mode}` requires at least one pattern"))
+            }
+            "disable" => Self::build(&[], patterns),
+            "enable" => Self::build(patterns, &[]),
+            other => Err(format!(
+                "unknown mode '{other}': expected \"disable\", \"enable\", or \"clear\""
+            )),
         }
     }
 
@@ -52,8 +74,8 @@ impl FilterMode {
     pub fn allows(&self, topic: &str) -> bool {
         match self {
             FilterMode::Disabled => true,
-            FilterMode::Blacklist(p) => !p.iter().any(|re| re.is_match(topic)),
-            FilterMode::Whitelist(p) => p.iter().any(|re| re.is_match(topic)),
+            FilterMode::Blacklist(set) => !set.is_match(topic),
+            FilterMode::Whitelist(set) => set.is_match(topic),
         }
     }
 
@@ -62,8 +84,8 @@ impl FilterMode {
     pub fn describe(&self) -> String {
         match self {
             FilterMode::Disabled => "no filter (all topics)".to_string(),
-            FilterMode::Blacklist(p) => format!("blacklist [{}]", join_patterns(p)),
-            FilterMode::Whitelist(p) => format!("whitelist [{}]", join_patterns(p)),
+            FilterMode::Blacklist(set) => format!("blacklist [{}]", set.patterns().join(", ")),
+            FilterMode::Whitelist(set) => format!("whitelist [{}]", set.patterns().join(", ")),
         }
     }
 
@@ -74,17 +96,6 @@ impl FilterMode {
     }
 }
 
-fn join_patterns(patterns: &[Regex]) -> String {
-    patterns
-        .iter()
-        .map(Regex::as_str)
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
-fn compile_patterns(patterns: &[String]) -> Result<Vec<Regex>, String> {
-    patterns
-        .iter()
-        .map(|p| Regex::new(p).map_err(|e| format!("Invalid regex '{p}': {e}")))
-        .collect()
+fn compile(patterns: &[String]) -> Result<RegexSet, String> {
+    RegexSet::new(patterns).map_err(|e| format!("Invalid regex: {e}"))
 }

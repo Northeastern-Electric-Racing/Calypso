@@ -65,6 +65,25 @@ pub type SimCommandRx = mpsc::Receiver<SimCommand>;
 /// Sent when the mock task is not running, so nothing holds the receiver.
 pub const NO_MOCK: &str = "mock heartbeat is not running; start the sim with --mock";
 
+/// Hand a command to the mock task and wait for its answer.
+///
+/// `make` receives the reply channel so each caller names only the variant it
+/// wants; the channel pairing and the "heartbeat isn't running" mapping live
+/// here rather than in every control surface. A failed send and a dropped reply
+/// mean the same thing in practice — nothing holds the receiver, so there is no
+/// component list to read or mutate.
+pub async fn request<T>(
+    cmd_tx: &SimCommandTx,
+    make: impl FnOnce(oneshot::Sender<T>) -> SimCommand,
+) -> Result<T, String> {
+    let (reply, answer) = oneshot::channel();
+    cmd_tx
+        .send(make(reply))
+        .await
+        .map_err(|_| NO_MOCK.to_string())?;
+    answer.await.map_err(|_| NO_MOCK.to_string())
+}
+
 /// A topic to start simulating, as supplied by a caller.
 #[derive(Debug, Deserialize)]
 pub struct TopicSpec {

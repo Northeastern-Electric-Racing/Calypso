@@ -120,13 +120,14 @@ async fn run_foreground(
 ) -> Result<(), String> {
     if cli.stream {
         modes::stream::run(token.clone(), transport.clone(), filter_tx, cmd_tx).await
-    } else if let Some(action) = &cli.play {
-        // A missing scenario here is an impossible state, not a runtime error.
-        let scenario = scenario.expect("clap enforces --play requires --key-map");
-        modes::replay::run(transport.clone(), scenario, action).await
-    } else if cli.key_map.is_some() {
-        let scenario = scenario.expect("--key-map implies main loaded the scenario");
-        modes::interactive::run(token.clone(), transport.clone(), scenario).await
+    } else if let Some(scenario) = scenario {
+        // `scenario` is Some exactly when `--key-map` was given, and clap makes
+        // `--play` require it — so matching the loaded scenario decides both
+        // branches without re-testing the flags it came from.
+        match &cli.play {
+            Some(action) => modes::replay::run(transport.clone(), scenario, action).await,
+            None => modes::interactive::run(token.clone(), transport.clone(), scenario).await,
+        }
     } else {
         // Pure --mock: stdin is free, so take live control commands on it.
         modes::control::run(token.clone(), filter_tx, cmd_tx).await

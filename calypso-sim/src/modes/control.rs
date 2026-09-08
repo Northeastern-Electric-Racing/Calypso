@@ -22,11 +22,10 @@
 //! `--enable-topic` / `--disable-topic` flags have.
 
 use tokio::io::{AsyncBufReadExt, BufReader};
-use tokio::sync::oneshot;
 use tokio_util::sync::CancellationToken;
 
 use crate::filter::{FilterMode, FilterTx};
-use crate::runtime_topic::{self, NO_MOCK, SimCommand, SimCommandTx, TopicSpec, ValueSpec};
+use crate::runtime_topic::{self, SimCommand, SimCommandTx, TopicSpec, ValueSpec};
 
 const HELP: &str = "commands: disable <regex>... | enable <regex>... | clear | \
                     add <topic> <unit> <freq_ms> <min> <max> | remove <topic> | status | help";
@@ -79,7 +78,13 @@ async fn handle(line: &str, filter_tx: &FilterTx, cmd_tx: &SimCommandTx) {
     let args: Vec<String> = parts.map(str::to_string).collect();
 
     let next = match command {
-        "clear" => Some(FilterMode::Disabled),
+        "clear" | "disable" | "enable" => match FilterMode::from_command(command, &args) {
+            Ok(filter) => Some(filter),
+            Err(e) => {
+                println!("error: {e}. {HELP}");
+                None
+            }
+        },
         "status" => {
             println!("filter: {}", filter_tx.borrow().describe());
             None
@@ -88,12 +93,6 @@ async fn handle(line: &str, filter_tx: &FilterTx, cmd_tx: &SimCommandTx) {
             println!("{HELP}");
             None
         }
-        "disable" | "enable" if args.is_empty() => {
-            println!("error: `{command}` needs at least one regex. {HELP}");
-            None
-        }
-        "disable" => build(&[], &args),
-        "enable" => build(&args, &[]),
         "add" => {
             add_topic(&args, cmd_tx).await;
             None
@@ -152,12 +151,12 @@ async fn add_topic(args: &[String], cmd_tx: &SimCommandTx) {
         }
     };
 
-    let (reply, answer) = oneshot::channel();
-    let cmd = SimCommand::Add {
+    let added = runtime_topic::request(cmd_tx, |reply| SimCommand::Add {
         component: Box::new(component),
         reply,
-    };
-    match send_and_wait(cmd_tx, cmd, answer).await {
+    })
+    .await;
+    match added {
         Err(e) | Ok(Err(e)) => println!("error: {e}"),
         Ok(Ok(())) => println!("added {topic}"),
     }
@@ -171,36 +170,14 @@ async fn remove_topic(args: &[String], cmd_tx: &SimCommandTx) {
         return;
     };
 
-    let (reply, answer) = oneshot::channel();
-    let cmd = SimCommand::Remove {
+    let removed = runtime_topic::request(cmd_tx, |reply| SimCommand::Remove {
         name: topic.clone(),
         reply,
-    };
-    match send_and_wait(cmd_tx, cmd, answer).await {
+    })
+    .await;
+    match removed {
         Ok(0) => println!("{topic} was not simulated"),
         Ok(n) => println!("removed {topic} ({n} component(s))"),
         Err(e) => println!("error: {e}"),
-    }
-}
-
-/// Hand a command to the mock task and wait for its answer. A failed send or a
-/// dropped reply both mean the heartbeat is not running.
-async fn send_and_wait<T>(
-    cmd_tx: &SimCommandTx,
-    cmd: SimCommand,
-    answer: oneshot::Receiver<T>,
-) -> Result<T, String> {
-    cmd_tx.send(cmd).await.map_err(|_| NO_MOCK.to_string())?;
-    answer.await.map_err(|_| NO_MOCK.to_string())
-}
-
-/// Compile a new filter, reporting a bad regex instead of applying it.
-fn build(enable: &[String], disable: &[String]) -> Option<FilterMode> {
-    match FilterMode::build(enable, disable) {
-        Ok(filter) => Some(filter),
-        Err(e) => {
-            println!("error: {e}");
-            None
-        }
     }
 }

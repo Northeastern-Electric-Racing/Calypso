@@ -5,12 +5,11 @@ use crate::simulate_data::create_simulated_components;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::sync::oneshot;
 use tokio_util::sync::CancellationToken;
 
 use crate::filter::{FilterMode, FilterTx};
 use crate::publish::{Transport, publish_data, resolve_values};
-use crate::runtime_topic::{self, NO_MOCK, SimCommand, SimCommandTx, TopicSpec};
+use crate::runtime_topic::{self, SimCommand, SimCommandTx, TopicSpec};
 
 /// JSON-RPC 2.0 over stdio. Reads one request per line from stdin, writes
 /// one response per line to stdout. Diagnostics go to stderr.
@@ -166,19 +165,7 @@ fn handle_set_filter(id: Value, params: Value, filter_tx: &FilterTx) -> Value {
         Err(e) => return error(id, ERR_INVALID_PARAMS, &format!("Invalid params: {e}")),
     };
 
-    let built = match p.mode.as_str() {
-        "clear" => Ok(FilterMode::Disabled),
-        "disable" | "enable" if p.patterns.is_empty() => {
-            Err(format!("`{}` requires a non-empty `patterns`", p.mode))
-        }
-        "disable" => FilterMode::build(&[], &p.patterns),
-        "enable" => FilterMode::build(&p.patterns, &[]),
-        other => Err(format!(
-            "unknown mode '{other}': expected \"disable\", \"enable\", or \"clear\""
-        )),
-    };
-
-    match built {
+    match FilterMode::from_command(&p.mode, &p.patterns) {
         Ok(filter) => {
             let described = filter.describe();
             // The mock task may not be running (`--stream` without `--mock`);
@@ -204,12 +191,12 @@ async fn handle_add_topic(id: Value, params: Value, cmd_tx: &SimCommandTx) -> Va
         Err(e) => return error(id, ERR_INVALID_PARAMS, &e),
     };
 
-    let (reply, answer) = oneshot::channel();
-    let cmd = SimCommand::Add {
+    let added = runtime_topic::request(cmd_tx, |reply| SimCommand::Add {
         component: Box::new(component),
         reply,
-    };
-    match send_and_wait(cmd_tx, cmd, answer).await {
+    })
+    .await;
+    match added {
         Err(e) => error(id, ERR_INTERNAL, &e),
         Ok(Err(e)) => error(id, ERR_INVALID_PARAMS, &e),
         Ok(Ok(())) => ok(id, json!({"topic": topic})),
@@ -230,27 +217,15 @@ async fn handle_remove_topic(id: Value, params: Value, cmd_tx: &SimCommandTx) ->
         Err(e) => return error(id, ERR_INVALID_PARAMS, &format!("Invalid params: {e}")),
     };
 
-    let (reply, answer) = oneshot::channel();
-    let cmd = SimCommand::Remove {
+    let removed = runtime_topic::request(cmd_tx, |reply| SimCommand::Remove {
         name: p.topic.clone(),
         reply,
-    };
-    match send_and_wait(cmd_tx, cmd, answer).await {
+    })
+    .await;
+    match removed {
         Ok(removed) => ok(id, json!({"topic": p.topic, "removed": removed})),
         Err(e) => error(id, ERR_INTERNAL, &e),
     }
-}
-
-/// Hand a command to the mock task and wait for its answer. Both a failed send
-/// and a dropped reply mean the same thing in practice — the heartbeat is not
-/// running, so there is no component list to mutate.
-async fn send_and_wait<T>(
-    cmd_tx: &SimCommandTx,
-    cmd: SimCommand,
-    answer: oneshot::Receiver<T>,
-) -> Result<T, String> {
-    cmd_tx.send(cmd).await.map_err(|_| NO_MOCK.to_string())?;
-    answer.await.map_err(|_| NO_MOCK.to_string())
 }
 
 /// The compiled topic set, computed once. Building the full component set runs
@@ -267,17 +242,20 @@ static COMPILED_TOPICS: LazyLock<Vec<(String, String)>> = LazyLock::new(|| {
 });
 
 async fn handle_list_topics(id: Value, cmd_tx: &SimCommandTx) -> Value {
-    let (reply, answer) = oneshot::channel();
+    fn to_json(topics: &[(String, String)]) -> Vec<Value> {
+        topics
+            .iter()
+            .map(|(name, unit)| json!({"name": name, "unit": unit}))
+            .collect()
+    }
+
     // Falls back to the compiled set when the heartbeat is not running: nothing
-    // can have been added in that case, so the two agree.
-    let topics = match send_and_wait(cmd_tx, SimCommand::List { reply }, answer).await {
-        Ok(live) => live,
-        Err(_) => COMPILED_TOPICS.clone(),
+    // can have been added in that case, so the two agree. The fallback reads the
+    // cache in place — cloning it would undo the point of caching it.
+    let topics = match runtime_topic::request(cmd_tx, |reply| SimCommand::List { reply }).await {
+        Ok(live) => to_json(&live),
+        Err(_) => to_json(&COMPILED_TOPICS),
     };
-    let topics: Vec<Value> = topics
-        .iter()
-        .map(|(name, unit)| json!({"name": name, "unit": unit}))
-        .collect();
     ok(id, json!({"topics": topics}))
 }
 
