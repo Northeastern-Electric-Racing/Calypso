@@ -21,8 +21,11 @@ jobs:
             submodules: recursive
          - name: Build
            run: cargo build --all --verbose
+         # `--all`: the root Cargo.toml is a package as well as the workspace
+         # root, so a bare `cargo test` only runs the `calypso` package's tests
+         # and silently skips every workspace member's.
          - name: Test
-           run: cargo test --verbose
+           run: cargo test --all --verbose
          - name: Fmt
            run: cargo fmt --all --check
          - name: Clippy
