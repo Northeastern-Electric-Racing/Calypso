@@ -85,12 +85,6 @@ fn range_starts_inside_its_bounds() {
 }
 
 #[test]
-#[expect(
-    clippy::float_cmp,
-    reason = "the final ceiling is assigned the literal 1.0 rather than accumulated to it, \
-              and that exactness is the invariant: any shortfall is the probability with \
-              which `update` matches nothing and publishes -1.0"
-)]
 fn discrete_weights_become_running_ceilings() {
     // The stored second element is a cumulative ceiling, not the weight the
     // caller wrote. `update` picks the first ceiling above a 0..1 sample.
@@ -118,12 +112,6 @@ fn discrete_weights_become_running_ceilings() {
 }
 
 #[test]
-#[expect(
-    clippy::float_cmp,
-    reason = "the final ceiling is assigned the literal 1.0 rather than accumulated to it, \
-              and that exactness is the invariant: any shortfall is the probability with \
-              which `update` matches nothing and publishes -1.0"
-)]
 fn discrete_normalises_weights_that_do_not_sum_to_one() {
     let component = build(spec(
         "A/B",
