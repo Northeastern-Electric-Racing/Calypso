@@ -431,7 +431,12 @@ async fn main() {
     let (can_push_send, can_push_recv) = mpsc::channel::<CanFrame>(100);
 
     // a channel to give messages to the bidir manager
-    let (siren_recv_send, siren_recv_recv) = mpsc::channel::<(String, CommandData)>(100);
+    let (siren_recv_send, siren_recv_recv) = if cli.encode {
+        let (a, b) = mpsc::channel::<(String, CommandData)>(100);
+        (Some(a), Some(b))
+    } else {
+        (None, None)
+    };
 
     if cli.zenoh {
         let zenoh =
@@ -439,7 +444,7 @@ async fn main() {
         task_tracker.spawn(zenoh.process_zenoh());
     } else {
         // the actual client and eventloop handlers
-        let main_broker = siren_creator(cli.siren_host_url).await;
+        let main_broker = siren_creator(cli.siren_host_url, "Calypso-Decoder".to_string()).await;
 
         task_tracker.spawn(poll_stub(token.clone(), main_broker.1, siren_recv_send));
         task_tracker.spawn(publish_stub(token.clone(), main_broker.0, decoder_recv));
@@ -454,12 +459,14 @@ async fn main() {
         can_push_recv,
     ));
 
-    task_tracker.spawn(bidir_manager(
-        token.clone(),
-        can_push_send.clone(),
-        siren_recv_recv,
-        cli.encode,
-    ));
+    if cli.encode {
+        task_tracker.spawn(bidir_manager(
+            token.clone(),
+            can_push_send.clone(),
+            siren_recv_recv.unwrap(),
+            cli.encode,
+        ));
+    }
 
     if let Some(can_decoder_recv) = can_decoder_recv {
         task_tracker.spawn(imd_poll_main(
