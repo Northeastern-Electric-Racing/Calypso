@@ -2,7 +2,10 @@
 # built for the target arch by the CI job (see .github/workflows/calypso-build.yml).
 # For a self-contained build from source, use the regular `Dockerfile`.
 
-FROM debian:bookworm-slim
+# Must match the builder's glibc: the binaries need GLIBC_2.38, which
+# debian:bookworm-slim (2.36) does not have. ubuntu:24.04 is the same
+# distro release as the ubuntu-24.04 / ubuntu-24.04-arm build runners.
+FROM ubuntu:24.04
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends openssl ca-certificates \
