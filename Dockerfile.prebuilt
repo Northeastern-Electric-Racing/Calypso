@@ -1,0 +1,14 @@
+# Runtime-only image. Expects `bin/calypso` and `bin/simulate` to already be
+# built for the target arch by the CI job (see .github/workflows/calypso-build.yml).
+# For a self-contained build from source, use the regular `Dockerfile`.
+
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY bin/calypso /usr/local/bin/calypso
+COPY bin/simulate /usr/local/bin/simulate
+
+CMD ["simulate"]
