@@ -1,9 +1,9 @@
-use calypso_cangen::validate::*;
+use calypso_cangen::validate::validate_all_spec;
 use std::process;
 
 /* Prebuild script */
 fn main() {
-    println!("cargo:rerun-if-changed=Embedded-Base");
+    println!("cargo:rerun-if-changed=Odyssey-Definitions");
     println!("cargo:rerun-if-changed=src/proto");
 
     protobuf_codegen::Codegen::new()
