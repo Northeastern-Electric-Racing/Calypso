@@ -21,7 +21,7 @@ use crate::proto::{
 pub struct ZenohProcessor {
     cancel_token: CancellationToken,
     zenoh_sender_rx: Receiver<(String, ServerData)>,
-    zenoh_recv_tx: Sender<(String, CommandData)>,
+    zenoh_recv_tx: Option<Sender<(String, CommandData)>>,
     session: Session,
 }
 
@@ -32,7 +32,7 @@ impl ZenohProcessor {
     pub async fn new(
         cancel_token: CancellationToken,
         mqtt_sender_rx: Receiver<(String, ServerData)>,
-        mqtt_recv_tx: Sender<(String, CommandData)>,
+        mqtt_recv_tx: Option<Sender<(String, CommandData)>>,
         conf_path: PathBuf,
     ) -> ZenohProcessor {
         zenoh::init_log_from_env_or("info");
@@ -58,11 +58,8 @@ impl ZenohProcessor {
             warn!("Could not deserialize Zenoh incoming!");
             return;
         };
-
-        if let Err(e) = self
-            .zenoh_recv_tx
-            .send((sample.key_expr().to_string(), msg))
-            .await
+        if let Some(ref recv_tx) = self.zenoh_recv_tx
+            && let Err(e) = recv_tx.send((sample.key_expr().to_string(), msg)).await
         {
             warn!("Error putting received command into queue! {}", e);
         }

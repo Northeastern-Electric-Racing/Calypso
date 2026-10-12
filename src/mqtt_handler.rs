@@ -20,10 +20,11 @@ const ENCODER_MAP_SUB: &str = "Calypso/Bidir/Command/#";
  * # Panics
  *  Panics if time went backwards
  */
-pub async fn siren_creator(pub_path: String) -> (AsyncClient, EventLoop) {
+pub async fn siren_creator(pub_path: String, name: String) -> (AsyncClient, EventLoop) {
     let mut mqtt_opts_main = MqttOptions::new(
         format!(
-            "Calypso-Decoder-{}",
+            "{}-{}",
+            name,
             SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .expect("Time went backwards")
@@ -89,7 +90,7 @@ pub async fn publish_stub(
 pub async fn poll_stub(
     token: CancellationToken,
     mut eventloop: EventLoop,
-    send_to_manager: Sender<(String, CommandData)>,
+    send_to_manager: Option<Sender<(String, CommandData)>>,
 ) {
     loop {
         tokio::select! {
@@ -111,9 +112,11 @@ pub async fn poll_stub(
                         warn!("Could not parse topic, topic: {:?}", msg.topic);
                         continue;
                     };
-                    match send_to_manager.send((topic.to_string(), buf)).await {
-                        Ok(()) => (),
-                        Err(err) => warn!("Could not send MQTT message to bidir manager: {}", err),
+                    if let Some(ref sender) = send_to_manager {
+                        match sender.send((topic.to_string(), buf)).await {
+                            Ok(()) => (),
+                            Err(err) => warn!("Could not send MQTT message to bidir manager: {}", err),
+                        }
                     }
                 },
                 Err(msg) => trace!("Received mqtt error: {:?}", msg),
