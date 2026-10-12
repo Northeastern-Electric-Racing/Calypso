@@ -48,7 +48,7 @@ Every mode above is transport-agnostic; the wire is chosen once at startup.
 | *(default)* | MQTT to `--siren-host-url` (`-u`, default `localhost:1883`), QoS 0. |
 | `--zenoh` / `-z` | Zenoh `put` on the topic as the key expression, encoded `application/protobuf`. |
 
-The payload is the same `ServerData` protobuf either way, so a Zenoh-mode sim feeds the `calypso` decoder's own `--zenoh` path. `--zenoh-conf FILE` (requires `--zenoh`) loads a JSON5 Zenoh config; omit it and the Zenoh defaults are used, so no conf file is needed to get running. `-u` is ignored under `--zenoh`.
+The payload is the same `ServerData` protobuf either way, so a Zenoh-mode sim feeds the `calypso` decoder's own `--zenoh` path. `--zenoh-conf FILE` loads a JSON5 Zenoh config; omit it and the Zenoh defaults are used, so no conf file is needed to get running. It only applies under `--zenoh`; without it the flag (or an exported `CALYPSO_ZENOH_CONF`) is ignored with a warning rather than blocking startup. `-u` is ignored under `--zenoh`.
 
 Both flags also read from the environment (`CALYPSO_ZENOH`, `CALYPSO_ZENOH_CONF`), matching the main `calypso` binary.
 
@@ -210,6 +210,9 @@ JSON-RPC 2.0 over stdio — one request per line on stdin, one response per line
 |---|---|---|
 | `publish` | `{topic, value? \| values?, unit?}` | `{ts_us}` |
 | `list_topics` | `{}` | `{topics: [{name, unit}, ...]}` |
+| `set_filter` | `{mode: "disable" \| "enable" \| "clear", patterns?}` | `{filter}` |
+| `add_topic` | `{topic, unit?, sim_freq, sim}` — needs `--mock` | `{topic}` |
+| `remove_topic` | `{topic}` — needs `--mock` | `{topic, removed}` |
 | `ping` | `{}` | `{ok: true}` |
 
 There are no `claim`/`release`/`silence` methods: nothing arbitrates between the heartbeat and a driver. To keep the heartbeat off a stream driver's topics, mute them with `--disable-topic` at startup or `set_filter` while running.
