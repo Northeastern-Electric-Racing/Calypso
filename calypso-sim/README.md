@@ -1,5 +1,7 @@
 # calypso-sim
 
+> **AI disclaimer:** this crate and its documentation were written with AI assistance (Claude Code) and reviewed by a human.
+
 Standalone CAN simulation tool. Publishes simulated messages onto the same wire the main `calypso` decoder uses — MQTT by default, or Zenoh with `--zenoh` — for testing UIs and dependent services without a live CAN bus.
 
 `calypso-sim` is a member of the top-level workspace, so `cargo build --all` from

@@ -25,28 +25,39 @@ serde_json = "1.0.150"
 regex = "1.12.3"
 schemars = "1.2.1"
 definition-rs = { path = "./Odyssey-Definitions/definition-rs"}
-
-[dependencies]
-rumqttc = "0.25.0"
-protobuf-codegen = "3.7.2"
-protobuf = "3.7.2"
-bitstream-io = "4.5.0"
-clap = { version = "4.5.43", features = ["derive", "env"] }
-rand = "0.10.1"
-regex = { workspace = true }
-phf = { version = "0.13.1", features = ["macros"] }
 calypso-cangen = { path = "./libs/calypso-cangen" }
 daedalus = { path = "./libs/daedalus" }
+rumqttc = "0.25.0"
+protobuf = "3.7.2"
+protobuf-codegen = "3.7.2"
+clap = { version = "4.5.43", features = ["derive", "env"] }
 tokio = { version = "1.47.1", features = ["full"] }
+tokio-util = { version = "0.7.16", features = ["full"] }
 futures-util = "0.3.31"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["ansi", "env-filter"] }
-tokio-util = { version = "0.7.16", features = ["full"] }
+zenoh = "1.9.0"
+
+[dependencies]
+rumqttc.workspace = true
+protobuf-codegen.workspace = true
+protobuf.workspace = true
+bitstream-io = "4.5.0"
+clap.workspace = true
+regex = { workspace = true }
+phf = { version = "0.13.1", features = ["macros"] }
+calypso-cangen.workspace = true
+daedalus.workspace = true
+tokio.workspace = true
+futures-util.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tokio-util.workspace = true
 can-dbc = "9.1.0"
 serde_json.workspace = true
 schemars.workspace = true
 num_enum = "0.7.5"
-zenoh = "1.9.0"
+zenoh.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 socketcan = { version = "3.6.1", features = ["tokio"] }
@@ -55,8 +66,8 @@ definition-rs.workspace = true
 
 
 [build-dependencies]
-protobuf-codegen = "3.7.2"
-calypso-cangen = { path = "./libs/calypso-cangen" }
+protobuf-codegen.workspace = true
+calypso-cangen.workspace = true
 
 [profile.release]
 lto = true
