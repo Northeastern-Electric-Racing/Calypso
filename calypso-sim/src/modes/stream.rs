@@ -181,9 +181,11 @@ fn handle_set_filter(id: Value, params: Value, filter_tx: &FilterTx) -> Value {
     match built {
         Ok(filter) => {
             let described = filter.describe();
-            // The mock task may not be running (`--stream` without `--mock`);
-            // the filter is still recorded, so this is not an error.
-            let _ = filter_tx.send(filter);
+            // `send` fails, storing nothing, once the mock task's receiver is
+            // gone (`--stream` without `--mock`): report it like add/remove.
+            if filter_tx.send(filter).is_err() {
+                return error(id, ERR_INTERNAL, NO_MOCK);
+            }
             ok(id, json!({"filter": described}))
         }
         Err(e) => error(id, ERR_INVALID_PARAMS, &e),

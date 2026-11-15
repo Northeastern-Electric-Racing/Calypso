@@ -179,7 +179,7 @@ impl SimValue {
         Self::quantize(sampled, inc_min, false) * sign
     }
 
-    fn update(&mut self) {
+    pub(crate) fn update(&mut self) {
         match self {
             SimValue::Range {
                 min,
@@ -208,18 +208,14 @@ impl SimValue {
             SimValue::Discrete { options, current } => {
                 let mut rng = rand::rng();
                 let prob = rng.random_range(0f32..1f32);
-                let mut new_value = None;
-
-                for i in 0..options.len() {
-                    let prob_floor = if i == 0 { 0f32 } else { options[i - 1].1 };
-                    let prob_ceiling = options[i].1;
-                    if prob >= prob_floor && prob <= prob_ceiling {
-                        new_value = Some(options[i].0);
-                        break;
-                    }
-                }
-
-                *current = new_value.unwrap_or(-1f32);
+                // Ceilings that sum to slightly under 1.0 (float rounding in
+                // the spec's weights) leave a gap at the top: fall back to
+                // the last option rather than publishing a bogus value.
+                *current = options
+                    .iter()
+                    .find(|(_, ceiling)| prob <= *ceiling)
+                    .or(options.last())
+                    .map_or(-1f32, |(value, _)| *value);
             }
         }
     }

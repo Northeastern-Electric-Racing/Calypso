@@ -299,3 +299,15 @@ fn adding_without_the_mock_heartbeat_is_an_error() {
     assert_eq!(code, -32603);
     assert!(msg.contains("--mock"), "{msg}");
 }
+
+/// Without `--mock` there is no heartbeat to filter, so `set_filter` must say
+/// so rather than report a filter that was never stored.
+#[test]
+fn filtering_without_the_mock_heartbeat_is_an_error() {
+    let mut sim = Sim::spawn();
+    let (code, msg) = sim
+        .call("set_filter", json!({"mode": "clear"}))
+        .expect_err("set_filter without --mock should fail");
+    assert_eq!(code, -32603);
+    assert!(msg.contains("--mock"), "{msg}");
+}

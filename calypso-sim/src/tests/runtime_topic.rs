@@ -148,3 +148,17 @@ fn rejects_discrete_option_sets_that_cannot_be_sampled() {
     };
     assert!(build(spec("A/B", 100.0, bad_value)).is_err());
 }
+
+#[test]
+fn discrete_ceilings_short_of_one_fall_back_to_the_last_option() {
+    // Ceilings ending below 1.0 leave a gap at the top of the 0..1 sample;
+    // it must land on the last option, never on a bogus sentinel.
+    let mut value = SimValue::Discrete {
+        options: vec![(7.0, 0.5)],
+        current: 7.0,
+    };
+    for _ in 0..50 {
+        value.update();
+        assert_eq!(value.get_value(), 7.0);
+    }
+}
