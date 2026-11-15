@@ -1,6 +1,6 @@
 # calypso-sim
 
-> **AI disclaimer:** this crate and its documentation were written with AI assistance (Claude Code) and reviewed by a human.
+> **AI disclaimer:** this crate and its documentation were written with Claude and have not been reviewed line by line by a human. The sim does not affect the `calypso` code that runs on the car, but use it with caution when sending commands to the car.
 
 Standalone CAN simulation tool. Publishes simulated messages onto the same wire the main `calypso` decoder uses — MQTT by default, or Zenoh with `--zenoh` — for testing UIs and dependent services without a live CAN bus.
 
