@@ -4,9 +4,10 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 
 use crate::filter::{FilterMode, FilterRx};
-use crate::publish::{Transport, publish_data};
+use crate::publish::publish_data;
 use crate::runtime_topic::{SimCommand, SimCommandRx};
 use crate::simulatable_message::SimComponent;
+use zenoh::Session;
 
 /// Background task: every 5ms, walk `components` and publish any that are both
 /// admitted by the current filter and due for an update (per `sim_freq`).
@@ -24,7 +25,7 @@ use crate::simulatable_message::SimComponent;
 /// place that can answer "is this name already taken".
 pub async fn run(
     token: CancellationToken,
-    transport: Transport,
+    session: Session,
     mut components: Vec<SimComponent>,
     mut filter_rx: FilterRx,
     mut cmd_rx: SimCommandRx,
@@ -65,7 +66,7 @@ pub async fn run(
                     log_active(&components, &admitted, &filter);
                 }
             }
-            _ = interval.tick() => publish_due(&mut components, &admitted, &transport).await,
+            _ = interval.tick() => publish_due(&mut components, &admitted, &session).await,
         }
     }
 }
@@ -138,14 +139,14 @@ fn log_active(components: &[SimComponent], admitted: &[bool], filter: &FilterMod
 
 /// Publish every admitted component that is due for an update (per its
 /// `sim_freq`), advancing its simulated value first.
-async fn publish_due(components: &mut [SimComponent], admitted: &[bool], transport: &Transport) {
+async fn publish_due(components: &mut [SimComponent], admitted: &[bool], session: &Session) {
     for (component, admitted) in components.iter_mut().zip(admitted) {
         if !admitted || !component.should_update() {
             continue;
         }
         component.update();
         let data = component.get_decode_data();
-        if let Err(e) = publish_data(transport, &data.topic, &data.unit, &data.value).await {
+        if let Err(e) = publish_data(session, &data.topic, &data.unit, &data.value).await {
             warn!("Mock publish failed for {}: {e}", data.topic);
         }
     }

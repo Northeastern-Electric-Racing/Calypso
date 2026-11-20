@@ -1,11 +1,11 @@
 //! Integration coverage for `calypso-sim --stream`: spawns the real binary and
 //! drives its JSON-RPC-over-stdio protocol.
 //!
-//! No broker required. `AsyncClient::publish` only enqueues, and the sim's
-//! eventloop poller retries a missing broker instead of dropping the queue (see
-//! `modes::poll_eventloop`), so every `publish` still returns a `ts_us`.
-//! Observing the actual bytes on the wire needs a live broker (Siren, in the
-//! Docker compose stack) and is intentionally out of scope — see `README.md`.
+//! No router required. The sim runs as an isolated Zenoh peer
+//! (`tests/isolated.zenoh.json5`), and a Zenoh `put` with no subscriber
+//! succeeds, so every `publish` still returns a `ts_us`. Observing the actual
+//! bytes on the wire needs a live subscriber and is intentionally out of scope —
+//! see `README.md`.
 
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
@@ -33,9 +33,14 @@ impl Sim {
     /// fails as "not running".
     fn spawn_with(extra: &[&str]) -> Self {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_calypso-sim"));
-        // A closed port: no broker is needed, and this keeps the sim off any
-        // real broker a developer happens to be running.
-        cmd.arg("-u").arg("127.0.0.1:47654").arg("--stream");
+        // No scouting or listening, so the sim stays off any real Zenoh peer or
+        // router a developer happens to be running.
+        cmd.arg("--zenoh-conf")
+            .arg(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/tests/isolated.zenoh.json5"
+            ))
+            .arg("--stream");
         cmd.args(extra);
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -46,8 +51,7 @@ impl Sim {
         let stdout = BufReader::new(child.stdout.take().expect("child stdout"));
 
         // Drain stderr on a background thread so the child never blocks on a full
-        // pipe (it logs an MQTT connection error ~every 500ms against the closed
-        // broker). The thread exits on EOF when the child is killed.
+        // pipe. The thread exits on EOF when the child is killed.
         let stderr = child.stderr.take().expect("child stderr");
         std::thread::spawn(move || {
             let mut reader = BufReader::new(stderr);
@@ -148,8 +152,8 @@ fn publish_requires_exactly_one_of_value_or_values() {
         )
         .expect_err("value + values together must error");
     assert_eq!(code, -32602);
-    // Exactly one -> accepted, returns a timestamp (publish only enqueues, so no
-    // broker is needed for this to succeed).
+    // Exactly one -> accepted, returns a timestamp (a put with no subscriber
+    // still succeeds, so no router is needed).
     assert!(
         sim.ok("publish", json!({"topic": "T", "value": 1.0}))["ts_us"]
             .as_u64()

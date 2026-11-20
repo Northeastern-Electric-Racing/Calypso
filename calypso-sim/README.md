@@ -2,7 +2,7 @@
 
 > **AI disclaimer:** this crate and its documentation were written with Claude and have not been reviewed line by line by a human. The sim does not affect the `calypso` code that runs on the car, but use it with caution when sending commands to the car.
 
-Standalone CAN simulation tool. Publishes simulated messages onto the same wire the main `calypso` decoder uses — MQTT by default, or Zenoh with `--zenoh` — for testing UIs and dependent services without a live CAN bus.
+Standalone CAN simulation tool. Publishes simulated messages over Zenoh, matching the main `calypso` decoder's `--zenoh` output, for testing UIs and dependent services without a live CAN bus.
 
 `calypso-sim` is a member of the top-level workspace, so `cargo build --all` from
 the repo root covers it. The examples below run from this directory for brevity;
@@ -35,24 +35,15 @@ cargo run -- --key-map manual_sim_buttons.keymap.json             # interactive
 cargo run -- --key-map manual_sim_buttons.keymap.json --mock      # + background heartbeat
 cargo run -- --key-map manual_sim_buttons.keymap.json --play demo # replay the "demo" action
 cargo run -- --stream                                             # JSON-RPC over stdio
-cargo run -- -u 10.0.0.5:1883 ...                                 # remote MQTT broker
-cargo run -- --zenoh                                              # publish over Zenoh
-cargo run -- --zenoh --zenoh-conf zenoh.json5                     # ... with an explicit conf
+cargo run -- --zenoh-conf zenoh.json5                             # explicit Zenoh conf
 cargo run -- --stream --mock                                      # stream + live add/remove
 ```
 
-## Transport (`--zenoh`)
+## Transport (Zenoh)
 
-Every mode above is transport-agnostic; the wire is chosen once at startup.
+Every mode publishes a Zenoh `put` with the topic as the key expression, encoded `application/protobuf`. The payload is the same `ServerData` protobuf the `calypso` decoder publishes under its own `--zenoh`.
 
-| Flag | Wire |
-|---|---|
-| *(default)* | MQTT to `--siren-host-url` (`-u`, default `localhost:1883`), QoS 0. |
-| `--zenoh` / `-z` | Zenoh `put` on the topic as the key expression, encoded `application/protobuf`. |
-
-The payload is the same `ServerData` protobuf either way, so a Zenoh-mode sim feeds the `calypso` decoder's own `--zenoh` path. `--zenoh-conf FILE` loads a JSON5 Zenoh config; omit it and the Zenoh defaults are used, so no conf file is needed to get running. It only applies under `--zenoh`; without it the flag (or an exported `CALYPSO_ZENOH_CONF`) is ignored with a warning rather than blocking startup. `-u` is ignored under `--zenoh`.
-
-Both flags also read from the environment (`CALYPSO_ZENOH`, `CALYPSO_ZENOH_CONF`), matching the main `calypso` binary.
+`--zenoh-conf FILE` (or `CALYPSO_ZENOH_CONF`, matching the main `calypso` binary) loads a JSON5 Zenoh config; omit it and the Zenoh defaults are used, so no conf file is needed to get running.
 
 ## Topic filtering (live)
 
@@ -223,7 +214,7 @@ Errors follow JSON-RPC 2.0 (`{error: {code, message}}`) with the standard codes:
 
 ## Testing
 
-The tests need **no broker** — just run:
+The tests need **no Zenoh router** — just run:
 
 ```
 cd calypso-sim
@@ -233,13 +224,13 @@ cargo test
 | Layer | Where | What it checks |
 |---|---|---|
 | Unit — scenario | `src/tests/keymap.rs` | The fragile scenario logic: the serde `untagged` step-shape disambiguation (invoke / publish / sleep, by shape not order), and load-time validation — unknown or cyclic invokes are rejected, and publishes must set exactly one of `value` / `values`. |
-| Unit — CLI modes | `src/tests/cli.rs` | `run_mock` arbitration: heartbeat on by default, off under a foreground mode or `--list-topics`, forced on by explicit `--mock`. Plus that `--zenoh-conf` is not `requires = "zenoh"`, so an exported `CALYPSO_ZENOH_CONF` cannot block startup. |
+| Unit — CLI modes | `src/tests/cli.rs` | `run_mock` arbitration: heartbeat on by default, off under a foreground mode or `--list-topics`, forced on by explicit `--mock`. |
 | Unit — filter | `src/tests/filter.rs` | Whitelist / blacklist / no-filter selection, bad regexes rejected, and that an over-narrow whitelist silences the heartbeat rather than falling open. |
 | Unit — runtime topics | `src/tests/runtime_topic.rs` | That an unusable spec is rejected at build time rather than at the first publish tick — non-finite or over-wide range bounds (which would panic the sampler), a `sim_freq` of zero, `{}` in the name — and that discrete weights become the running ceilings `SimValue` expects, ending at exactly 1.0. |
 | Integration — stream | `tests/stream.rs` | Spawns the real `calypso-sim --stream` binary and checks the JSON-RPC contract: `list_topics` is non-empty and well-formed, `publish` requires exactly one of `value`/`values` (and a well-formed one returns a `ts_us`), and malformed requests get `-32601`/`-32600`. Also the runtime-topic lifecycle against a `--mock` sim — add, see it listed, remove — plus the rejections and the `--mock`-off error. |
 
 The suite is deliberately small: each test guards logic a future change could silently break, not code that is obvious by reading it. Unit tests live in `src/tests/` — compiled into the crate under `cfg(test)`, so they reach internals via `use crate::…`; binary-driven tests live in the crate-root `tests/` dir, the only place Cargo sets `CARGO_BIN_EXE_calypso-sim`.
 
-No broker is needed because the MQTT `publish` only enqueues (the eventloop retries a missing broker rather than dropping the queue), so it still returns a `ts_us`. Observing the actual *bytes on the wire* — that a payload reaches a subscriber — needs a live broker, which in practice is **Siren** in the Docker compose stack (see the repo `Dockerfile`); a standalone end-to-end test broker is intentionally out of scope.
+No router is needed: the stream tests run the sim as an isolated Zenoh peer (`tests/isolated.zenoh.json5` turns off scouting and listening, so a test can't reach a real peer on the LAN), and a `put` with no subscriber still succeeds and returns a `ts_us`. Observing the actual *bytes on the wire* — that a payload reaches a subscriber — needs a live Zenoh subscriber; a standalone end-to-end test is intentionally out of scope.
 
 CI runs the suite via the workspace-wide `cargo test --all` in `.github/workflows/rust-ci.yml`.

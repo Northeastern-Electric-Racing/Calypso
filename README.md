@@ -32,4 +32,4 @@ Now view calypso interpret the can message and broadcast it on `mqttui`
 
 ### Simulation
 
-The MQTT simulator lives in [`calypso-sim/`](calypso-sim/) as its own standalone crate. See [calypso-sim/README.md](calypso-sim/README.md) for usage.
+The Zenoh simulator lives in [`calypso-sim/`](calypso-sim/) as its own standalone crate. See [calypso-sim/README.md](calypso-sim/README.md) for usage.

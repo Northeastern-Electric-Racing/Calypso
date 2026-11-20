@@ -16,17 +16,15 @@ mod tests;
 
 use std::path::Path;
 use std::process::exit;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::filter::{FilterMode, FilterTx};
-use crate::publish::Transport;
 use crate::runtime_topic::SimCommandTx;
 use crate::simulate_data::create_simulated_components;
 use clap::Parser;
-use rumqttc::v5::{AsyncClient, EventLoop, MqttOptions};
 use tokio_util::sync::CancellationToken;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
+use zenoh::Session;
 
 use cli::Cli;
 
@@ -53,14 +51,12 @@ async fn main() {
 
     let token = CancellationToken::new();
 
-    let (transport, eventloop) = connect_transport(&cli).await.unwrap_or_else(|err| {
-        eprintln!("Error: {err}");
-        exit(1);
-    });
-
-    // MQTT only: publishes are enqueued by the client and written to the socket
-    // by this task. Zenoh publishes inline, so it has no eventloop to drive.
-    let poll_handle = eventloop.map(|el| tokio::spawn(modes::poll_eventloop(token.clone(), el)));
+    let session = connect_zenoh(cli.zenoh_conf.as_deref())
+        .await
+        .unwrap_or_else(|err| {
+            eprintln!("Error: {err}");
+            exit(1);
+        });
 
     // The heartbeat's topic filter lives in a watch channel so `--stream`'s
     // `set_filter` RPC and the plain-`--mock` stdin commands can retune it
@@ -77,26 +73,11 @@ async fn main() {
     // the receiver, and senders get a clear error instead of a silent no-op.
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::channel(16);
 
-    let mock_handle = spawn_mock(&cli, &transport, &token, filter_rx, cmd_rx);
+    let mock_handle = spawn_mock(&cli, &session, &token, filter_rx, cmd_rx);
 
-    let foreground = run_foreground(&cli, &token, &transport, scenario, filter_tx, cmd_tx).await;
+    let foreground = run_foreground(&cli, &token, &session, scenario, filter_tx, cmd_tx).await;
 
-    if let Some(poll_handle) = poll_handle {
-        // Let the MQTT eventloop drain any just-enqueued publishes before we
-        // cancel it. `AsyncClient::publish` only enqueues; the eventloop's
-        // `poll()` is what writes to the socket. Cancelling first drops the
-        // eventloop with the queue unflushed — best-effort for QoS0, but this
-        // lets the last messages of a clean stream-EOF / Ctrl+C shutdown
-        // actually land.
-        tokio::time::sleep(Duration::from_millis(50)).await;
-
-        token.cancel();
-        if let Err(e) = poll_handle.await {
-            tracing::error!("MQTT eventloop task panicked: {e}");
-        }
-    } else {
-        token.cancel();
-    }
+    token.cancel();
 
     if let Some(h) = mock_handle
         && let Err(e) = h.await
@@ -113,20 +94,20 @@ async fn main() {
 async fn run_foreground(
     cli: &Cli,
     token: &CancellationToken,
-    transport: &Transport,
+    session: &Session,
     scenario: Option<keymap::Scenario>,
     filter_tx: FilterTx,
     cmd_tx: SimCommandTx,
 ) -> Result<(), String> {
     if cli.stream {
-        modes::stream::run(token.clone(), transport.clone(), filter_tx, cmd_tx).await
+        modes::stream::run(token.clone(), session.clone(), filter_tx, cmd_tx).await
     } else if let Some(action) = &cli.play {
         // A missing scenario here is an impossible state, not a runtime error.
         let scenario = scenario.expect("clap enforces --play requires --key-map");
-        modes::replay::run(transport.clone(), scenario, action).await
+        modes::replay::run(session.clone(), scenario, action).await
     } else if cli.key_map.is_some() {
         let scenario = scenario.expect("--key-map implies main loaded the scenario");
-        modes::interactive::run(token.clone(), transport.clone(), scenario).await
+        modes::interactive::run(token.clone(), session.clone(), scenario).await
     } else {
         // Pure --mock: stdin is free, so take live control commands on it.
         modes::control::run(token.clone(), filter_tx, cmd_tx).await
@@ -138,7 +119,7 @@ async fn run_foreground(
 /// filter can change while running — so the task takes the whole set.
 fn spawn_mock(
     cli: &Cli,
-    transport: &Transport,
+    session: &Session,
     token: &CancellationToken,
     filter_rx: filter::FilterRx,
     cmd_rx: runtime_topic::SimCommandRx,
@@ -148,7 +129,7 @@ fn spawn_mock(
     }
     Some(tokio::spawn(modes::mock::run(
         token.clone(),
-        transport.clone(),
+        session.clone(),
         create_simulated_components(),
         filter_rx,
         cmd_rx,
@@ -179,29 +160,9 @@ fn list_topics_and_exit() -> ! {
     exit(0);
 }
 
-/// Open the transport chosen on the command line.
-///
-/// Returns the [`Transport`] plus, for MQTT only, the `EventLoop` that `main`
-/// must drive for publishes to reach the socket. `None` means there is nothing
-/// to drive (Zenoh publishes inline).
-async fn connect_transport(cli: &Cli) -> Result<(Transport, Option<EventLoop>), String> {
-    if cli.zenoh {
-        let session = connect_zenoh(cli.zenoh_conf.as_deref()).await?;
-        return Ok((Transport::Zenoh(session), None));
-    }
-    if let Some(path) = &cli.zenoh_conf {
-        tracing::warn!(
-            "Ignoring --zenoh-conf '{}': the transport is MQTT. Pass --zenoh to use it.",
-            path.display()
-        );
-    }
-    let (client, eventloop) = connect_mqtt(&cli.siren_host_url)?;
-    Ok((Transport::Mqtt(client), Some(eventloop)))
-}
-
 /// Open a Zenoh session. With no `--zenoh-conf` the Zenoh defaults are used, so
 /// the sim runs without a conf file; an explicit path must load and parse.
-async fn connect_zenoh(conf_path: Option<&Path>) -> Result<zenoh::Session, String> {
+async fn connect_zenoh(conf_path: Option<&Path>) -> Result<Session, String> {
     zenoh::init_log_from_env_or("warn");
 
     let config = match conf_path {
@@ -213,28 +174,4 @@ async fn connect_zenoh(conf_path: Option<&Path>) -> Result<zenoh::Session, Strin
     zenoh::open(config)
         .await
         .map_err(|e| format!("Could not open Zenoh session: {e}"))
-}
-
-fn connect_mqtt(host_url: &str) -> Result<(AsyncClient, EventLoop), String> {
-    let (host, port_str) = host_url
-        .split_once(':')
-        .ok_or_else(|| format!("Invalid broker URL '{host_url}', expected host:port"))?;
-    let port: u16 = port_str
-        .parse()
-        .map_err(|_| format!("Invalid port: {port_str}"))?;
-
-    let client_id = format!(
-        "Calypso-Sim-{}",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_or(0, |d| d.as_millis())
-    );
-
-    let mut mqtt_opts = MqttOptions::new(client_id, host, port);
-    mqtt_opts
-        .set_keep_alive(Duration::from_secs(20))
-        .set_clean_start(true)
-        .set_connection_timeout(3)
-        .set_session_expiry_interval(Some(u32::MAX));
-    Ok(AsyncClient::new(mqtt_opts, 600))
 }

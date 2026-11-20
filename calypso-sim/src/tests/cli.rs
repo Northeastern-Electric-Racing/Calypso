@@ -22,25 +22,3 @@ fn run_mock_arbitrates_the_heartbeat_against_other_modes() {
     assert!(cli(&["calypso-sim", "--mock"]).run_mock());
     assert!(cli(&["calypso-sim", "--stream", "--mock"]).run_mock());
 }
-
-#[test]
-fn zenoh_conf_requires_the_zenoh_flag() {
-    // Default transport is MQTT; --zenoh switches it.
-    assert!(!cli(&["calypso-sim"]).zenoh);
-    assert!(cli(&["calypso-sim", "--zenoh"]).zenoh);
-    assert!(cli(&["calypso-sim", "-z"]).zenoh);
-
-    // A conf path is optional (Zenoh defaults are used without it)...
-    assert!(cli(&["calypso-sim", "--zenoh"]).zenoh_conf.is_none());
-    assert!(
-        cli(&["calypso-sim", "--zenoh", "--zenoh-conf", "z.json5"])
-            .zenoh_conf
-            .is_some()
-    );
-
-    // ...and it must NOT be `requires = "zenoh"`. clap enforces `requires`
-    // against env-provided values too, so an exported CALYPSO_ZENOH_CONF would
-    // make every mode -- including --list-topics -- fail to start. Parsing it
-    // without --zenoh has to succeed; main warns that it is unused.
-    assert!(Cli::try_parse_from(["calypso-sim", "--zenoh-conf", "z.json5"]).is_ok());
-}

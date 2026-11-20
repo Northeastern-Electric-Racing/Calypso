@@ -9,8 +9,9 @@ use tokio::sync::oneshot;
 use tokio_util::sync::CancellationToken;
 
 use crate::filter::{FilterMode, FilterTx};
-use crate::publish::{Transport, publish_data, resolve_values};
+use crate::publish::{publish_data, resolve_values};
 use crate::runtime_topic::{self, NO_MOCK, SimCommand, SimCommandTx, TopicSpec};
+use zenoh::Session;
 
 /// JSON-RPC 2.0 over stdio. Reads one request per line from stdin, writes
 /// one response per line to stdout. Diagnostics go to stderr.
@@ -31,7 +32,7 @@ use crate::runtime_topic::{self, NO_MOCK, SimCommand, SimCommandTx, TopicSpec};
 /// * `ping` — `{}` → `{ok: true}`
 pub async fn run(
     token: CancellationToken,
-    transport: Transport,
+    session: Session,
     filter_tx: FilterTx,
     cmd_tx: SimCommandTx,
 ) -> Result<(), String> {
@@ -46,7 +47,7 @@ pub async fn run(
                     if line.trim().is_empty() {
                         continue;
                     }
-                    let resp = handle_line(&line, &transport, &filter_tx, &cmd_tx).await;
+                    let resp = handle_line(&line, &session, &filter_tx, &cmd_tx).await;
                     write_line(&resp).await;
                 }
                 Ok(None) => break, // stdin closed
@@ -80,7 +81,7 @@ const ERR_INTERNAL: i32 = -32603;
 
 async fn handle_line(
     line: &str,
-    transport: &Transport,
+    session: &Session,
     filter_tx: &FilterTx,
     cmd_tx: &SimCommandTx,
 ) -> Value {
@@ -107,7 +108,7 @@ async fn handle_line(
     };
 
     match method.as_str() {
-        "publish" => handle_publish(id, request.params, transport).await,
+        "publish" => handle_publish(id, request.params, session).await,
         "list_topics" => handle_list_topics(id, cmd_tx).await,
         "set_filter" => handle_set_filter(id, request.params, filter_tx),
         "add_topic" => handle_add_topic(id, request.params, cmd_tx).await,
@@ -132,7 +133,7 @@ struct PublishParams {
     unit: Option<String>,
 }
 
-async fn handle_publish(id: Value, params: Value, transport: &Transport) -> Value {
+async fn handle_publish(id: Value, params: Value, session: &Session) -> Value {
     let p: PublishParams = match serde_json::from_value(params) {
         Ok(v) => v,
         Err(e) => return error(id, ERR_INVALID_PARAMS, &format!("Invalid params: {e}")),
@@ -144,7 +145,7 @@ async fn handle_publish(id: Value, params: Value, transport: &Transport) -> Valu
     };
 
     let unit = p.unit.unwrap_or_default();
-    match publish_data(transport, &p.topic, &unit, &values).await {
+    match publish_data(session, &p.topic, &unit, &values).await {
         Ok(ts_us) => ok(id, json!({"ts_us": ts_us})),
         Err(e) => error(id, ERR_INTERNAL, &format!("publish failed: {e}")),
     }

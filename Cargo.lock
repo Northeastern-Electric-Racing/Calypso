@@ -336,7 +336,6 @@ dependencies = [
  "protobuf-codegen",
  "rand 0.9.5",
  "regex",
- "rumqttc",
  "serde",
  "serde_json",
  "tokio",
