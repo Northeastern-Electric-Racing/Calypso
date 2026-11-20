@@ -17,13 +17,14 @@ mod tests;
 use std::path::Path;
 use std::process::exit;
 
-use crate::filter::{FilterMode, FilterTx};
-use crate::runtime_topic::SimCommandTx;
+use crate::filter::{FilterMode, FilterRx, FilterTx};
+use crate::keymap::Scenario;
+use crate::runtime_topic::{SimCommandRx, SimCommandTx};
 use crate::simulate_data::create_simulated_components;
 use clap::Parser;
-use tokio_util::sync::CancellationToken;
+use tokio::task::JoinHandle;
 use tracing::level_filters::LevelFilter;
-use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
+use tracing_subscriber::EnvFilter;
 use zenoh::Session;
 
 use cli::Cli;
@@ -38,34 +39,31 @@ async fn main() {
         list_topics_and_exit();
     }
 
+    if let Err(err) = run(&cli).await {
+        eprintln!("Error: {err}");
+        exit(1);
+    }
+}
+
+async fn run(cli: &Cli) -> Result<(), String> {
     warnings::print_unsimulated();
 
     // Load the scenario once, up front (for --key-map / --play), so a bad file
     // is a startup error rather than a failure part-way through a run.
-    let scenario = cli.key_map.as_deref().map(|path| {
-        keymap::load_scenario(path).unwrap_or_else(|err| {
-            eprintln!("Error: {err}");
-            exit(1);
-        })
-    });
-
-    let token = CancellationToken::new();
-
-    let session = connect_zenoh(cli.zenoh_conf.as_deref())
-        .await
-        .unwrap_or_else(|err| {
-            eprintln!("Error: {err}");
-            exit(1);
-        });
+    let scenario = cli
+        .key_map
+        .as_deref()
+        .map(keymap::load_scenario)
+        .transpose()?;
 
     // The heartbeat's topic filter lives in a watch channel so `--stream`'s
     // `set_filter` RPC and the plain-`--mock` stdin commands can retune it
     // while the sim runs. Built before anything spawns so a bad regex is a
     // startup error, not a surprise mid-run.
-    let initial = FilterMode::build(&cli.enable_topic, &cli.disable_topic).unwrap_or_else(|err| {
-        eprintln!("Error: {err}");
-        exit(1);
-    });
+    let initial = FilterMode::build(&cli.enable_topic, &cli.disable_topic)?;
+
+    let session = connect_zenoh(cli.zenoh_conf.as_deref()).await?;
+
     let (filter_tx, filter_rx) = tokio::sync::watch::channel(initial);
 
     // Add/remove are events rather than state, so they get an mpsc: a watch
@@ -73,44 +71,40 @@ async fn main() {
     // the receiver, and senders get a clear error instead of a silent no-op.
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::channel(16);
 
-    let mock_handle = spawn_mock(&cli, &session, &token, filter_rx, cmd_rx);
+    let mock_handle = spawn_mock(cli, &session, filter_rx, cmd_rx);
 
-    let foreground = run_foreground(&cli, &token, &session, scenario, filter_tx, cmd_tx).await;
+    let foreground = run_foreground(cli, session, scenario, filter_tx, cmd_tx).await;
 
-    token.cancel();
-
-    if let Some(h) = mock_handle
-        && let Err(e) = h.await
-    {
-        tracing::error!("mock task panicked: {e}");
+    if let Some(handle) = mock_handle {
+        handle.abort();
+        // Cancellation is the expected outcome; only a panic is worth reporting.
+        if let Err(e) = handle.await
+            && e.is_panic()
+        {
+            tracing::error!("mock task panicked: {e}");
+        }
     }
 
-    if let Err(err) = foreground {
-        eprintln!("Error: {err}");
-        exit(1);
-    }
+    foreground
 }
 
 async fn run_foreground(
     cli: &Cli,
-    token: &CancellationToken,
-    session: &Session,
-    scenario: Option<keymap::Scenario>,
+    session: Session,
+    scenario: Option<Scenario>,
     filter_tx: FilterTx,
     cmd_tx: SimCommandTx,
 ) -> Result<(), String> {
     if cli.stream {
-        modes::stream::run(token.clone(), session.clone(), filter_tx, cmd_tx).await
-    } else if let Some(action) = &cli.play {
-        // A missing scenario here is an impossible state, not a runtime error.
-        let scenario = scenario.expect("clap enforces --play requires --key-map");
-        modes::replay::run(session.clone(), scenario, action).await
-    } else if cli.key_map.is_some() {
-        let scenario = scenario.expect("--key-map implies main loaded the scenario");
-        modes::interactive::run(token.clone(), session.clone(), scenario).await
-    } else {
+        return modes::stream::run(session, filter_tx, cmd_tx).await;
+    }
+    // clap makes `--play` require `--key-map`, so a play action always comes
+    // with a scenario.
+    match (scenario, cli.play.as_deref()) {
+        (Some(scenario), Some(action)) => modes::replay::run(session, scenario, action).await,
+        (Some(scenario), None) => modes::interactive::run(session, scenario).await,
         // Pure --mock: stdin is free, so take live control commands on it.
-        modes::control::run(token.clone(), filter_tx, cmd_tx).await
+        (None, _) => modes::control::run(filter_tx, cmd_tx).await,
     }
 }
 
@@ -120,15 +114,13 @@ async fn run_foreground(
 fn spawn_mock(
     cli: &Cli,
     session: &Session,
-    token: &CancellationToken,
-    filter_rx: filter::FilterRx,
-    cmd_rx: runtime_topic::SimCommandRx,
-) -> Option<tokio::task::JoinHandle<()>> {
+    filter_rx: FilterRx,
+    cmd_rx: SimCommandRx,
+) -> Option<JoinHandle<()>> {
     if !cli.run_mock() {
         return None;
     }
     Some(tokio::spawn(modes::mock::run(
-        token.clone(),
         session.clone(),
         create_simulated_components(),
         filter_rx,
@@ -138,14 +130,18 @@ fn spawn_mock(
 
 fn init_tracing() {
     // Tracing always writes to stderr so stdout stays clean for stream mode
-    // and keymap-mode logs.
+    // and keymap-mode logs. Without RUST_LOG, Zenoh (chatty at INFO) logs at
+    // WARN; the default directive covers a RUST_LOG with no valid directives.
+    let directives = std::env::var(EnvFilter::DEFAULT_ENV)
+        .ok()
+        .filter(|v| !v.is_empty())
+        .unwrap_or_else(|| "info,zenoh=warn".to_string());
     let subscriber = tracing_subscriber::fmt()
         .with_writer(std::io::stderr)
-        .with_span_events(FmtSpan::CLOSE)
         .with_env_filter(
             EnvFilter::builder()
                 .with_default_directive(LevelFilter::INFO.into())
-                .from_env_lossy(),
+                .parse_lossy(directives),
         )
         .finish();
     let _ = tracing::subscriber::set_global_default(subscriber);
@@ -163,8 +159,6 @@ fn list_topics_and_exit() -> ! {
 /// Open a Zenoh session. With no `--zenoh-conf` the Zenoh defaults are used, so
 /// the sim runs without a conf file; an explicit path must load and parse.
 async fn connect_zenoh(conf_path: Option<&Path>) -> Result<Session, String> {
-    zenoh::init_log_from_env_or("warn");
-
     let config = match conf_path {
         Some(path) => zenoh::Config::from_file(path)
             .map_err(|e| format!("Invalid Zenoh conf '{}': {e}", path.display()))?,

@@ -21,10 +21,9 @@ pub type FilterRx = tokio::sync::watch::Receiver<FilterMode>;
 
 /// Which topics the mock heartbeat publishes, from the `--enable-topic` /
 /// `--disable-topic` flags (mutually exclusive) or a live update.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug)]
 pub enum FilterMode {
     /// No filter — every simulatable topic is allowed.
-    #[default]
     Disabled,
     /// Publish everything *except* topics matching these patterns.
     Blacklist(Vec<Regex>),
@@ -33,18 +32,33 @@ pub enum FilterMode {
 }
 
 impl FilterMode {
-    /// Build from raw patterns, compiling them so a bad regex is rejected
-    /// up front rather than silently disabling the heartbeat.
-    ///
-    /// `disable` wins if both are non-empty; the CLI marks them mutually
-    /// exclusive, and the live commands only ever set one.
+    /// Build from the `--enable-topic` / `--disable-topic` flags. clap makes
+    /// them mutually exclusive, so at most one is non-empty.
     pub fn build(enable: &[String], disable: &[String]) -> Result<Self, String> {
-        if !disable.is_empty() {
-            Ok(Self::Blacklist(compile_patterns(disable)?))
-        } else if !enable.is_empty() {
-            Ok(Self::Whitelist(compile_patterns(enable)?))
+        if !enable.is_empty() {
+            Self::from_command("enable", enable)
+        } else if !disable.is_empty() {
+            Self::from_command("disable", disable)
         } else {
             Ok(Self::Disabled)
+        }
+    }
+
+    /// Build from a live filter command — `mode` is `enable`, `disable` or
+    /// `clear` — as sent on the `--mock` control stdin or via `set_filter`.
+    /// Patterns are compiled up front, so a bad regex is rejected rather than
+    /// silently disabling the heartbeat.
+    pub fn from_command(mode: &str, patterns: &[String]) -> Result<Self, String> {
+        match mode {
+            "clear" => Ok(Self::Disabled),
+            "enable" | "disable" if patterns.is_empty() => {
+                Err(format!("`{mode}` needs at least one regex"))
+            }
+            "enable" => Ok(Self::Whitelist(compile_patterns(patterns)?)),
+            "disable" => Ok(Self::Blacklist(compile_patterns(patterns)?)),
+            other => Err(format!(
+                "unknown mode '{other}': expected \"disable\", \"enable\", or \"clear\""
+            )),
         }
     }
 

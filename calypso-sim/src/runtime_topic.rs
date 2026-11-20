@@ -48,8 +48,8 @@ pub enum SimCommand {
     },
     Remove {
         name: String,
-        /// How many components were dropped — see [`build`]'s note on names
-        /// not being unique.
+        /// How many components were dropped: can exceed one, since in-topic
+        /// placeholder names repeat in the generated set.
         reply: oneshot::Sender<usize>,
     },
     /// Snapshot the live `(name, unit)` pairs. Needed because the compiled
@@ -64,6 +64,65 @@ pub type SimCommandRx = mpsc::Receiver<SimCommand>;
 
 /// Sent when the mock task is not running, so nothing holds the receiver.
 pub const NO_MOCK: &str = "mock heartbeat is not running; start the sim with --mock";
+
+/// Why [`add_topic`] failed.
+#[derive(Debug)]
+pub enum AddError {
+    /// The spec is unusable, or the name is already simulated.
+    Rejected(String),
+    /// The mock heartbeat is not running ([`NO_MOCK`]).
+    NoMock,
+}
+
+impl std::fmt::Display for AddError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AddError::Rejected(e) => f.write_str(e),
+            AddError::NoMock => f.write_str(NO_MOCK),
+        }
+    }
+}
+
+/// Build `spec` and hand it to the mock task. Returns the (trimmed) topic name
+/// it is simulated under.
+pub async fn add_topic(cmd_tx: &SimCommandTx, spec: TopicSpec) -> Result<String, AddError> {
+    let component = build(spec).map_err(AddError::Rejected)?;
+    let name = component.name.clone();
+    let (reply, answer) = oneshot::channel();
+    let cmd = SimCommand::Add {
+        component: Box::new(component),
+        reply,
+    };
+    send_and_wait(cmd_tx, cmd, answer)
+        .await
+        .map_err(|_| AddError::NoMock)?
+        .map_err(AddError::Rejected)?;
+    Ok(name)
+}
+
+/// Stop simulating `name`; returns how many components were dropped (0 if it
+/// was not simulated).
+pub async fn remove_topic(cmd_tx: &SimCommandTx, name: String) -> Result<usize, String> {
+    let (reply, answer) = oneshot::channel();
+    send_and_wait(cmd_tx, SimCommand::Remove { name, reply }, answer).await
+}
+
+/// The live `(name, unit)` pairs the mock task is simulating.
+pub async fn list_topics(cmd_tx: &SimCommandTx) -> Result<Vec<(String, String)>, String> {
+    let (reply, answer) = oneshot::channel();
+    send_and_wait(cmd_tx, SimCommand::List { reply }, answer).await
+}
+
+/// Hand a command to the mock task and wait for its answer. A failed send or a
+/// dropped reply both mean the heartbeat is not running.
+async fn send_and_wait<T>(
+    cmd_tx: &SimCommandTx,
+    cmd: SimCommand,
+    answer: oneshot::Receiver<T>,
+) -> Result<T, String> {
+    cmd_tx.send(cmd).await.map_err(|_| NO_MOCK.to_string())?;
+    answer.await.map_err(|_| NO_MOCK.to_string())
+}
 
 /// A topic to start simulating, as supplied by a caller.
 #[derive(Debug, Deserialize)]
@@ -161,8 +220,8 @@ fn build_value(spec: ValueSpec) -> Result<SimValue, String> {
             inc_max,
             round,
         } => {
-            // Degenerate and inverted ranges are already handled downstream, but
-            // a non-finite span is not: the sampler only tests `max - min > eps`,
+            // A degenerate range (min == max) is handled downstream; a
+            // non-finite span is not: the sampler only tests `max - min > eps`,
             // so an infinite span reaches `random_range`, which panics on
             // non-finite bounds. `f32::MIN..f32::MAX` overflows to infinity too,
             // hence checking the span and not just the bounds.
@@ -235,9 +294,7 @@ fn build_value(spec: ValueSpec) -> Result<SimValue, String> {
 /// ```
 ///
 /// Unlike the codegen this also normalises by the total, so the last ceiling is
-/// always 1.0. `update` picks a value by finding the first ceiling above a
-/// `0..1` sample and yields -1.0 when none is, so weights that sum to less than
-/// one would otherwise publish -1.0 for the shortfall.
+/// always 1.0 and each option is picked in proportion to its weight.
 fn accumulate(options: &[(f32, f32)], total: f32) -> Vec<(f32, f32)> {
     let mut running = 0.0;
     let last = options.len() - 1;

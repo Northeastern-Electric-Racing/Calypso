@@ -106,8 +106,8 @@ fn discrete_weights_become_running_ceilings() {
     );
     assert!((ceilings[0] - 0.3).abs() < 1e-6, "{ceilings:?}");
     assert!((ceilings[1] - 0.6).abs() < 1e-6, "{ceilings:?}");
-    // The last must be exactly 1.0: any shortfall is the probability with which
-    // `update` finds no match and publishes -1.0.
+    // The last is pinned to exactly 1.0 rather than left to accumulated
+    // rounding, so every 0..1 sample finds a ceiling.
     assert_eq!(ceilings[2], 1.0);
 }
 

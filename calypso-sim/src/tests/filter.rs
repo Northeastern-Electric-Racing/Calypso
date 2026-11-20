@@ -18,11 +18,6 @@ fn build_picks_the_mode_and_compiles_patterns() {
     let white = FilterMode::build(&["^BMS/".into()], &[]).unwrap();
     assert_eq!(allows(&white, &["BMS/A", "VCU/B"]), [true, false]);
 
-    // disable wins when both are given; the CLI marks them mutually exclusive,
-    // but the live commands route through the same constructor.
-    let both = FilterMode::build(&["^VCU/".into()], &["^BMS/".into()]).unwrap();
-    assert_eq!(allows(&both, &["BMS/A", "VCU/B"]), [false, true]);
-
     // A bad regex is rejected rather than quietly matching nothing.
     assert!(FilterMode::build(&[], &["[".into()]).is_err());
 }
@@ -33,4 +28,14 @@ fn a_whitelist_with_no_match_admits_nothing() {
     // heartbeat outright, not fall back to allowing everything.
     let white = FilterMode::build(&["^Nope/".into()], &[]).unwrap();
     assert_eq!(allows(&white, &["BMS/A", "VCU/B"]), [false, false]);
+}
+
+#[test]
+fn live_commands_reject_an_empty_pattern_list() {
+    // An empty whitelist would silence the heartbeat; require a regex instead.
+    assert!(FilterMode::from_command("enable", &[]).is_err());
+    assert!(FilterMode::from_command("disable", &[]).is_err());
+    assert!(FilterMode::from_command("bogus", &["x".into()]).is_err());
+    let clear = FilterMode::from_command("clear", &[]).unwrap();
+    assert_eq!(allows(&clear, &["BMS/A"]), [true]);
 }
