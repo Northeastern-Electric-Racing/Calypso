@@ -14,7 +14,7 @@ cast_sign_loss = "allow"
 [dependencies]
 protobuf.workspace = true
 clap.workspace = true
-rand = "0.9.2"
+rand = "0.10.2"
 regex.workspace = true
 serde.workspace = true
 serde_json.workspace = true

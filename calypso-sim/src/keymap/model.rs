@@ -23,8 +23,7 @@ use serde::Deserialize;
 /// A scenario file: a set of named [`Action`]s keyed by name.
 ///
 /// A scenario drives the interactive (`--key-map`) and replay (`--play`) modes.
-/// There is no separate "script" concept: a replay program is itself just an
-/// [`Action`] whose steps run in order.
+/// A replay program is just an [`Action`] whose steps run in order.
 pub type Scenario = HashMap<String, Action>;
 
 /// One named command: an ordered list of [`Step`]s, optionally bound to a

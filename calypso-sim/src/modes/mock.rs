@@ -145,9 +145,10 @@ async fn publish_due(components: &mut [SimComponent], admitted: &[bool], session
             continue;
         }
         component.update();
-        let data = component.get_decode_data();
-        if let Err(e) = publish_data(session, &data.topic, &data.unit, &data.value).await {
-            warn!("Mock publish failed for {}: {e}", data.topic);
+        let topic = component.topic();
+        let values = component.values();
+        if let Err(e) = publish_data(session, &topic, &component.unit, &values).await {
+            warn!("Mock publish failed for {topic}: {e}");
         }
     }
 }

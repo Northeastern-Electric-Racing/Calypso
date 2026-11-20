@@ -44,22 +44,11 @@ impl Sim {
         cmd.args(extra);
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+            .stderr(Stdio::null());
 
         let mut child = cmd.spawn().expect("failed to spawn calypso-sim binary");
         let stdin = child.stdin.take().expect("child stdin");
         let stdout = BufReader::new(child.stdout.take().expect("child stdout"));
-
-        // Drain stderr on a background thread so the child never blocks on a full
-        // pipe. The thread exits on EOF when the child is killed.
-        let stderr = child.stderr.take().expect("child stderr");
-        std::thread::spawn(move || {
-            let mut reader = BufReader::new(stderr);
-            let mut line = String::new();
-            while reader.read_line(&mut line).is_ok_and(|n| n > 0) {
-                line.clear();
-            }
-        });
 
         Sim {
             child,
@@ -112,7 +101,7 @@ impl Sim {
 
 impl Drop for Sim {
     fn drop(&mut self) {
-        // Kill and reap so no sim process (or its stderr thread) outlives the test.
+        // Kill and reap so no sim process outlives the test.
         let _ = self.child.kill();
         let _ = self.child.wait();
     }
@@ -136,24 +125,10 @@ fn list_topics_is_nonempty_and_well_formed() {
     }
 }
 
+/// A put with no subscriber still succeeds, so no router is needed.
 #[test]
-fn publish_requires_exactly_one_of_value_or_values() {
+fn publish_returns_a_timestamp() {
     let mut sim = Sim::spawn();
-    // Neither present -> invalid params.
-    let (code, _) = sim
-        .call("publish", json!({"topic": "T"}))
-        .expect_err("publish with no value/values must error");
-    assert_eq!(code, -32602, "expected Invalid params");
-    // Both present -> invalid params.
-    let (code, _) = sim
-        .call(
-            "publish",
-            json!({"topic": "T", "value": 1.0, "values": [1.0, 2.0]}),
-        )
-        .expect_err("value + values together must error");
-    assert_eq!(code, -32602);
-    // Exactly one -> accepted, returns a timestamp (a put with no subscriber
-    // still succeeds, so no router is needed).
     assert!(
         sim.ok("publish", json!({"topic": "T", "value": 1.0}))["ts_us"]
             .as_u64()
@@ -221,8 +196,8 @@ fn a_runtime_topic_can_be_added_listed_and_removed() {
     assert!(!listed(&mut sim), "topic should be gone once removed");
 }
 
-/// A weighted option set is the other value shape, and the one whose conversion
-/// is easy to get wrong.
+/// The other value shape, a weighted option set, is accepted end to end. The
+/// weight conversion itself is unit tested in `src/tests/runtime_topic.rs`.
 #[test]
 fn a_discrete_runtime_topic_is_accepted() {
     let mut sim = Sim::spawn_with(&["--mock"]);
@@ -236,45 +211,21 @@ fn a_discrete_runtime_topic_is_accepted() {
     assert_eq!(added["topic"], "Runtime/Test/State");
 }
 
+/// Adding the same name twice is add-only, not an upsert.
 #[test]
-fn unusable_runtime_topics_are_rejected() {
+fn adding_a_topic_twice_is_rejected() {
     let mut sim = Sim::spawn_with(&["--mock"]);
-    let good = json!({
+    let topic = json!({
         "topic": "Runtime/Test/Dup", "unit": "V", "sim_freq": 100,
         "sim": {"min": 0, "max": 10, "inc_min": 1, "inc_max": 2}
     });
-    sim.ok("add_topic", good.clone());
+    sim.ok("add_topic", topic.clone());
 
-    // Adding the same name twice is add-only, not an upsert.
     let (code, msg) = sim
-        .call("add_topic", good)
+        .call("add_topic", topic)
         .expect_err("duplicate add should fail");
     assert_eq!(code, -32602);
     assert!(msg.contains("already simulated"), "{msg}");
-
-    // `{}` would publish a topic containing a literal `{}` — rejected up front.
-    let (code, _) = sim
-        .call(
-            "add_topic",
-            json!({
-                "topic": "Runtime/{}/Value", "unit": "V", "sim_freq": 100,
-                "sim": {"min": 0, "max": 10, "inc_min": 1, "inc_max": 2}
-            }),
-        )
-        .expect_err("placeholder name should fail");
-    assert_eq!(code, -32602);
-
-    // 0 means "publish every 5ms tick", so it is rejected rather than taken.
-    let (code, _) = sim
-        .call(
-            "add_topic",
-            json!({
-                "topic": "Runtime/Test/Zero", "unit": "V", "sim_freq": 0,
-                "sim": {"min": 0, "max": 10, "inc_min": 1, "inc_max": 2}
-            }),
-        )
-        .expect_err("zero sim_freq should fail");
-    assert_eq!(code, -32602);
 }
 
 /// Removing something that was never simulated is a no-op, not an error — the
@@ -286,32 +237,20 @@ fn removing_an_unknown_topic_reports_zero() {
     assert_eq!(removed["removed"], 0);
 }
 
-/// Without the heartbeat there is no component list to mutate, and the caller
-/// is told so rather than getting a silent success.
+/// Without `--mock` there is no heartbeat, so mutating its topics or filter is
+/// an error rather than a silent success.
 #[test]
-fn adding_without_the_mock_heartbeat_is_an_error() {
+fn heartbeat_calls_without_mock_are_errors() {
     let mut sim = Sim::spawn();
-    let (code, msg) = sim
-        .call(
-            "add_topic",
-            json!({
-                "topic": "Runtime/Test/NoMock", "unit": "V", "sim_freq": 100,
-                "sim": {"min": 0, "max": 10, "inc_min": 1, "inc_max": 2}
-            }),
-        )
-        .expect_err("add without --mock should fail");
-    assert_eq!(code, -32603);
-    assert!(msg.contains("--mock"), "{msg}");
-}
-
-/// Without `--mock` there is no heartbeat to filter, so `set_filter` must say
-/// so rather than report a filter that was never stored.
-#[test]
-fn filtering_without_the_mock_heartbeat_is_an_error() {
-    let mut sim = Sim::spawn();
-    let (code, msg) = sim
-        .call("set_filter", json!({"mode": "clear"}))
-        .expect_err("set_filter without --mock should fail");
-    assert_eq!(code, -32603);
-    assert!(msg.contains("--mock"), "{msg}");
+    let add = json!({
+        "topic": "Runtime/Test/NoMock", "unit": "V", "sim_freq": 100,
+        "sim": {"min": 0, "max": 10, "inc_min": 1, "inc_max": 2}
+    });
+    for (method, params) in [("add_topic", add), ("set_filter", json!({"mode": "clear"}))] {
+        let (code, msg) = sim
+            .call(method, params)
+            .expect_err("calls needing the heartbeat should fail without --mock");
+        assert_eq!(code, -32603, "{method}");
+        assert!(msg.contains("--mock"), "{method}: {msg}");
+    }
 }

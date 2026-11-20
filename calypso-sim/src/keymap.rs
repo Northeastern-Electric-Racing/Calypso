@@ -1,6 +1,5 @@
-//! Loading, validating, and running scenarios. The plain data types live in
-//! the [`model`] submodule and are re-exported here, so every existing
-//! `crate::keymap::…` path keeps working.
+//! Loading, validating, and running scenarios. The data types live in the
+//! [`model`] submodule and are re-exported here.
 
 mod model;
 pub use model::{Scenario, Step};

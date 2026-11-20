@@ -1,12 +1,19 @@
 use calypso_cangen::CANGEN_SPEC_PATH;
 use definition_rs::OdysseyMsg;
 
+/// The CAN spec in the source tree this binary was compiled from.
+const BUILD_SPEC_PATH: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../Odyssey-Definitions/can-messages/"
+);
+
 /// Print a comma-separated list of CAN message topics that have no
 /// `sim_freq` in the spec — these are invisible to the mock simulator
 /// and can only be published via `--key-map` / `--play` / `--stream`.
 ///
-/// Resolves the spec path relative to the current working directory; emits
-/// nothing if the spec dir is missing.
+/// Reads the spec from the source tree the binary was built from, falling back
+/// to the current directory; emits nothing if neither has it (e.g. an installed
+/// binary in Docker).
 pub fn print_unsimulated() {
     let topics = collect_unsimulated_topics();
     if topics.is_empty() {
@@ -17,7 +24,9 @@ pub fn print_unsimulated() {
 
 fn collect_unsimulated_topics() -> Vec<String> {
     let mut out = Vec::new();
-    let Ok(entries) = std::fs::read_dir(CANGEN_SPEC_PATH) else {
+    let Ok(entries) =
+        std::fs::read_dir(BUILD_SPEC_PATH).or_else(|_| std::fs::read_dir(CANGEN_SPEC_PATH))
+    else {
         return out;
     };
     for entry in entries.flatten() {

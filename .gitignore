@@ -25,7 +25,3 @@ serverdata.rs
 
 # private testing 
 /privatetest/
-
-# AI things
-.claude
-CLAUDE.md

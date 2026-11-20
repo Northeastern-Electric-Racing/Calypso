@@ -1,20 +1,15 @@
 #![allow(dead_code)]
-// The simulation data model. This lives only in calypso-sim: the main calypso
-// decoder never drove the simulate path, so it was removed there when the sim
-// was extracted. Some struct fields are read only by the codegen-expanded
-// `create_simulated_components` initializer, not by hand-written sim code
-// paths — hence the crate-level dead_code allow.
+// The simulation data model. `create_simulated_components` (generated in
+// `simulate_data.rs`) builds one `SimComponent` per simulated topic from the CAN
+// spec. Some fields mirror the spec but are never read, hence the dead_code allow.
 
-use calypso_cangen::data::DecodeData;
 use rand::prelude::*;
-use regex::Regex;
-use std::sync::LazyLock;
 use std::time::Instant;
 
 /**
  * A `SimComponent` roughly corresponds to a `NetField` with properties inherited from `CANMsg`
  */
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SimComponent {
     pub id: String,
     pub points: Vec<SimPoint>,
@@ -29,7 +24,7 @@ pub struct SimComponent {
 /**
  * Corresponds to `CANPoint` of a `NetField`
  */
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SimPoint {
     pub size: usize,
     pub parse: Option<bool>,
@@ -43,7 +38,7 @@ pub struct SimPoint {
 /**
  * The mode of simulation and the real-time value of the `CANPoint`
  */
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum SimValue {
     /// Ranged mode where the value is within a min/max range and can include increment parameters.
     Range {
@@ -74,15 +69,16 @@ impl SimComponent {
         self.last_update.elapsed().as_millis() > self.sim_freq as u128
     }
 
+    /// The topic to publish on, with any in-topic values injected.
     #[must_use]
-    pub fn get_decode_data(&self) -> DecodeData {
-        let topic_name = topic_values_inject(self);
-        DecodeData::new(
-            self.points.iter().map(SimPoint::get_value).collect(),
-            &topic_name,
-            &self.unit,
-            None,
-        )
+    pub fn topic(&self) -> String {
+        topic_values_inject(self)
+    }
+
+    /// The current value of each point, in order.
+    #[must_use]
+    pub fn values(&self) -> Vec<f32> {
+        self.points.iter().map(SimPoint::get_value).collect()
     }
 
     pub fn update(&mut self) {
@@ -129,7 +125,7 @@ impl SimValue {
                 ..
             } => {
                 let sampled = Self::sample_range_or_low(&mut rng, *min, *max, f32::EPSILON);
-                *current = Self::quantize(sampled, *inc_min, *round);
+                *current = Self::clamp(Self::quantize(sampled, *inc_min, *round), *min, *max);
             }
             SimValue::Discrete { options, current } => {
                 // `choose` is empty-safe (returns None); direct indexing panics.
@@ -156,6 +152,16 @@ impl SimValue {
             (value / inc_min).round() * inc_min
         };
         if round { snapped.round() } else { snapped }
+    }
+
+    /// Clamp `value` to `min..=max`, leaving it as is when the bounds are
+    /// inverted or NaN (`f32::clamp` panics on those).
+    fn clamp(value: f32, min: f32, max: f32) -> f32 {
+        if min <= max {
+            value.clamp(min, max)
+        } else {
+            value
+        }
     }
 
     /// Sample uniformly from `lo..hi`, falling back to `lo` when the range is
@@ -199,11 +205,11 @@ impl SimValue {
                 }
 
                 // Range too tight to land in; keep the current value.
-                if attempts >= MAX_ATTEMPTS {
+                if new_value < *min || new_value > *max {
                     return;
                 }
 
-                *current = Self::quantize(new_value, *inc_min, *round);
+                *current = Self::clamp(Self::quantize(new_value, *inc_min, *round), *min, *max);
             }
             SimValue::Discrete { options, current } => {
                 let mut rng = rand::rng();
@@ -221,38 +227,25 @@ impl SimValue {
     }
 }
 
-/// Placeholder pattern (`{}`) for in-topic value injection, compiled once and reused.
-static PLACEHOLDER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\}").unwrap());
-
-/**
- * This helper function takes a `SimComponent`, injects the associated `CANPoint` values into the topic string
- * e.g. "Hello/{}/World/{}" -> "Hello/{4}/World{5}"
- *
- * # Panics
- *  Panics if Regex compilation fails.
- *
- */
+/// Fill each `{}` in the component's name with the matching in-topic point's
+/// value, e.g. `"Hello/{}/World/{}"` -> `"Hello/4/World/5"`. Returns the name
+/// unchanged if the placeholder and point counts differ.
 #[must_use]
 pub fn topic_values_inject(component: &SimComponent) -> String {
-    if let Some(points_intopic) = &component.points_intopic {
-        let component_name = &component.name;
-        // check: placeholder count lines up with in point vector array length
-        if points_intopic.len() != PLACEHOLDER_RE.find_iter(component_name).count() {
-            eprintln!(
-                "[error] in-topic points vector length does not line up with placeholder count"
-            );
-            return component_name.clone();
-        }
-
-        // Replace {} placeholders with values, pulling each in-topic point's
-        // value on the fly (no intermediate Vec).
-        let mut values = points_intopic.iter().map(|p| p.get_value() as u32);
-        PLACEHOLDER_RE
-            .replace_all(component_name, |_: &regex::Captures| {
-                values.next().map_or("{}".to_string(), |v| v.to_string())
-            })
-            .into_owned()
-    } else {
-        component.name.clone()
+    let name = &component.name;
+    let Some(points_intopic) = &component.points_intopic else {
+        return name.clone();
+    };
+    if points_intopic.len() != name.matches("{}").count() {
+        eprintln!("[error] in-topic points vector length does not line up with placeholder count");
+        return name.clone();
     }
+
+    let mut parts = name.split("{}");
+    let mut topic = parts.next().unwrap_or_default().to_string();
+    for (point, part) in points_intopic.iter().zip(parts) {
+        topic.push_str(&(point.get_value() as u32).to_string());
+        topic.push_str(part);
+    }
+    topic
 }
