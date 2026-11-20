@@ -1,0 +1,12 @@
+// Zenoh conf for the integration tests: a peer that neither scouts nor
+// listens, so a test sim can't reach (or be reached by) any Zenoh peer or
+// router a developer happens to be running on the LAN.
+{
+  mode: "peer",
+  scouting: {
+    multicast: { enabled: false },
+    gossip: { enabled: false },
+  },
+  listen: { endpoints: [] },
+  connect: { endpoints: [] },
+}
