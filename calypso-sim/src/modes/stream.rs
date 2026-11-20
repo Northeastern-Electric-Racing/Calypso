@@ -1,16 +1,11 @@
-use std::sync::LazyLock;
-
-use crate::simulate_data::create_simulated_components;
-
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::sync::oneshot;
-use tokio_util::sync::CancellationToken;
 
 use crate::filter::{FilterMode, FilterTx};
 use crate::publish::{publish_data, resolve_values};
-use crate::runtime_topic::{self, NO_MOCK, SimCommand, SimCommandTx, TopicSpec};
+use crate::runtime_topic::{self, AddError, NO_MOCK, SimCommandTx, TopicSpec};
+use crate::simulate_data::create_simulated_components;
 use zenoh::Session;
 
 /// JSON-RPC 2.0 over stdio. Reads one request per line from stdin, writes
@@ -31,7 +26,6 @@ use zenoh::Session;
 /// * `remove_topic` — `{topic}` → `{topic, removed}`; stops simulating one
 /// * `ping` — `{}` → `{ok: true}`
 pub async fn run(
-    token: CancellationToken,
     session: Session,
     filter_tx: FilterTx,
     cmd_tx: SimCommandTx,
@@ -40,21 +34,18 @@ pub async fn run(
     let mut reader = BufReader::new(stdin).lines();
 
     loop {
-        tokio::select! {
-            () = token.cancelled() => break,
-            line = reader.next_line() => match line {
-                Ok(Some(line)) => {
-                    if line.trim().is_empty() {
-                        continue;
-                    }
-                    let resp = handle_line(&line, &session, &filter_tx, &cmd_tx).await;
-                    write_line(&resp).await;
+        match reader.next_line().await {
+            Ok(Some(line)) => {
+                if line.trim().is_empty() {
+                    continue;
                 }
-                Ok(None) => break, // stdin closed
-                Err(e) => {
-                    eprintln!("stream: stdin read error: {e}");
-                    break;
-                }
+                let resp = handle_line(&line, &session, &filter_tx, &cmd_tx).await;
+                write_line(&resp).await;
+            }
+            Ok(None) => break, // stdin closed
+            Err(e) => {
+                eprintln!("stream: stdin read error: {e}");
+                break;
             }
         }
     }
@@ -63,11 +54,8 @@ pub async fn run(
 
 #[derive(Debug, Deserialize)]
 struct Request {
-    #[serde(default)]
     jsonrpc: Option<String>,
-    #[serde(default)]
     id: Option<Value>,
-    #[serde(default)]
     method: Option<String>,
     #[serde(default)]
     params: Value,
@@ -125,11 +113,8 @@ async fn handle_line(
 #[derive(Deserialize)]
 struct PublishParams {
     topic: String,
-    #[serde(default)]
     value: Option<f32>,
-    #[serde(default)]
     values: Option<Vec<f32>>,
-    #[serde(default)]
     unit: Option<String>,
 }
 
@@ -167,19 +152,7 @@ fn handle_set_filter(id: Value, params: Value, filter_tx: &FilterTx) -> Value {
         Err(e) => return error(id, ERR_INVALID_PARAMS, &format!("Invalid params: {e}")),
     };
 
-    let built = match p.mode.as_str() {
-        "clear" => Ok(FilterMode::Disabled),
-        "disable" | "enable" if p.patterns.is_empty() => {
-            Err(format!("`{}` requires a non-empty `patterns`", p.mode))
-        }
-        "disable" => FilterMode::build(&[], &p.patterns),
-        "enable" => FilterMode::build(&p.patterns, &[]),
-        other => Err(format!(
-            "unknown mode '{other}': expected \"disable\", \"enable\", or \"clear\""
-        )),
-    };
-
-    match built {
+    match FilterMode::from_command(&p.mode, &p.patterns) {
         Ok(filter) => {
             let described = filter.describe();
             // `send` fails, storing nothing, once the mock task's receiver is
@@ -201,21 +174,10 @@ async fn handle_add_topic(id: Value, params: Value, cmd_tx: &SimCommandTx) -> Va
         Ok(v) => v,
         Err(e) => return error(id, ERR_INVALID_PARAMS, &format!("Invalid params: {e}")),
     };
-    let topic = spec.topic.clone();
-    let component = match runtime_topic::build(spec) {
-        Ok(c) => c,
-        Err(e) => return error(id, ERR_INVALID_PARAMS, &e),
-    };
-
-    let (reply, answer) = oneshot::channel();
-    let cmd = SimCommand::Add {
-        component: Box::new(component),
-        reply,
-    };
-    match send_and_wait(cmd_tx, cmd, answer).await {
-        Err(e) => error(id, ERR_INTERNAL, &e),
-        Ok(Err(e)) => error(id, ERR_INVALID_PARAMS, &e),
-        Ok(Ok(())) => ok(id, json!({"topic": topic})),
+    match runtime_topic::add_topic(cmd_tx, spec).await {
+        Ok(topic) => ok(id, json!({"topic": topic})),
+        Err(AddError::Rejected(e)) => error(id, ERR_INVALID_PARAMS, &e),
+        Err(AddError::NoMock) => error(id, ERR_INTERNAL, NO_MOCK),
     }
 }
 
@@ -233,49 +195,21 @@ async fn handle_remove_topic(id: Value, params: Value, cmd_tx: &SimCommandTx) ->
         Err(e) => return error(id, ERR_INVALID_PARAMS, &format!("Invalid params: {e}")),
     };
 
-    let (reply, answer) = oneshot::channel();
-    let cmd = SimCommand::Remove {
-        name: p.topic.clone(),
-        reply,
-    };
-    match send_and_wait(cmd_tx, cmd, answer).await {
+    match runtime_topic::remove_topic(cmd_tx, p.topic.clone()).await {
         Ok(removed) => ok(id, json!({"topic": p.topic, "removed": removed})),
         Err(e) => error(id, ERR_INTERNAL, &e),
     }
 }
 
-/// Hand a command to the mock task and wait for its answer. Both a failed send
-/// and a dropped reply mean the same thing in practice — the heartbeat is not
-/// running, so there is no component list to mutate.
-async fn send_and_wait<T>(
-    cmd_tx: &SimCommandTx,
-    cmd: SimCommand,
-    answer: oneshot::Receiver<T>,
-) -> Result<T, String> {
-    cmd_tx.send(cmd).await.map_err(|_| NO_MOCK.to_string())?;
-    answer.await.map_err(|_| NO_MOCK.to_string())
-}
-
-/// The compiled topic set, computed once. Building the full component set runs
-/// each component's RNG initializer — wasted work for the static name/unit
-/// returned here — so cache it rather than rebuilding per call.
-///
-/// Only a fallback: once topics can be added and removed at runtime this is no
-/// longer the live set, so `list_topics` asks the heartbeat first.
-static COMPILED_TOPICS: LazyLock<Vec<(String, String)>> = LazyLock::new(|| {
-    create_simulated_components()
-        .into_iter()
-        .map(|c| (c.name, c.unit))
-        .collect()
-});
-
 async fn handle_list_topics(id: Value, cmd_tx: &SimCommandTx) -> Value {
-    let (reply, answer) = oneshot::channel();
     // Falls back to the compiled set when the heartbeat is not running: nothing
     // can have been added in that case, so the two agree.
-    let topics = match send_and_wait(cmd_tx, SimCommand::List { reply }, answer).await {
+    let topics = match runtime_topic::list_topics(cmd_tx).await {
         Ok(live) => live,
-        Err(_) => COMPILED_TOPICS.clone(),
+        Err(_) => create_simulated_components()
+            .into_iter()
+            .map(|c| (c.name, c.unit))
+            .collect(),
     };
     let topics: Vec<Value> = topics
         .iter()

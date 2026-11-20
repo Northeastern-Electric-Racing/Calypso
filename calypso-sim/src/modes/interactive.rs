@@ -3,8 +3,6 @@ use std::io::Write;
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use futures_util::StreamExt;
 
-use tokio_util::sync::CancellationToken;
-
 use crate::keymap::{Scenario, key_bindings, print_listing, run_action};
 use crate::raw_mode::{RawModeGuard, line_end};
 use zenoh::Session;
@@ -12,11 +10,7 @@ use zenoh::Session;
 /// Run the interactive raw-mode keypress loop. Each key-bound action fires on
 /// its key. The heartbeat, if running, may publish some of the same topics —
 /// mute its copy with `--disable-topic` if that matters (see [`crate::filter`]).
-pub async fn run(
-    token: CancellationToken,
-    session: Session,
-    scenario: Scenario,
-) -> Result<(), String> {
+pub async fn run(session: Session, scenario: Scenario) -> Result<(), String> {
     let keys = key_bindings(&scenario)?;
     if keys.is_empty() {
         return Err(
@@ -32,22 +26,19 @@ pub async fn run(
     let mut reader = EventStream::new();
 
     loop {
-        tokio::select! {
-            () = token.cancelled() => break,
-            event = reader.next() => match classify(event) {
-                Input::Quit => break,
-                Input::Error(e) => {
-                    print!("Terminal event error: {e}{}", line_end());
-                    let _ = std::io::stdout().flush();
-                    break;
-                }
-                Input::Key(ch) => {
-                    if let Some(name) = keys.get(&ch) {
-                        run_action(&scenario, name, &session).await;
-                    }
-                }
-                Input::Ignore => {}
+        match classify(reader.next().await) {
+            Input::Quit => break,
+            Input::Error(e) => {
+                print!("Terminal event error: {e}{}", line_end());
+                let _ = std::io::stdout().flush();
+                break;
             }
+            Input::Key(ch) => {
+                if let Some(name) = keys.get(&ch) {
+                    run_action(&scenario, name, &session).await;
+                }
+            }
+            Input::Ignore => {}
         }
     }
 

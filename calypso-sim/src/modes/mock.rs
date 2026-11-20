@@ -1,7 +1,6 @@
 use std::time::Duration;
 
-use tokio_util::sync::CancellationToken;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 use crate::filter::{FilterMode, FilterRx};
 use crate::publish::publish_data;
@@ -23,47 +22,31 @@ use zenoh::Session;
 /// The set itself can also grow and shrink at runtime via `cmd_rx` (see
 /// [`crate::runtime_topic`]). This task owns the list, so it is also the only
 /// place that can answer "is this name already taken".
+///
+/// Runs until `main` aborts it once the foreground mode returns.
 pub async fn run(
-    token: CancellationToken,
     session: Session,
     mut components: Vec<SimComponent>,
     mut filter_rx: FilterRx,
     mut cmd_rx: SimCommandRx,
 ) {
-    let mut admitted = filter_rx.borrow_and_update().admits(&components);
-    log_active(&components, &admitted, &filter_rx.borrow());
+    let mut admitted = refresh(&components, &filter_rx.borrow_and_update());
 
     let mut interval = tokio::time::interval(Duration::from_millis(5));
 
     loop {
         tokio::select! {
-            () = token.cancelled() => {
-                debug!("Mock: shutting down.");
-                break;
-            }
-            // The sender lives as long as the process, so a receive error here
-            // is not reachable in practice; treat it as "stop watching".
+            // The sender is dropped when the foreground mode returns, just
+            // before `main` aborts this task; stop either way.
             changed = filter_rx.changed() => {
                 if changed.is_err() {
                     break;
                 }
-                let filter = filter_rx.borrow_and_update().clone();
-                admitted = filter.admits(&components);
-                log_active(&components, &admitted, &filter);
+                admitted = refresh(&components, &filter_rx.borrow_and_update());
             }
             Some(cmd) = cmd_rx.recv() => {
-                // A list is a read; only a mutation needs the set recomputed.
-                if let SimCommand::List { reply } = cmd {
-                    let snapshot = components
-                        .iter()
-                        .map(|c| (c.name.clone(), c.unit.clone()))
-                        .collect();
-                    let _ = reply.send(snapshot);
-                } else {
-                    apply(&mut components, cmd);
-                    let filter = filter_rx.borrow().clone();
-                    admitted = filter.admits(&components);
-                    log_active(&components, &admitted, &filter);
+                if apply(&mut components, cmd) {
+                    admitted = refresh(&components, &filter_rx.borrow());
                 }
             }
             _ = interval.tick() => publish_due(&mut components, &admitted, &session).await,
@@ -71,21 +54,25 @@ pub async fn run(
     }
 }
 
-/// Apply one add/remove to the component list and answer the caller.
+/// Apply one command to the component list and answer the caller. Returns
+/// whether the list changed, so the admitted set needs recomputing.
 ///
 /// A dropped reply channel means the caller gave up waiting; the mutation still
 /// stands, so there is nothing to do about it.
-fn apply(components: &mut Vec<SimComponent>, cmd: SimCommand) {
+fn apply(components: &mut Vec<SimComponent>, cmd: SimCommand) -> bool {
     match cmd {
         SimCommand::Add { component, reply } => {
-            let result = if components.iter().any(|c| c.name == component.name) {
-                Err(format!("topic '{}' is already simulated", component.name))
-            } else {
-                info!("Mock: adding topic {}", component.name);
-                components.push(*component);
-                Ok(())
-            };
-            let _ = reply.send(result);
+            if components.iter().any(|c| c.name == component.name) {
+                let _ = reply.send(Err(format!(
+                    "topic '{}' is already simulated",
+                    component.name
+                )));
+                return false;
+            }
+            info!("Mock: adding topic {}", component.name);
+            components.push(*component);
+            let _ = reply.send(Ok(()));
+            true
         }
         SimCommand::Remove { name, reply } => {
             let before = components.len();
@@ -98,10 +85,24 @@ fn apply(components: &mut Vec<SimComponent>, cmd: SimCommand) {
                 info!("Mock: removed {removed} component(s) for topic {name}");
             }
             let _ = reply.send(removed);
+            removed > 0
         }
-        // Handled by the caller, which does not need the recompute below.
-        SimCommand::List { .. } => unreachable!("List is answered before apply"),
+        SimCommand::List { reply } => {
+            let snapshot = components
+                .iter()
+                .map(|c| (c.name.clone(), c.unit.clone()))
+                .collect();
+            let _ = reply.send(snapshot);
+            false
+        }
     }
+}
+
+/// Recompute which components `filter` admits and log the result.
+fn refresh(components: &[SimComponent], filter: &FilterMode) -> Vec<bool> {
+    let admitted = filter.admits(components);
+    log_active(components, &admitted, filter);
+    admitted
 }
 
 /// How many active topics to name before logging just the count. Naming a

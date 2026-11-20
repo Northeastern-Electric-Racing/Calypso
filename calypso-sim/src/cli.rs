@@ -54,7 +54,8 @@ pub struct Cli {
 impl Cli {
     /// Whether the mock heartbeat should run.
     pub fn run_mock(&self) -> bool {
-        let any_other_mode = self.stream || self.key_map.is_some() || self.play.is_some();
+        // `--play` requires `--key-map`, so `key_map` covers replay too.
+        let any_other_mode = self.stream || self.key_map.is_some();
         self.mock || (!any_other_mode && !self.list_topics)
     }
 }
