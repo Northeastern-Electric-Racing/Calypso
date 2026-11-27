@@ -1,0 +1,32 @@
+{
+  "home": {
+    "key": "h",
+    "desc": "home / esc (button 0 + Cerberus home_mode pulse)",
+    "steps": [
+      { "topic": "Wheel/Buttons/button_id", "value": 0 },
+      { "topic": "VCU/CarState/home_mode", "value": 1 },
+      { "sleep_ms": 10 },
+      { "topic": "VCU/CarState/home_mode", "value": 0 },
+      { "sleep_ms": 100 }
+    ]
+  },
+  "launch_toggle": { "key": "2", "desc": "launch control toggle", "steps": [{ "topic": "Wheel/Buttons/button_id", "value": 2 }] },
+  "regen_up":      { "key": "j", "desc": "up (regen)",   "steps": [{ "topic": "Wheel/Buttons/button_id", "value": 3 }] },
+  "regen_down":    { "key": "k", "desc": "down (regen)", "steps": [{ "topic": "Wheel/Buttons/button_id", "value": 4 }] },
+  "enter":         { "key": "e", "desc": "enter",        "steps": [{ "topic": "Wheel/Buttons/button_id", "value": 5 }] },
+  "right":         { "key": "r", "desc": "right",        "steps": [{ "topic": "Wheel/Buttons/button_id", "value": 6 }] },
+
+  "reset_nero":    { "key": "n", "desc": "reset nero_index", "steps": [{ "topic": "VCU/CarState/nero_index", "value": 0 }] },
+  "forward_drive": { "key": "d", "desc": "forward drive",    "steps": [{ "topic": "VCU/CarState/not_in_reverse", "value": 1 }] },
+
+  "menu_wrap": {
+    "key": "w",
+    "desc": "force menu wrap (reset nero_index, then home pulse)",
+    "steps": ["reset_nero", "home"]
+  },
+
+  "demo": {
+    "desc": "scripted demo: run via --play demo",
+    "steps": ["forward_drive", { "sleep_ms": 500 }, "menu_wrap", { "sleep_ms": 500 }, "enter"]
+  }
+}

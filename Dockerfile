@@ -4,15 +4,16 @@ WORKDIR /usr/src/calypso
 COPY . .
 
 RUN git submodule update --init
-RUN apt-get update && apt-get install -y libssl-dev build-essential cmake 
+RUN apt-get update && apt-get install -y libssl-dev build-essential cmake
 RUN cargo install --path .
+RUN cargo install --path ./calypso-sim
 
 FROM debian:bookworm-slim
 RUN apt update
 RUN apt install openssl -y
 
 COPY --from=builder /usr/local/cargo/bin/calypso /usr/local/bin/calypso
-COPY --from=builder /usr/local/cargo/bin/simulate /usr/local/bin/simulate
+COPY --from=builder /usr/local/cargo/bin/calypso-sim /usr/local/bin/simulate
 
 CMD ["simulate"]
 
